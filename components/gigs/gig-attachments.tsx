@@ -3,19 +3,98 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   uploadGigAttachment,
   deleteGigAttachment,
   getGigAttachments,
   getSignedUrl,
   formatFileSize,
-  type GigAttachment
+  type GigAttachment,
+  type AttachmentCategory
 } from '@/lib/supabase/storage'
-import { FileText, Upload, Trash2, Download, Loader2, AlertCircle } from 'lucide-react'
+import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCheck } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+
+const categoryConfig: Record<AttachmentCategory, { label: string; description: string; color: string; icon: typeof FileText }> = {
+  gig_info: {
+    label: 'Gig-info',
+    description: 'Noter, schema, repertoar',
+    color: 'bg-blue-100 text-blue-800',
+    icon: Music
+  },
+  invoice_doc: {
+    label: 'Fakturaunderlag',
+    description: 'Kontrakt, PO, avtal',
+    color: 'bg-green-100 text-green-800',
+    icon: FileCheck
+  }
+}
 
 type GigAttachmentsProps = {
   gigId: string
   disabled?: boolean
+}
+
+type AttachmentRowProps = {
+  attachment: GigAttachment
+  onDownload: (attachment: GigAttachment) => void
+  onDelete: (attachment: GigAttachment) => void
+  disabled?: boolean
+}
+
+function AttachmentRow({ attachment, onDownload, onDelete, disabled }: AttachmentRowProps) {
+  const category = attachment.category || 'gig_info'
+  const config = categoryConfig[category]
+  const Icon = config.icon
+
+  return (
+    <div className="flex items-center justify-between p-2 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <FileText className="h-5 w-5 text-red-500 flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 h-4 ${config.color}`}>
+              {config.label}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {formatFileSize(attachment.file_size)} •{' '}
+            {new Date(attachment.uploaded_at).toLocaleDateString('sv-SE')}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onDownload(attachment)}
+          title="Öppna fil"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(attachment)}
+          disabled={disabled}
+          title="Ta bort fil"
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
@@ -23,6 +102,9 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [attachmentToDelete, setAttachmentToDelete] = useState<GigAttachment | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory>('gig_info')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -63,7 +145,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
           continue
         }
 
-        const attachment = await uploadGigAttachment(gigId, file)
+        const attachment = await uploadGigAttachment(gigId, file, selectedCategory)
         setAttachments(prev => [attachment, ...prev])
       }
     } catch (err) {
@@ -77,11 +159,12 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
     }
   }
 
-  async function handleDelete(attachment: GigAttachment) {
-    if (!confirm(`Är du säker på att du vill ta bort "${attachment.file_name}"?`)) {
-      return
-    }
+  function confirmDelete(attachment: GigAttachment) {
+    setAttachmentToDelete(attachment)
+    setDeleteConfirmOpen(true)
+  }
 
+  async function handleDelete(attachment: GigAttachment) {
     try {
       setError(null)
       await deleteGigAttachment(attachment.id, attachment.file_path)
@@ -105,33 +188,62 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
     }
   }
 
+  // Group attachments by category
+  const gigInfoAttachments = attachments.filter(a => a.category === 'gig_info' || !a.category)
+  const invoiceDocAttachments = attachments.filter(a => a.category === 'invoice_doc')
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label>Bilagor (PDF)</Label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,application/pdf"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-          disabled={disabled || uploading}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || uploading}
-        >
-          {uploading ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <Upload className="h-4 w-4 mr-1" />
-          )}
-          Ladda upp
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select
+            value={selectedCategory}
+            onValueChange={(value) => setSelectedCategory(value as AttachmentCategory)}
+            disabled={disabled || uploading}
+          >
+            <SelectTrigger className="w-[160px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gig_info">
+                <span className="flex items-center gap-1">
+                  <Music className="h-3 w-3" />
+                  Gig-info
+                </span>
+              </SelectItem>
+              <SelectItem value="invoice_doc">
+                <span className="flex items-center gap-1">
+                  <FileCheck className="h-3 w-3" />
+                  Fakturaunderlag
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            disabled={disabled || uploading}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || uploading}
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4 mr-1" />
+            )}
+            Ladda upp
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -149,47 +261,65 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
           Inga bilagor uppladdade
         </div>
       ) : (
-        <div className="space-y-2">
-          {attachments.map(attachment => (
-            <div
-              key={attachment.id}
-              className="flex items-center justify-between p-2 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <FileText className="h-5 w-5 text-red-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatFileSize(attachment.file_size)} •{' '}
-                    {new Date(attachment.uploaded_at).toLocaleDateString('sv-SE')}
-                  </p>
-                </div>
+        <div className="space-y-4">
+          {/* Gig-info section */}
+          {gigInfoAttachments.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Music className="h-3 w-3" />
+                <span>Gig-info ({gigInfoAttachments.length})</span>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDownload(attachment)}
-                  title="Öppna fil"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(attachment)}
+              {gigInfoAttachments.map(attachment => (
+                <AttachmentRow
+                  key={attachment.id}
+                  attachment={attachment}
+                  onDownload={handleDownload}
+                  onDelete={confirmDelete}
                   disabled={disabled}
-                  title="Ta bort fil"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
+                />
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Invoice documents section */}
+          {invoiceDocAttachments.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <FileCheck className="h-3 w-3" />
+                <span>Fakturaunderlag ({invoiceDocAttachments.length})</span>
+              </div>
+              {invoiceDocAttachments.map(attachment => (
+                <AttachmentRow
+                  key={attachment.id}
+                  attachment={attachment}
+                  onDownload={handleDownload}
+                  onDelete={confirmDelete}
+                  disabled={disabled}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open)
+          if (!open) setAttachmentToDelete(null)
+        }}
+        title="Ta bort bilaga"
+        description={`Är du säker på att du vill ta bort "${attachmentToDelete?.file_name}"?`}
+        confirmLabel="Ta bort"
+        variant="destructive"
+        onConfirm={() => {
+          if (attachmentToDelete) {
+            handleDelete(attachmentToDelete)
+          }
+          setDeleteConfirmOpen(false)
+          setAttachmentToDelete(null)
+        }}
+      />
     </div>
   )
 }

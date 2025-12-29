@@ -1,0 +1,105 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const body = await request.json()
+
+    const {
+      date,
+      supplier,
+      amount,
+      currency,
+      amount_sek,
+      category,
+      notes,
+      gig_id,
+    } = body
+
+    // Bygg uppdateringsobjekt med endast definierade fält
+    const updateData: Record<string, unknown> = {}
+
+    if (date !== undefined) updateData.date = date
+    if (supplier !== undefined) updateData.supplier = supplier
+    if (amount !== undefined) updateData.amount = amount
+    if (currency !== undefined) updateData.currency = currency
+    if (amount_sek !== undefined) updateData.amount_sek = amount_sek
+    if (category !== undefined) updateData.category = category
+    if (notes !== undefined) updateData.notes = notes || null
+    if (gig_id !== undefined) updateData.gig_id = gig_id || null
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'Inga fält att uppdatera' },
+        { status: 400 }
+      )
+    }
+
+    const { data: expense, error } = await supabase
+      .from('expenses')
+      .update(updateData)
+      .eq('id', id)
+      .select('*, gig:gigs(id, project_name, date, client:clients(name))')
+      .single()
+
+    if (error) {
+      console.error('Update expense error:', error)
+      return NextResponse.json(
+        { error: 'Kunde inte uppdatera utgift: ' + error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      expense,
+    })
+  } catch (error) {
+    console.error('Expense PATCH error:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Kunde inte uppdatera utgift' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Delete expense error:', error)
+      return NextResponse.json(
+        { error: 'Kunde inte ta bort utgift: ' + error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+    })
+  } catch (error) {
+    console.error('Expense DELETE error:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Kunde inte ta bort utgift' },
+      { status: 500 }
+    )
+  }
+}

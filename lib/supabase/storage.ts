@@ -1,5 +1,7 @@
 import { createClient } from './client'
 
+export type AttachmentCategory = 'gig_info' | 'invoice_doc'
+
 export type GigAttachment = {
   id: string
   gig_id: string
@@ -8,9 +10,15 @@ export type GigAttachment = {
   file_size: number | null
   file_type: string | null
   uploaded_at: string
+  category: AttachmentCategory
+  invoice_id: string | null
 }
 
-export async function uploadGigAttachment(gigId: string, file: File): Promise<GigAttachment> {
+export async function uploadGigAttachment(
+  gigId: string,
+  file: File,
+  category: AttachmentCategory = 'gig_info'
+): Promise<GigAttachment> {
   const supabase = createClient()
 
   // Sanitize filename and create unique path
@@ -34,7 +42,8 @@ export async function uploadGigAttachment(gigId: string, file: File): Promise<Gi
       file_name: file.name,
       file_path: filePath,
       file_size: file.size,
-      file_type: file.type
+      file_type: file.type,
+      category: category
     })
     .select()
     .single()
@@ -85,6 +94,30 @@ export async function getGigAttachments(gigId: string): Promise<GigAttachment[]>
   }
 
   return data as GigAttachment[]
+}
+
+export async function getGigAttachmentsByCategory(
+  gigId: string,
+  category: AttachmentCategory
+): Promise<GigAttachment[]> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('gig_attachments')
+    .select('*')
+    .eq('gig_id', gigId)
+    .eq('category', category)
+    .order('uploaded_at', { ascending: false })
+
+  if (error) {
+    throw new Error(`Kunde inte hämta bilagor: ${error.message}`)
+  }
+
+  return data as GigAttachment[]
+}
+
+export async function getInvoiceDocuments(gigId: string): Promise<GigAttachment[]> {
+  return getGigAttachmentsByCategory(gigId, 'invoice_doc')
 }
 
 export async function getSignedUrl(filePath: string): Promise<string | null> {

@@ -3,49 +3,25 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  CalendarDays,
-  FileText,
-  Receipt,
-  Settings,
-  PlusCircle,
-  Tag,
-  Download,
-  BarChart3,
-  Music,
-} from 'lucide-react'
-
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Uppdragsgivare', href: '/clients', icon: Users },
-  { name: 'Uppdrag', href: '/gigs', icon: Calendar },
-  { name: 'Kalender', href: '/calendar', icon: CalendarDays },
-  { name: 'Fakturor', href: '/invoices', icon: FileText },
-  { name: 'Utgifter', href: '/expenses', icon: Receipt },
-  { name: 'Analytik', href: '/analytics', icon: BarChart3 },
-  { name: 'Uppdragstyper', href: '/gig-types', icon: Tag },
-  { name: 'Positioner', href: '/positions', icon: Music },
-  { name: 'Importera', href: '/import', icon: Download },
-  { name: 'Inställningar', href: '/settings', icon: Settings },
-]
+import { PlusCircle } from 'lucide-react'
+import { navigationItems } from './nav-items'
 
 export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <div className="flex h-full w-64 flex-col bg-gray-900 text-white">
+    <div className="hidden md:flex h-full w-64 flex-col bg-gray-900 text-white">
       {/* Logo */}
       <div className="flex h-16 items-center px-6 border-b border-gray-800">
         <h1 className="text-xl font-bold">Babalisk Manager</h1>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+        {navigationItems.map((item) => {
+          const isActive = item.href === '/'
+            ? pathname === '/'
+            : pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.name}

@@ -20,7 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 type InitialGig = {
   id: string
@@ -47,6 +49,7 @@ type CreateInvoiceDialogProps = {
 
 type Client = { id: string; name: string; payment_terms: number }
 type Gig = { id: string; date: string; fee: number | null; travel_expense: number | null; client: { name: string }; gig_type: { vat_rate: number } }
+type GigType = { id: string; name: string; vat_rate: number }
 
 type InvoiceLine = {
   description: string
@@ -63,6 +66,8 @@ export function CreateInvoiceDialog({
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [completedGigs, setCompletedGigs] = useState<Gig[]>([])
+  const [gigTypes, setGigTypes] = useState<GigType[]>([])
+  const [selectedVatRate, setSelectedVatRate] = useState<number>(25)
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState<number>(46)
   const [formData, setFormData] = useState({
     client_id: '',
@@ -80,6 +85,7 @@ export function CreateInvoiceDialog({
     if (open) {
       loadClients()
       loadCompletedGigs()
+      loadGigTypes()
       loadNextInvoiceNumber()
     }
   }, [open])
@@ -94,6 +100,8 @@ export function CreateInvoiceDialog({
         invoice_date: new Date().toISOString().split('T')[0],
         payment_terms: initialGig.client_payment_terms.toString(),
       })
+      // Set VAT rate from gig type
+      setSelectedVatRate(initialGig.gig_type_vat_rate)
 
       // Format date for description based on single vs multi-day
       let dateDescription: string
@@ -151,6 +159,14 @@ export function CreateInvoiceDialog({
       .in('status', ['accepted', 'completed'])
       .order('date', { ascending: false })
     setCompletedGigs((data || []) as unknown as Gig[])
+  }
+
+  async function loadGigTypes() {
+    const { data } = await supabase
+      .from('gig_types')
+      .select('id, name, vat_rate')
+      .order('name')
+    setGigTypes(data || [])
   }
 
   async function loadNextInvoiceNumber() {
@@ -214,16 +230,8 @@ export function CreateInvoiceDialog({
       .reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
     const subtotal = lines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
 
-    // Get VAT rate from initialGig or selected gig
-    let vatRate = 0
-    if (initialGig) {
-      vatRate = initialGig.gig_type_vat_rate
-    } else if (formData.gig_id) {
-      const gig = completedGigs.find(g => g.id === formData.gig_id)
-      if (gig) {
-        vatRate = gig.gig_type.vat_rate
-      }
-    }
+    // Use selected VAT rate
+    const vatRate = selectedVatRate
 
     // VAT only applies to non-exempt lines
     const vatAmount = vatableSubtotal * (vatRate / 100)
@@ -255,7 +263,7 @@ export function CreateInvoiceDialog({
 
     if (invoiceError) {
       console.error('Error creating invoice:', invoiceError)
-      alert('Kunde inte skapa faktura: ' + invoiceError.message)
+      toast.error('Kunde inte skapa faktura: ' + invoiceError.message)
       setLoading(false)
       return
     }
@@ -275,7 +283,7 @@ export function CreateInvoiceDialog({
 
     if (linesError) {
       console.error('Error creating invoice lines:', linesError)
-      alert('Kunde inte skapa fakturarader: ' + linesError.message)
+      toast.error('Kunde inte skapa fakturarader: ' + linesError.message)
       setLoading(false)
       return
     }
@@ -308,6 +316,7 @@ export function CreateInvoiceDialog({
       invoice_date: new Date().toISOString().split('T')[0],
       payment_terms: '30',
     })
+    setSelectedVatRate(25)
     setLines([{ description: '', amount: '', is_vat_exempt: false }])
     onSuccess()
     onOpenChange(false)
@@ -404,6 +413,25 @@ export function CreateInvoiceDialog({
               </div>
             </div>
 
+            <div className="grid gap-2">
+              <Label>Uppdragstyp (moms)</Label>
+              <Select
+                value={selectedVatRate.toString()}
+                onValueChange={(value) => setSelectedVatRate(parseFloat(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Välj momssats" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gigTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.vat_rate.toString()}>
+                      {type.name} ({type.vat_rate}% moms)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-2">
                 <Label>Fakturarader</Label>
@@ -415,7 +443,7 @@ export function CreateInvoiceDialog({
 
               <div className="space-y-2">
                 {lines.map((line, index) => (
-                  <div key={index} className="flex gap-2 items-start">
+                  <div key={index} className="flex gap-2 items-center">
                     <div className="flex-1">
                       <Input
                         placeholder="Beskrivning"
@@ -426,7 +454,7 @@ export function CreateInvoiceDialog({
                         required
                       />
                     </div>
-                    <div className="w-32">
+                    <div className="w-28">
                       <Input
                         type="number"
                         step="0.01"
@@ -437,6 +465,16 @@ export function CreateInvoiceDialog({
                         }
                         required
                       />
+                    </div>
+                    <div className="flex items-center gap-1.5 min-w-[80px]">
+                      <Checkbox
+                        id={`vat-exempt-${index}`}
+                        checked={line.is_vat_exempt}
+                        onCheckedChange={(checked) => updateLine(index, 'is_vat_exempt', !!checked)}
+                      />
+                      <label htmlFor={`vat-exempt-${index}`} className="text-xs text-muted-foreground cursor-pointer">
+                        Momsfri
+                      </label>
                     </div>
                     {lines.length > 1 && (
                       <Button

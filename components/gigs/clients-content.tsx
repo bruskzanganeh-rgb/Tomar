@@ -1,0 +1,225 @@
+"use client"
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Building2, Mail, Phone, Edit, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { CreateClientDialog } from '@/components/clients/create-client-dialog'
+import { EditClientDialog } from '@/components/clients/edit-client-dialog'
+import { TableSkeleton } from '@/components/skeletons/table-skeleton'
+import Link from 'next/link'
+
+type Client = {
+  id: string
+  name: string
+  org_number: string | null
+  client_code: string | null
+  email: string | null
+  address: string | null
+  payment_terms: number
+  notes: string | null
+  created_at: string
+  invoices: { total: number }[]
+}
+
+export default function ClientsPage() {
+  const [clients, setClients] = useState<Client[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    loadClients()
+  }, [])
+
+  async function loadClients() {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('clients')
+      .select(`
+        *,
+        invoices(total)
+      `)
+      .order('name')
+
+    if (error) {
+      console.error('Error loading clients:', error)
+    } else {
+      setClients(data || [])
+    }
+    setLoading(false)
+  }
+
+  function confirmDelete(id: string) {
+    setClientToDelete(id)
+    setDeleteConfirmOpen(true)
+  }
+
+  async function handleDelete(id: string) {
+    const { error } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting client:', error)
+      toast.error('Kunde inte ta bort uppdragsgivare')
+    } else {
+      loadClients()
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Uppdragsgivare</h1>
+          <p className="text-muted-foreground">
+            Hantera dina orkestrar och kunder
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Ny uppdragsgivare
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Alla uppdragsgivare ({clients.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <TableSkeleton columns={5} rows={5} />
+          ) : clients.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Inga uppdragsgivare än</p>
+              <p className="text-sm">Klicka på "Ny uppdragsgivare" för att komma igång</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Namn</TableHead>
+                  <TableHead className="text-right">Fakturor</TableHead>
+                  <TableHead className="text-right">Fakturerat</TableHead>
+                  <TableHead>Org.nr</TableHead>
+                  <TableHead>Betalningsvillkor</TableHead>
+                  <TableHead className="text-right">Åtgärder</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => {
+                  const invoiceCount = client.invoices?.length || 0
+                  const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+
+                  return (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/clients/${client.id}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {client.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm font-medium">
+                          {invoiceCount}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm font-medium">
+                          {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} kr` : '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {client.org_number || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {client.payment_terms} dagar
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingClient(client)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmDelete(client.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <CreateClientDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={loadClients}
+      />
+
+      <EditClientDialog
+        client={editingClient}
+        open={editingClient !== null}
+        onOpenChange={(open) => !open && setEditingClient(null)}
+        onSuccess={loadClients}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open)
+          if (!open) setClientToDelete(null)
+        }}
+        title="Ta bort uppdragsgivare"
+        description="Är du säker på att du vill ta bort denna uppdragsgivare? Detta går inte att ångra."
+        confirmLabel="Ta bort"
+        variant="destructive"
+        onConfirm={() => {
+          if (clientToDelete) {
+            handleDelete(clientToDelete)
+          }
+          setDeleteConfirmOpen(false)
+          setClientToDelete(null)
+        }}
+      />
+    </div>
+  )
+}

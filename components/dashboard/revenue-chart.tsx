@@ -58,19 +58,32 @@ export function RevenueChart() {
   }, [selectedYear, viewMode])
 
   async function loadAvailableYears() {
+    // Hämta år från fakturor
     const { data: invoices } = await supabase
       .from('invoices')
       .select('invoice_date')
       .order('invoice_date', { ascending: true })
 
-    if (invoices) {
-      const years = [...new Set(invoices.map(inv =>
-        new Date(inv.invoice_date).getFullYear().toString()
-      ))]
-      setAvailableYears(years)
-      if (years.length > 0 && !years.includes(selectedYear)) {
-        setSelectedYear(years[years.length - 1])
-      }
+    // Hämta år från gig_dates (för kommande gigs)
+    const { data: gigDates } = await supabase
+      .from('gig_dates')
+      .select('date')
+      .order('date', { ascending: true })
+
+    const invoiceYears = invoices?.map(inv =>
+      new Date(inv.invoice_date).getFullYear().toString()
+    ) || []
+
+    const gigYears = gigDates?.map(gd =>
+      new Date(gd.date).getFullYear().toString()
+    ) || []
+
+    // Kombinera och sortera unika år
+    const years = [...new Set([...invoiceYears, ...gigYears])].sort()
+
+    setAvailableYears(years)
+    if (years.length > 0 && !years.includes(selectedYear)) {
+      setSelectedYear(years[years.length - 1])
     }
   }
 

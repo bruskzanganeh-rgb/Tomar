@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  classifyDocument,
+  type ClassifiedDocument,
+} from '@/lib/import/document-classifier'
+import { matchClient } from '@/lib/import/client-matcher'
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) {
+      return NextResponse.json(
+        { error: 'Ingen fil bifogad' },
+        { status: 400 }
+      )
+    }
+
+    // Validera filstorlek (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'Filen är för stor. Max 10MB.' },
+        { status: 400 }
+      )
+    }
+
+    // Validera filtyp
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ]
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: `Filtypen ${file.type} stöds inte. Använd PDF eller bild.` },
+        { status: 400 }
+      )
+    }
+
+    // Klassificera dokumentet med AI
+    const result: ClassifiedDocument = await classifyDocument(file)
+
+    // Om det är en faktura, kör kundmatchning
+    let clientMatch = null
+    if (result.type === 'invoice') {
+      const invoiceData = result.data as { clientName?: string }
+      if (invoiceData.clientName) {
+        try {
+          clientMatch = await matchClient(invoiceData.clientName)
+        } catch (matchError) {
+          console.error('Client match error:', matchError)
+          // Fortsätt utan kundmatchning om det misslyckas
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      filename: file.name,
+      ...result,
+      clientMatch,
+    })
+  } catch (error) {
+    console.error('Analyze error:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Kunde inte analysera fil' },
+      { status: 500 }
+    )
+  }
+}

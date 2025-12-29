@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { createGigSchema, type CreateGigFormData } from '@/lib/schemas/gig'
 import {
   Dialog,
   DialogContent,
@@ -10,9 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -22,6 +32,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { MultiDayDatePicker } from '@/components/ui/multi-day-date-picker'
 import { format } from 'date-fns'
 
@@ -45,20 +56,27 @@ export function CreateGigDialog({
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
-  const [formData, setFormData] = useState({
-    client_id: '',
-    gig_type_id: '',
-    position_id: '',
-    time: '19:00',
-    venue: '',
-    fee: '',
-    travel_expense: '',
-    project_name: '',
-    notes: '',
-    status: 'pending',
-  })
 
   const supabase = createClient()
+
+  const form = useForm<CreateGigFormData>({
+    resolver: zodResolver(createGigSchema),
+    defaultValues: {
+      client_id: '',
+      gig_type_id: '',
+      position_id: '',
+      time: '19:00',
+      venue: '',
+      fee: '',
+      travel_expense: '',
+      project_name: '',
+      notes: '',
+      status: 'pending',
+      response_deadline: '',
+    },
+  })
+
+  const watchStatus = form.watch('status')
 
   useEffect(() => {
     if (open) {
@@ -92,17 +110,9 @@ export function CreateGigDialog({
     setPositions(data || [])
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-
+  async function onSubmit(data: CreateGigFormData) {
     if (selectedDates.length === 0) {
-      alert('Välj minst ett datum')
-      return
-    }
-
-    // Kräv uppdragsgivare om inte tentative
-    if (formData.status !== 'tentative' && (!formData.client_id || formData.client_id === 'none')) {
-      alert('Välj en uppdragsgivare (krävs för alla statusar utom "Ej bekräftat")')
+      toast.warning('Välj minst ett datum')
       return
     }
 
@@ -110,7 +120,7 @@ export function CreateGigDialog({
 
     // Use first date for the main date field (with time)
     const primaryDate = selectedDates[0]
-    const dateTime = `${format(primaryDate, 'yyyy-MM-dd')}T${formData.time}:00`
+    const dateTime = `${format(primaryDate, 'yyyy-MM-dd')}T${data.time}:00`
 
     // Calculate start and end dates
     const startDate = format(selectedDates[0], 'yyyy-MM-dd')
@@ -119,26 +129,27 @@ export function CreateGigDialog({
     // Create gig
     const { data: gig, error } = await supabase.from('gigs').insert([
       {
-        client_id: formData.client_id && formData.client_id !== 'none' ? formData.client_id : null,
-        gig_type_id: formData.gig_type_id,
-        position_id: formData.position_id && formData.position_id !== 'none' ? formData.position_id : null,
+        client_id: data.client_id && data.client_id !== 'none' ? data.client_id : null,
+        gig_type_id: data.gig_type_id,
+        position_id: data.position_id && data.position_id !== 'none' ? data.position_id : null,
         date: dateTime,
         start_date: startDate,
         end_date: endDate,
         total_days: selectedDates.length,
-        venue: formData.venue || null,
-        fee: formData.fee ? parseFloat(formData.fee) : null,
-        travel_expense: formData.travel_expense ? parseFloat(formData.travel_expense) : null,
-        project_name: formData.project_name || null,
-        notes: formData.notes || null,
-        status: formData.status,
+        venue: data.venue || null,
+        fee: data.fee ? parseFloat(data.fee) : null,
+        travel_expense: data.travel_expense ? parseFloat(data.travel_expense) : null,
+        project_name: data.project_name || null,
+        notes: data.notes || null,
+        status: data.status,
+        response_deadline: data.response_deadline || null,
       },
     ]).select().single()
 
     if (error?.message || !gig) {
       setLoading(false)
       console.error('Error creating gig:', error)
-      alert('Kunde inte skapa uppdrag: ' + (error?.message || 'Okänt fel'))
+      toast.error('Kunde inte skapa uppdrag: ' + (error?.message || 'Okänt fel'))
       return
     }
 
@@ -152,23 +163,11 @@ export function CreateGigDialog({
 
     if (datesError) {
       console.error('Error creating gig dates:', datesError)
-      // Gig was created but dates failed - still considered partial success
     }
 
     setLoading(false)
     setSelectedDates([])
-    setFormData({
-      client_id: '',
-      gig_type_id: '',
-      position_id: '',
-      time: '19:00',
-      venue: '',
-      fee: '',
-      travel_expense: '',
-      project_name: '',
-      notes: '',
-      status: 'pending',
-    })
+    form.reset()
     onSuccess()
     onOpenChange(false)
   }
@@ -176,215 +175,260 @@ export function CreateGigDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Nytt uppdrag</DialogTitle>
-            <DialogDescription>
-              Registrera ett nytt gig eller uppdrag
-            </DialogDescription>
-          </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <DialogHeader>
+              <DialogTitle>Nytt uppdrag</DialogTitle>
+              <DialogDescription>
+                Registrera ett nytt gig eller uppdrag
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="client_id">
-                Uppdragsgivare {formData.status !== 'tentative' && <span className="text-destructive">*</span>}
-              </Label>
-              <Select
-                value={formData.client_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, client_id: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Välj uppdragsgivare" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ingen uppdragsgivare än</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formData.status === 'tentative' && (
-                <p className="text-xs text-muted-foreground">Valfritt för ej bekräftade uppdrag</p>
+            <div className="grid gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="client_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Uppdragsgivare {watchStatus !== 'tentative' && <span className="text-destructive">*</span>}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Välj uppdragsgivare" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Ingen uppdragsgivare än</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {watchStatus === 'tentative' && (
+                      <p className="text-xs text-muted-foreground">Valfritt för ej bekräftade uppdrag</p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gig_type_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Typ av uppdrag <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Välj typ" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {gigTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.name} ({type.vat_rate}% moms)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {positions.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="position_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position (valfritt)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Välj position" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Ingen position</SelectItem>
+                          {positions.map((pos) => (
+                            <SelectItem key={pos.id} value={pos.id}>
+                              {pos.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="gig_type_id">
-                Typ av uppdrag <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.gig_type_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, gig_type_id: value })
-                }
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Välj typ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gigTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name} ({type.vat_rate}% moms)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-4">
+                <MultiDayDatePicker
+                  selectedDates={selectedDates}
+                  onDatesChange={setSelectedDates}
+                  disabled={loading}
+                />
 
-            {positions.length > 0 && (
-              <div className="grid gap-2">
-                <Label htmlFor="position_id">Position (valfritt)</Label>
-                <Select
-                  value={formData.position_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, position_id: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Välj position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ingen position</SelectItem>
-                    {positions.map((pos) => (
-                      <SelectItem key={pos.id} value={pos.id}>
-                        {pos.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormField
+                  control={form.control}
+                  name="time"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tid (första dagen)</FormLabel>
+                      <FormControl>
+                        <Input type="time" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            )}
 
-            <div className="space-y-4">
-              <MultiDayDatePicker
-                selectedDates={selectedDates}
-                onDatesChange={setSelectedDates}
+              <FormField
+                control={form.control}
+                name="venue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plats</FormLabel>
+                    <FormControl>
+                      <Input placeholder="T.ex. Konserthuset, Stockholm" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="project_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Projektnamn</FormLabel>
+                    <FormControl>
+                      <Input placeholder="T.ex. Julkonsert 2025" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Arvode (kr)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="0" step="0.01" placeholder="Ej angivet" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="travel_expense"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reseersättning (kr)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="0" step="0.01" placeholder="0" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="tentative">Ej bekräftat</SelectItem>
+                          <SelectItem value="pending">Väntar på svar</SelectItem>
+                          <SelectItem value="accepted">Accepterat</SelectItem>
+                          <SelectItem value="declined">Avböjt</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {(watchStatus === 'pending' || watchStatus === 'tentative') && (
+                  <FormField
+                    control={form.control}
+                    name="response_deadline"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Svara senast</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">När behöver orkestern svar?</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Anteckningar</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="T.ex. Extra repetition kl 14, sololåt"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
                 disabled={loading}
-              />
-
-              <div className="grid gap-2">
-                <Label htmlFor="time">Tid (första dagen)</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={formData.time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, time: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="venue">Plats</Label>
-              <Input
-                id="venue"
-                placeholder="T.ex. Konserthuset, Stockholm"
-                value={formData.venue}
-                onChange={(e) =>
-                  setFormData({ ...formData, venue: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="project_name">Projektnamn</Label>
-              <Input
-                id="project_name"
-                placeholder="T.ex. Julkonsert 2025"
-                value={formData.project_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, project_name: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="fee">Arvode (kr)</Label>
-                <Input
-                  id="fee"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Ej angivet"
-                  value={formData.fee}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fee: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="travel_expense">Reseersättning (kr)</Label>
-                <Input
-                  id="travel_expense"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  value={formData.travel_expense}
-                  onChange={(e) =>
-                    setFormData({ ...formData, travel_expense: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, status: value })
-                }
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tentative">Ej bekräftat</SelectItem>
-                  <SelectItem value="pending">Väntar på svar</SelectItem>
-                  <SelectItem value="accepted">Accepterat</SelectItem>
-                  <SelectItem value="declined">Avböjt</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Anteckningar</Label>
-              <Textarea
-                id="notes"
-                placeholder="T.ex. Extra repetition kl 14, sololåt"
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              Avbryt
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Skapa uppdrag
-            </Button>
-          </DialogFooter>
-        </form>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Skapa uppdrag
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

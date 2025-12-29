@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import type { ParsedInvoiceData } from '@/lib/types/import'
+import { logAiUsage } from '@/lib/ai/usage-logger'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -53,8 +54,9 @@ export async function parseInvoiceWithAI(
   extractedText: string
 ): Promise<ParsedInvoiceData> {
   try {
+    const model = 'claude-3-haiku-20240307'
     const message = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model,
       max_tokens: 1024,
       temperature: 0,
       system: SYSTEM_PROMPT,
@@ -64,6 +66,14 @@ export async function parseInvoiceWithAI(
           content: `Extract invoice data from this Swedish invoice OCR text:\n\n${extractedText}`,
         },
       ],
+    })
+
+    // Log AI usage for cost tracking
+    await logAiUsage({
+      usageType: 'invoice_parse',
+      model,
+      inputTokens: message.usage.input_tokens,
+      outputTokens: message.usage.output_tokens,
     })
 
     const responseText = message.content[0]?.type === 'text'

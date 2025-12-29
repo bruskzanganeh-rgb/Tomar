@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import {
+  findDuplicateExpense,
+  findDuplicateExpenses,
+  type DuplicateExpense,
+} from '@/lib/expenses/duplicate-checker'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// POST - Kontrollera om en utgift redan finns (dublett) med fuzzy matching
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { date, supplier, amount } = body
+
+    if (!date || !supplier || amount === undefined) {
+      return NextResponse.json(
+        { error: 'Datum, leverantör och belopp krävs' },
+        { status: 400 }
+      )
+    }
+
+    // Hämta alla utgifter för samma datum
+    const { data: existingExpenses, error } = await supabase
+      .from('expenses')
+      .select('id, date, supplier, amount, category')
+      .eq('date', date)
+
+    if (error) {
+      console.error('Duplicate check error:', error)
+      return NextResponse.json(
+        { error: 'Kunde inte kontrollera dublett' },
+        { status: 500 }
+      )
+    }
+
+    // Använd fuzzy matching för att hitta dublett
+    const result = findDuplicateExpense(
+      { date, supplier, amount },
+      (existingExpenses || []) as DuplicateExpense[]
+    )
+
+    return NextResponse.json({
+      isDuplicate: result.isDuplicate,
+      existingExpense: result.existingExpense,
+      matchType: result.matchType,
+    })
+  } catch (error) {
+    console.error('Check duplicate error:', error)
+    return NextResponse.json(
+      { error: 'Ett fel uppstod' },
+      { status: 500 }
+    )
+  }
+}
+
+// Batch-kontroll av flera utgifter med fuzzy matching
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { expenses } = body as { expenses: Array<{ date: string; supplier: string; amount: number }> }
+
+    if (!expenses || !Array.isArray(expenses)) {
+      return NextResponse.json(
+        { error: 'Lista med utgifter krävs' },
+        { status: 400 }
+      )
+    }
+
+    // Hämta alla befintliga utgifter för relevanta datum
+    const uniqueDates = [...new Set(expenses.map(e => e.date))]
+
+    const { data: existingExpenses, error } = await supabase
+      .from('expenses')
+      .select('id, date, supplier, amount, category')
+      .in('date', uniqueDates)
+
+    if (error) {
+      console.error('Batch duplicate check error:', error)
+      return NextResponse.json(
+        { error: 'Kunde inte kontrollera dubletter' },
+        { status: 500 }
+      )
+    }
+
+    // Använd fuzzy matching för batch-kontroll
+    const results = findDuplicateExpenses(
+      expenses,
+      (existingExpenses || []) as DuplicateExpense[]
+    )
+
+    return NextResponse.json({
+      results,
+      duplicateCount: results.filter(r => r.isDuplicate).length,
+    })
+  } catch (error) {
+    console.error('Batch check duplicate error:', error)
+    return NextResponse.json(
+      { error: 'Ett fel uppstod' },
+      { status: 500 }
+    )
+  }
+}

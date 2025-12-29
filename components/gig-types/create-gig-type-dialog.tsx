@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 type CreateGigTypeDialogProps = {
   open: boolean
@@ -52,7 +53,7 @@ export function CreateGigTypeDialog({
 
     if (error) {
       console.error('Error creating gig type:', error)
-      alert('Kunde inte skapa uppdragstyp: ' + error.message)
+      toast.error('Kunde inte skapa uppdragstyp: ' + error.message)
     } else {
       setFormData({
         name: '',

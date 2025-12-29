@@ -33,6 +33,7 @@ type Client = {
   name: string
   org_number: string | null
   client_code: string | null
+  email: string | null
   address: string | null
   payment_terms: number
   notes: string | null

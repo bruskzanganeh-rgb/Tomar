@@ -22,7 +22,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { GigAttachments } from './gig-attachments'
+import { GigReceipts } from './gig-receipts'
+import { GigWorks } from './gig-works'
 import { MultiDayDatePicker } from '@/components/ui/multi-day-date-picker'
 import { format } from 'date-fns'
 
@@ -36,12 +39,14 @@ type Gig = {
   fee: number | null
   travel_expense: number | null
   project_name: string | null
+  conductor: string | null
   status: string
   notes?: string | null
-  client_id: string
+  response_deadline?: string | null
+  client_id: string | null
   gig_type_id: string
   position_id?: string | null
-  client: { name: string }
+  client: { name: string } | null
   gig_type: { name: string }
 }
 
@@ -76,8 +81,10 @@ export function EditGigDialog({
     travel_expense: '',
     venue: '',
     project_name: '',
+    conductor: '',
     notes: '',
     status: 'pending',
+    response_deadline: '',
   })
 
   const supabase = createClient()
@@ -107,8 +114,10 @@ export function EditGigDialog({
         travel_expense: gig.travel_expense?.toString() || '',
         venue: gig.venue || '',
         project_name: gig.project_name || '',
+        conductor: gig.conductor || '',
         notes: gig.notes || '',
         status: gig.status || 'pending',
+        response_deadline: gig.response_deadline || '',
       })
 
       // Load gig dates
@@ -163,13 +172,13 @@ export function EditGigDialog({
     if (!gig) return
 
     if (selectedDates.length === 0) {
-      alert('Välj minst ett datum')
+      toast.warning('Välj minst ett datum')
       return
     }
 
     // Kräv uppdragsgivare om inte tentative
     if (formData.status !== 'tentative' && (!formData.client_id || formData.client_id === 'none')) {
-      alert('Välj en uppdragsgivare (krävs för alla statusar utom "Ej bekräftat")')
+      toast.warning('Välj en uppdragsgivare (krävs för alla statusar utom "Ej bekräftat")')
       return
     }
 
@@ -201,15 +210,17 @@ export function EditGigDialog({
         travel_expense: formData.travel_expense ? parseFloat(formData.travel_expense) : null,
         venue: formData.venue || null,
         project_name: formData.project_name || null,
+        conductor: formData.conductor || null,
         notes: formData.notes || null,
         status: formData.status,
+        response_deadline: formData.response_deadline || null,
       })
       .eq('id', gig.id)
 
     if (error) {
       setLoading(false)
       console.error('Error updating gig:', error)
-      alert('Kunde inte uppdatera uppdrag: ' + error.message)
+      toast.error('Kunde inte uppdatera uppdrag: ' + error.message)
       return
     }
 
@@ -378,6 +389,19 @@ export function EditGigDialog({
               />
             </div>
 
+            {/* Conductor */}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-conductor">Dirigent</Label>
+              <Input
+                id="edit-conductor"
+                placeholder="T.ex. Herbert Blomstedt"
+                value={formData.conductor}
+                onChange={(e) =>
+                  setFormData({ ...formData, conductor: e.target.value })
+                }
+              />
+            </div>
+
             {/* Fee and travel expense */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
@@ -411,26 +435,43 @@ export function EditGigDialog({
               </div>
             </div>
 
-            {/* Status */}
-            <div className="grid gap-2">
-              <Label htmlFor="edit-status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Status and Deadline */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(formData.status === 'pending' || formData.status === 'tentative') && (
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-response_deadline">Svara senast</Label>
+                  <Input
+                    id="edit-response_deadline"
+                    type="date"
+                    value={formData.response_deadline}
+                    onChange={(e) =>
+                      setFormData({ ...formData, response_deadline: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">När behöver orkestern svar?</p>
+                </div>
+              )}
             </div>
 
             {/* Notes */}
@@ -446,6 +487,24 @@ export function EditGigDialog({
                 rows={3}
               />
             </div>
+
+            {/* Program / Verk */}
+            {gig && (
+              <div className="border-t pt-4">
+                <GigWorks gigId={gig.id} disabled={loading} />
+              </div>
+            )}
+
+            {/* Kvitton */}
+            {gig && (
+              <div className="border-t pt-4">
+                <GigReceipts
+                  gigId={gig.id}
+                  gigTitle={formData.project_name || gig.gig_type?.name}
+                  disabled={loading}
+                />
+              </div>
+            )}
 
             {/* Attachments */}
             {gig && (

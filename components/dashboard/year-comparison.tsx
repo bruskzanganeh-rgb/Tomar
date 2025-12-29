@@ -3,14 +3,18 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, BarChart3, ArrowUpRight } from 'lucide-react'
+import Link from 'next/link'
 
 type YearData = {
   year: number
-  total: number
-  count: number
-  ytdTotal: number
-  ytdCount: number
+  revenue: number
+  ytdRevenue: number
+  gigCount: number
+  ytdGigCount: number
+  workDays: number
+  ytdWorkDays: number
+  newClients: number
 }
 
 export function YearComparison() {
@@ -31,8 +35,9 @@ export function YearComparison() {
     const previousYearNum = currentYearNum - 1
     const currentMonth = now.getMonth() + 1
     const currentDay = now.getDate()
+    const ytdEndDatePrev = `${previousYearNum}-${currentMonth.toString().padStart(2, '0')}-${currentDay.toString().padStart(2, '0')}`
 
-    // Fetch all invoices for current and previous year
+    // Fetch invoices
     const { data: invoices } = await supabase
       .from('invoices')
       .select('invoice_date, total')
@@ -40,39 +45,55 @@ export function YearComparison() {
       .gte('invoice_date', `${previousYearNum}-01-01`)
       .lte('invoice_date', `${currentYearNum}-12-31`)
 
-    if (invoices) {
-      // Calculate totals for each year
-      const currentYearInvoices = invoices.filter(inv => {
-        const date = new Date(inv.invoice_date)
-        return date.getFullYear() === currentYearNum
-      })
+    // Fetch gigs with status completed/invoiced/paid
+    const { data: gigs } = await supabase
+      .from('gigs')
+      .select('id, start_date, total_days, client_id')
+      .in('status', ['accepted', 'completed', 'invoiced', 'paid'])
+      .gte('start_date', `${previousYearNum}-01-01`)
+      .lte('start_date', `${currentYearNum}-12-31`)
 
-      const previousYearInvoices = invoices.filter(inv => {
-        const date = new Date(inv.invoice_date)
-        return date.getFullYear() === previousYearNum
-      })
+    // Fetch clients to find new ones this year
+    const { data: clients } = await supabase
+      .from('clients')
+      .select('id, created_at')
+      .gte('created_at', `${previousYearNum}-01-01`)
+      .lte('created_at', `${currentYearNum}-12-31T23:59:59`)
 
-      // YTD calculation - same period comparison
-      const ytdEndDate = `${previousYearNum}-${currentMonth.toString().padStart(2, '0')}-${currentDay.toString().padStart(2, '0')}`
+    if (invoices && gigs) {
+      // Current year calculations
+      const currentYearInvoices = invoices.filter(inv => new Date(inv.invoice_date).getFullYear() === currentYearNum)
+      const currentYearGigs = gigs.filter(g => new Date(g.start_date).getFullYear() === currentYearNum)
+      const currentYearNewClients = (clients || []).filter(c => new Date(c.created_at).getFullYear() === currentYearNum)
 
-      const previousYearYTD = previousYearInvoices.filter(inv => {
-        return inv.invoice_date <= ytdEndDate
-      })
+      // Previous year calculations
+      const previousYearInvoices = invoices.filter(inv => new Date(inv.invoice_date).getFullYear() === previousYearNum)
+      const previousYearGigs = gigs.filter(g => new Date(g.start_date).getFullYear() === previousYearNum)
+
+      // YTD calculations for previous year (same period)
+      const previousYearYTDInvoices = previousYearInvoices.filter(inv => inv.invoice_date <= ytdEndDatePrev)
+      const previousYearYTDGigs = previousYearGigs.filter(g => g.start_date <= ytdEndDatePrev)
 
       setCurrentYear({
         year: currentYearNum,
-        total: currentYearInvoices.reduce((sum, inv) => sum + inv.total, 0),
-        count: currentYearInvoices.length,
-        ytdTotal: currentYearInvoices.reduce((sum, inv) => sum + inv.total, 0),
-        ytdCount: currentYearInvoices.length,
+        revenue: currentYearInvoices.reduce((sum, inv) => sum + inv.total, 0),
+        ytdRevenue: currentYearInvoices.reduce((sum, inv) => sum + inv.total, 0),
+        gigCount: currentYearGigs.length,
+        ytdGigCount: currentYearGigs.length,
+        workDays: currentYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+        ytdWorkDays: currentYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+        newClients: currentYearNewClients.length,
       })
 
       setPreviousYear({
         year: previousYearNum,
-        total: previousYearInvoices.reduce((sum, inv) => sum + inv.total, 0),
-        count: previousYearInvoices.length,
-        ytdTotal: previousYearYTD.reduce((sum, inv) => sum + inv.total, 0),
-        ytdCount: previousYearYTD.length,
+        revenue: previousYearInvoices.reduce((sum, inv) => sum + inv.total, 0),
+        ytdRevenue: previousYearYTDInvoices.reduce((sum, inv) => sum + inv.total, 0),
+        gigCount: previousYearGigs.length,
+        ytdGigCount: previousYearYTDGigs.length,
+        workDays: previousYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+        ytdWorkDays: previousYearYTDGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+        newClients: 0, // Not relevant for comparison
       })
     }
 
@@ -84,31 +105,34 @@ export function YearComparison() {
     return ((current - previous) / previous) * 100
   }
 
-  function ChangeIndicator({ current, previous }: { current: number; previous: number }) {
+  function ChangeIndicator({ current, previous, showAbsolute = false }: { current: number; previous: number; showAbsolute?: boolean }) {
     const change = getChangePercent(current, previous)
+    const diff = current - previous
 
     if (Math.abs(change) < 1) {
       return (
-        <span className="flex items-center text-muted-foreground text-sm">
-          <Minus className="w-4 h-4 mr-1" />
-          Oförändrat
+        <span className="flex items-center text-muted-foreground text-[10px]">
+          <Minus className="w-3 h-3 mr-0.5" />
+          0%
         </span>
       )
     }
 
     if (change > 0) {
       return (
-        <span className="flex items-center text-green-600 text-sm">
-          <TrendingUp className="w-4 h-4 mr-1" />
-          +{change.toFixed(1)}%
+        <span className="flex items-center text-green-600 text-[10px]">
+          <TrendingUp className="w-3 h-3 mr-0.5" />
+          +{change.toFixed(0)}%
+          {showAbsolute && <span className="ml-1 text-green-500">({diff > 0 ? '+' : ''}{diff})</span>}
         </span>
       )
     }
 
     return (
-      <span className="flex items-center text-red-600 text-sm">
-        <TrendingDown className="w-4 h-4 mr-1" />
-        {change.toFixed(1)}%
+      <span className="flex items-center text-red-600 text-[10px]">
+        <TrendingDown className="w-3 h-3 mr-0.5" />
+        {change.toFixed(0)}%
+        {showAbsolute && <span className="ml-1 text-red-500">({diff})</span>}
       </span>
     )
   }
@@ -120,7 +144,7 @@ export function YearComparison() {
           <CardTitle className="text-sm font-medium text-purple-700">Årsjämförelse</CardTitle>
         </CardHeader>
         <CardContent className="pb-3">
-          <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
+          <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
             Laddar...
           </div>
         </CardContent>
@@ -132,51 +156,71 @@ export function YearComparison() {
     <Card className="bg-gradient-to-br from-white to-purple-50/30 border-purple-100/50">
       <CardHeader className="pb-2 pt-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-purple-700">Årsjämförelse</CardTitle>
-          <span className="text-xs text-muted-foreground">{currentYear?.year} vs {previousYear?.year}</span>
+          <CardTitle className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Årsjämförelse
+          </CardTitle>
+          <Link
+            href="/analytics"
+            className="text-xs text-muted-foreground hover:text-purple-600 flex items-center gap-1"
+          >
+            Mer
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
         </div>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {currentYear?.year} vs {previousYear?.year} (YTD)
+        </p>
       </CardHeader>
-      <CardContent className="space-y-3 pb-3">
-        {/* YTD Comparison */}
-        <div className="space-y-1">
-          <h4 className="text-xs font-medium text-muted-foreground">YTD</h4>
-          <div className="flex items-baseline justify-between">
+      <CardContent className="pb-3">
+        <div className="space-y-2">
+          {/* Intäkter */}
+          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-purple-50/50">
             <div>
-              <span className="text-lg font-bold">{currentYear?.ytdTotal.toLocaleString('sv-SE')}</span>
-              <span className="text-xs text-muted-foreground ml-1">kr</span>
+              <span className="text-xs text-muted-foreground">Intäkter</span>
+              <p className="text-sm font-bold">{(currentYear?.ytdRevenue || 0).toLocaleString('sv-SE')} kr</p>
             </div>
             <ChangeIndicator
-              current={currentYear?.ytdTotal || 0}
-              previous={previousYear?.ytdTotal || 0}
+              current={currentYear?.ytdRevenue || 0}
+              previous={previousYear?.ytdRevenue || 0}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            {previousYear?.year}: {previousYear?.ytdTotal.toLocaleString('sv-SE')} kr
-          </p>
-        </div>
 
-        {/* Full Year */}
-        <div className="space-y-1 pt-2 border-t">
-          <h4 className="text-xs font-medium text-muted-foreground">Helår {previousYear?.year}</h4>
-          <p className="text-lg font-bold">
-            {previousYear?.total.toLocaleString('sv-SE')} <span className="text-xs font-normal">kr</span>
-          </p>
-        </div>
-
-        {/* Average */}
-        <div className="space-y-1 pt-2 border-t">
-          <h4 className="text-xs font-medium text-muted-foreground">Snitt/faktura</h4>
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-semibold">
-              {currentYear && currentYear.count > 0
-                ? Math.round(currentYear.ytdTotal / currentYear.ytdCount).toLocaleString('sv-SE')
-                : 0} kr
-            </span>
+          {/* Antal gigs */}
+          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-purple-50/50">
+            <div>
+              <span className="text-xs text-muted-foreground">Antal gigs</span>
+              <p className="text-sm font-bold">{currentYear?.ytdGigCount || 0}</p>
+            </div>
             <ChangeIndicator
-              current={currentYear && currentYear.count > 0 ? currentYear.ytdTotal / currentYear.ytdCount : 0}
-              previous={previousYear && previousYear.count > 0 ? previousYear.total / previousYear.count : 0}
+              current={currentYear?.ytdGigCount || 0}
+              previous={previousYear?.ytdGigCount || 0}
+              showAbsolute
             />
           </div>
+
+          {/* Arbetsdagar */}
+          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-purple-50/50">
+            <div>
+              <span className="text-xs text-muted-foreground">Arbetsdagar</span>
+              <p className="text-sm font-bold">{currentYear?.ytdWorkDays || 0}</p>
+            </div>
+            <ChangeIndicator
+              current={currentYear?.ytdWorkDays || 0}
+              previous={previousYear?.ytdWorkDays || 0}
+              showAbsolute
+            />
+          </div>
+
+          {/* Nya uppdragsgivare */}
+          {(currentYear?.newClients || 0) > 0 && (
+            <div className="pt-1 border-t">
+              <p className="text-xs text-center">
+                <span className="font-semibold text-purple-700">{currentYear?.newClients}</span>
+                <span className="text-muted-foreground"> nya uppdragsgivare i år</span>
+              </p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
