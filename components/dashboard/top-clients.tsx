@@ -61,14 +61,14 @@ export function TopClients() {
   const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0)
 
   return (
-    <Card className="bg-gradient-to-br from-white to-indigo-50/30 border-indigo-100/50">
-      <CardHeader className="pb-2 pt-3">
+    <Card variant="glass" className="border-indigo-500/20">
+      <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-indigo-700">Topp uppdragsgivare</CardTitle>
-          <span className="text-sm font-semibold text-indigo-600">{totalRevenue.toLocaleString('sv-SE')} kr</span>
+          <CardTitle className="text-sm font-medium text-indigo-400">Topp uppdragsgivare</CardTitle>
+          <span className="text-sm font-semibold text-white">{totalRevenue.toLocaleString('sv-SE')} kr</span>
         </div>
       </CardHeader>
-      <CardContent className="pb-3">
+      <CardContent className="pb-4">
         {loading ? (
           <div className="h-[180px] flex items-center justify-center text-muted-foreground text-sm">
             Laddar...
@@ -82,7 +82,7 @@ export function TopClients() {
             >
               <XAxis
                 type="number"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.6)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
@@ -90,7 +90,7 @@ export function TopClients() {
               <YAxis
                 type="category"
                 dataKey="name"
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }}
                 tickLine={false}
                 axisLine={false}
                 width={100}
@@ -99,10 +99,12 @@ export function TopClients() {
               <Tooltip
                 formatter={(value: number) => [`${value.toLocaleString('sv-SE')} kr`, 'Omsättning']}
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
+                  color: '#fff',
                 }}
+                labelStyle={{ color: 'rgba(255,255,255,0.7)' }}
               />
               <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
                 {data.map((_, index) => (

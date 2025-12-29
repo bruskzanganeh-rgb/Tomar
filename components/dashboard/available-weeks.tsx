@@ -111,11 +111,11 @@ export function AvailableWeeks() {
   function getStatusStyle(status: WeekStatus) {
     switch (status) {
       case 'free':
-        return { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: CheckCircle }
+        return { bg: 'bg-emerald-500/15', text: 'text-emerald-400', icon: CheckCircle }
       case 'partial':
-        return { bg: 'bg-amber-50', text: 'text-amber-700', icon: Clock }
+        return { bg: 'bg-amber-500/15', text: 'text-amber-400', icon: Clock }
       case 'busy':
-        return { bg: 'bg-red-50', text: 'text-red-700', icon: AlertCircle }
+        return { bg: 'bg-red-500/15', text: 'text-red-400', icon: AlertCircle }
     }
   }
 
@@ -125,10 +125,10 @@ export function AvailableWeeks() {
   const totalWeeks = weeks.length
 
   return (
-    <Card className="bg-gradient-to-br from-white to-emerald-50/30 border-emerald-100/50 self-start">
-      <CardHeader className="pb-2 pt-3">
+    <Card variant="glass" className="border-emerald-500/20 self-start">
+      <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-emerald-700 flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium text-emerald-400 flex items-center gap-1.5">
             <CalendarCheck className="h-3.5 w-3.5" />
             Tillgänglighet
           </CardTitle>
@@ -136,17 +136,17 @@ export function AvailableWeeks() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 hover:bg-white/10"
               onClick={() => setSelectedYear(y => Math.max(minYear, y - 1))}
               disabled={selectedYear <= minYear}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-xs font-medium min-w-[40px] text-center">{selectedYear}</span>
+            <span className="text-xs font-medium min-w-[40px] text-center text-white">{selectedYear}</span>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 hover:bg-white/10"
               onClick={() => setSelectedYear(y => Math.min(maxYear, y + 1))}
               disabled={selectedYear >= maxYear}
             >
@@ -155,7 +155,7 @@ export function AvailableWeeks() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pb-3">
+      <CardContent className="pb-4">
         {loading ? (
           <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
             Laddar...
@@ -164,17 +164,17 @@ export function AvailableWeeks() {
           <>
             {/* Säsongssammanfattning */}
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="text-center p-2 rounded-lg bg-emerald-50">
-                <p className="text-lg font-bold text-emerald-700">{freeCount}</p>
-                <p className="text-[10px] text-emerald-600">Lediga</p>
+              <div className="text-center p-2 rounded-lg bg-emerald-500/15">
+                <p className="text-lg font-bold text-emerald-400">{freeCount}</p>
+                <p className="text-[10px] text-emerald-300">Lediga</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-amber-50">
-                <p className="text-lg font-bold text-amber-700">{partialCount}</p>
-                <p className="text-[10px] text-amber-600">Delvis</p>
+              <div className="text-center p-2 rounded-lg bg-amber-500/15">
+                <p className="text-lg font-bold text-amber-400">{partialCount}</p>
+                <p className="text-[10px] text-amber-300">Delvis</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-red-50">
-                <p className="text-lg font-bold text-red-700">{busyCount}</p>
-                <p className="text-[10px] text-red-600">Fulla</p>
+              <div className="text-center p-2 rounded-lg bg-red-500/15">
+                <p className="text-lg font-bold text-red-400">{busyCount}</p>
+                <p className="text-[10px] text-red-300">Fulla</p>
               </div>
             </div>
 
@@ -191,15 +191,15 @@ export function AvailableWeeks() {
                   <div
                     key={`${selectedYear}-${index}`}
                     ref={isCurrentWeek ? currentWeekRef : null}
-                    className={`flex items-center justify-between py-1 px-2 rounded-lg text-xs ${style.bg} ${isCurrentWeek ? 'ring-2 ring-emerald-400' : ''}`}
+                    className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${style.bg} hover:bg-white/10 ${isCurrentWeek ? 'ring-1 ring-emerald-400' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       <Icon className={`h-3 w-3 ${style.text}`} />
-                      <span className="font-medium">V{week.weekNumber}</span>
+                      <span className="font-medium text-white">V{week.weekNumber}</span>
                     </div>
                     <Badge
                       variant="secondary"
-                      className={`text-[10px] ${style.text} ${style.bg} border-0`}
+                      className={`text-[10px] ${style.text} bg-transparent border-0`}
                     >
                       {week.status === 'free' ? 'Ledig' :
                        week.status === 'partial' ? `${week.gigDays}d` :
@@ -211,7 +211,7 @@ export function AvailableWeeks() {
             </div>
           </>
         )}
-        <div className="mt-2 pt-2 border-t text-center">
+        <div className="mt-2 pt-2 border-t border-white/10 text-center">
           <p className="text-[10px] text-muted-foreground">
             jan–dec {selectedYear} • {totalWeeks} veckor totalt
           </p>

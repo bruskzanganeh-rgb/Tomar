@@ -120,30 +120,30 @@ export function YearComparison() {
 
     if (change > 0) {
       return (
-        <span className="flex items-center text-green-600 text-[10px]">
+        <span className="flex items-center text-emerald-400 text-[10px]">
           <TrendingUp className="w-3 h-3 mr-0.5" />
           +{change.toFixed(0)}%
-          {showAbsolute && <span className="ml-1 text-green-500">({diff > 0 ? '+' : ''}{diff})</span>}
+          {showAbsolute && <span className="ml-1 text-emerald-300">({diff > 0 ? '+' : ''}{diff})</span>}
         </span>
       )
     }
 
     return (
-      <span className="flex items-center text-red-600 text-[10px]">
+      <span className="flex items-center text-red-400 text-[10px]">
         <TrendingDown className="w-3 h-3 mr-0.5" />
         {change.toFixed(0)}%
-        {showAbsolute && <span className="ml-1 text-red-500">({diff})</span>}
+        {showAbsolute && <span className="ml-1 text-red-300">({diff})</span>}
       </span>
     )
   }
 
   if (loading) {
     return (
-      <Card className="bg-gradient-to-br from-white to-purple-50/30 border-purple-100/50">
-        <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-sm font-medium text-purple-700">Årsjämförelse</CardTitle>
+      <Card variant="glass" className="border-purple-500/20">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-sm font-medium text-purple-400">Årsjämförelse</CardTitle>
         </CardHeader>
-        <CardContent className="pb-3">
+        <CardContent className="pb-4">
           <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
             Laddar...
           </div>
@@ -153,16 +153,16 @@ export function YearComparison() {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-white to-purple-50/30 border-purple-100/50">
-      <CardHeader className="pb-2 pt-3">
+    <Card variant="glass" className="border-purple-500/20">
+      <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium text-purple-400 flex items-center gap-1.5">
             <BarChart3 className="h-3.5 w-3.5" />
             Årsjämförelse
           </CardTitle>
           <Link
             href="/analytics"
-            className="text-xs text-muted-foreground hover:text-purple-600 flex items-center gap-1"
+            className="text-xs text-muted-foreground hover:text-purple-400 flex items-center gap-1 transition-colors"
           >
             Mer
             <ArrowUpRight className="h-3 w-3" />
@@ -172,13 +172,13 @@ export function YearComparison() {
           {currentYear?.year} vs {previousYear?.year} (YTD)
         </p>
       </CardHeader>
-      <CardContent className="pb-3">
+      <CardContent className="pb-4">
         <div className="space-y-2">
           {/* Intäkter */}
-          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-purple-50/50">
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/5">
             <div>
               <span className="text-xs text-muted-foreground">Intäkter</span>
-              <p className="text-sm font-bold">{(currentYear?.ytdRevenue || 0).toLocaleString('sv-SE')} kr</p>
+              <p className="text-sm font-bold text-white">{(currentYear?.ytdRevenue || 0).toLocaleString('sv-SE')} kr</p>
             </div>
             <ChangeIndicator
               current={currentYear?.ytdRevenue || 0}
@@ -187,10 +187,10 @@ export function YearComparison() {
           </div>
 
           {/* Antal gigs */}
-          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-purple-50/50">
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/5">
             <div>
               <span className="text-xs text-muted-foreground">Antal gigs</span>
-              <p className="text-sm font-bold">{currentYear?.ytdGigCount || 0}</p>
+              <p className="text-sm font-bold text-white">{currentYear?.ytdGigCount || 0}</p>
             </div>
             <ChangeIndicator
               current={currentYear?.ytdGigCount || 0}
@@ -200,10 +200,10 @@ export function YearComparison() {
           </div>
 
           {/* Arbetsdagar */}
-          <div className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-purple-50/50">
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/5">
             <div>
               <span className="text-xs text-muted-foreground">Arbetsdagar</span>
-              <p className="text-sm font-bold">{currentYear?.ytdWorkDays || 0}</p>
+              <p className="text-sm font-bold text-white">{currentYear?.ytdWorkDays || 0}</p>
             </div>
             <ChangeIndicator
               current={currentYear?.ytdWorkDays || 0}
@@ -214,9 +214,9 @@ export function YearComparison() {
 
           {/* Nya uppdragsgivare */}
           {(currentYear?.newClients || 0) > 0 && (
-            <div className="pt-1 border-t">
+            <div className="pt-2 border-t border-white/10">
               <p className="text-xs text-center">
-                <span className="font-semibold text-purple-700">{currentYear?.newClients}</span>
+                <span className="font-semibold text-purple-400">{currentYear?.newClients}</span>
                 <span className="text-muted-foreground"> nya uppdragsgivare i år</span>
               </p>
             </div>

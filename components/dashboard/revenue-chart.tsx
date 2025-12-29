@@ -173,39 +173,39 @@ export function RevenueChart() {
   const totalYearRevenue = data.reduce((sum, d) => sum + d.revenue, 0)
 
   return (
-    <Card className="col-span-full bg-gradient-to-br from-white to-blue-50/30 border-blue-100/50">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3">
+    <Card variant="glass" className="col-span-full border-blue-500/20">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4">
         <div className="flex items-center gap-3">
-          <CardTitle className="text-sm font-medium text-blue-700">
+          <CardTitle className="text-sm font-medium text-blue-400">
             {viewMode === 'invoice' ? 'Fakturerat' : 'Arbetat'} {selectedYear}
           </CardTitle>
-          <span className="text-sm font-semibold text-blue-600">{totalYearRevenue.toLocaleString('sv-SE')} kr</span>
+          <span className="text-sm font-semibold text-white">{totalYearRevenue.toLocaleString('sv-SE')} kr</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md border border-blue-200 overflow-hidden">
+          <div className="flex rounded-lg border border-white/20 overflow-hidden">
             <button
               onClick={() => setViewMode('invoice')}
-              className={`px-2 py-1 text-xs transition-colors ${
+              className={`px-3 py-1.5 text-xs transition-colors ${
                 viewMode === 'invoice'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-white text-blue-600 hover:bg-blue-50'
+                  : 'bg-white/5 text-blue-300 hover:bg-white/10'
               }`}
             >
               Fakturerat
             </button>
             <button
               onClick={() => setViewMode('workday')}
-              className={`px-2 py-1 text-xs transition-colors ${
+              className={`px-3 py-1.5 text-xs transition-colors ${
                 viewMode === 'workday'
                   ? 'bg-blue-500 text-white'
-                  : 'bg-white text-blue-600 hover:bg-blue-50'
+                  : 'bg-white/5 text-blue-300 hover:bg-white/10'
               }`}
             >
               Arbetat
             </button>
           </div>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-[70px] h-7 text-xs border-blue-200">
+            <SelectTrigger className="w-[70px] h-7 text-xs border-white/20 bg-white/5">
               <SelectValue placeholder="År" />
             </SelectTrigger>
             <SelectContent>
@@ -216,7 +216,7 @@ export function RevenueChart() {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="pb-3">
+      <CardContent className="pb-4">
         {loading ? (
           <div className="h-[160px] flex items-center justify-center text-muted-foreground">
             Laddar...
@@ -224,16 +224,16 @@ export function RevenueChart() {
         ) : (
           <ResponsiveContainer width="100%" height={160}>
             <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
               <XAxis
                 dataKey="monthName"
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 yAxisId="left"
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
@@ -242,7 +242,7 @@ export function RevenueChart() {
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
@@ -257,16 +257,18 @@ export function RevenueChart() {
                 ]}
                 labelFormatter={(label) => `${label} ${selectedYear}`}
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
                   fontSize: '12px',
+                  color: '#fff',
                 }}
+                labelStyle={{ color: 'rgba(255,255,255,0.7)' }}
               />
               <Bar
                 yAxisId="left"
                 dataKey="revenue"
-                fill="#3b82f6"
+                fill="#60a5fa"
                 radius={[3, 3, 0, 0]}
                 maxBarSize={30}
               />
@@ -274,7 +276,7 @@ export function RevenueChart() {
                 yAxisId="right"
                 type="monotone"
                 dataKey="cumulative"
-                stroke="#10b981"
+                stroke="#34d399"
                 strokeWidth={2}
                 dot={false}
               />

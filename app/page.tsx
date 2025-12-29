@@ -8,11 +8,25 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
+import { motion, type Variants } from 'framer-motion'
 import { RevenueChart } from '@/components/dashboard/revenue-chart'
 import { TopClients } from '@/components/dashboard/top-clients'
 import { YearComparison } from '@/components/dashboard/year-comparison'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { AvailableWeeks } from '@/components/dashboard/available-weeks'
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+}
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+}
 
 type Stats = {
   upcomingRevenue: number
@@ -131,73 +145,98 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-4"
+    >
       {/* Minimal Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Dashboard</h1>
-      </div>
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+          Dashboard
+        </h1>
+      </motion.div>
 
-      {/* Stats Grid - Compact Cards */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Grid - Glass Cards */}
+      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Upcoming Revenue */}
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-emerald-200/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-emerald-700">Kommande intäkter</CardTitle>
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-          </CardHeader>
-          <CardContent className="pb-3 px-4">
-            <div className="text-xl font-bold text-emerald-900">
-              {stats.upcomingRevenue.toLocaleString('sv-SE')} <span className="text-sm font-normal">kr</span>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div whileHover={{ scale: 1.02, y: -2 }} transition={{ duration: 0.2 }}>
+          <Card variant="glass" className="border-emerald-500/20 hover:border-emerald-500/40 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-5">
+              <CardTitle className="text-xs font-medium text-emerald-400">Kommande intäkter</CardTitle>
+              <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="pb-4 px-5">
+              <div className="text-2xl font-bold text-white">
+                {stats.upcomingRevenue.toLocaleString('sv-SE')} <span className="text-sm font-normal text-emerald-300">kr</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Upcoming Gigs */}
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100/30 border-blue-200/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-blue-700">Kommande</CardTitle>
-            <Calendar className="h-3.5 w-3.5 text-blue-600" />
-          </CardHeader>
-          <CardContent className="pb-3 px-4">
-            <div className="text-xl font-bold text-blue-900">
-              {stats.upcomingGigs} <span className="text-sm font-normal">gigs</span>
-            </div>
-            <div className="text-sm text-blue-600">
-              {stats.upcomingDays} dagar
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div whileHover={{ scale: 1.02, y: -2 }} transition={{ duration: 0.2 }}>
+          <Card variant="glass" className="border-blue-500/20 hover:border-blue-500/40 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-5">
+              <CardTitle className="text-xs font-medium text-blue-400">Kommande</CardTitle>
+              <div className="p-1.5 rounded-lg bg-blue-500/20">
+                <Calendar className="h-3.5 w-3.5 text-blue-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="pb-4 px-5">
+              <div className="text-2xl font-bold text-white">
+                {stats.upcomingGigs} <span className="text-sm font-normal text-blue-300">gigs</span>
+              </div>
+              <div className="text-sm text-blue-400">
+                {stats.upcomingDays} dagar
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Total Clients */}
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-100/30 border-purple-200/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-purple-700">Uppdragsgivare</CardTitle>
-            <Users className="h-3.5 w-3.5 text-purple-600" />
-          </CardHeader>
-          <CardContent className="pb-3 px-4">
-            <div className="text-xl font-bold text-purple-900">{stats.totalClients}</div>
-          </CardContent>
-        </Card>
+        <motion.div whileHover={{ scale: 1.02, y: -2 }} transition={{ duration: 0.2 }}>
+          <Card variant="glass" className="border-purple-500/20 hover:border-purple-500/40 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-5">
+              <CardTitle className="text-xs font-medium text-purple-400">Uppdragsgivare</CardTitle>
+              <div className="p-1.5 rounded-lg bg-purple-500/20">
+                <Users className="h-3.5 w-3.5 text-purple-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="pb-4 px-5">
+              <div className="text-2xl font-bold text-white">{stats.totalClients}</div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {/* Unpaid Invoices */}
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-100/30 border-amber-200/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-medium text-amber-700">Obetalda</CardTitle>
-            <FileText className="h-3.5 w-3.5 text-amber-600" />
-          </CardHeader>
-          <CardContent className="pb-3 px-4">
-            <div className="text-xl font-bold text-amber-900">
-              {stats.unpaidInvoices.toLocaleString('sv-SE')} <span className="text-sm font-normal">kr</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div whileHover={{ scale: 1.02, y: -2 }} transition={{ duration: 0.2 }}>
+          <Card variant="glass" className="border-amber-500/20 hover:border-amber-500/40 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-5">
+              <CardTitle className="text-xs font-medium text-amber-400">Obetalda</CardTitle>
+              <div className="p-1.5 rounded-lg bg-amber-500/20">
+                <FileText className="h-3.5 w-3.5 text-amber-400" />
+              </div>
+            </CardHeader>
+            <CardContent className="pb-4 px-5">
+              <div className="text-2xl font-bold text-white">
+                {stats.unpaidInvoices.toLocaleString('sv-SE')} <span className="text-sm font-normal text-amber-300">kr</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* Revenue Chart */}
-      <RevenueChart />
+      <motion.div variants={itemVariants}>
+        <RevenueChart />
+      </motion.div>
 
       {/* Four Column Grid */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Year Comparison */}
         <YearComparison />
 
@@ -208,24 +247,24 @@ export default function DashboardPage() {
         <AvailableWeeks />
 
         {/* Pending Gigs - Kräver svar */}
-        <Card className="bg-gradient-to-br from-white to-amber-50/30 border-amber-100/50">
-          <CardHeader className="pb-2 pt-3">
+        <Card variant="glass" className="border-amber-500/20 self-start">
+          <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-amber-700 flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium text-amber-400 flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Kräver ditt svar
               </CardTitle>
               <span className="text-xs text-muted-foreground">{pendingGigs.length} st</span>
             </div>
           </CardHeader>
-          <CardContent className="pb-3">
+          <CardContent className="pb-4">
             {loading ? (
               <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
                 Laddar...
               </div>
             ) : pendingGigs.length === 0 ? (
               <div className="text-center py-4 text-muted-foreground">
-                <Clock className="h-6 w-6 mx-auto mb-1 text-amber-300" />
+                <Clock className="h-6 w-6 mx-auto mb-1 text-amber-400/50" />
                 <p className="text-xs">Inga väntande förfrågningar!</p>
               </div>
             ) : (
@@ -235,23 +274,23 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={gig.id}
-                      className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs ${deadlineInfo?.urgent ? 'bg-red-50/50' : ''}`}
+                      className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${deadlineInfo?.urgent ? 'bg-red-500/10' : 'bg-white/5 hover:bg-white/10'}`}
                     >
                       <div className="min-w-0 flex-1">
-                        <span className="font-medium truncate block">
+                        <span className="font-medium truncate block text-white">
                           {gig.client?.name || <span className="text-muted-foreground italic">Ej angiven</span>}
                         </span>
                         {deadlineInfo && (
-                          <span className={`text-[10px] ${deadlineInfo.color} px-1 py-0.5 rounded`}>
-                            {deadlineInfo.urgent && '⚠️ '}Svar: {deadlineInfo.label}
+                          <span className={`text-[10px] ${deadlineInfo.urgent ? 'text-red-400' : 'text-muted-foreground'}`}>
+                            Svar: {deadlineInfo.label}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="font-semibold">{gig.fee?.toLocaleString('sv-SE') || '—'} kr</span>
+                        <span className="font-semibold text-white">{gig.fee?.toLocaleString('sv-SE') || '—'} kr</span>
                         <Link
                           href="/gigs"
-                          className="p-1 rounded bg-amber-50 text-amber-600 hover:bg-amber-100"
+                          className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
                         >
                           <ArrowUpRight className="w-3 h-3" />
                         </Link>
@@ -263,10 +302,12 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Top Clients - Full Width */}
-      <TopClients />
-    </div>
+      <motion.div variants={itemVariants}>
+        <TopClients />
+      </motion.div>
+    </motion.div>
   )
 }

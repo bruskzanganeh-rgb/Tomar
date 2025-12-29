@@ -47,15 +47,15 @@ export function UpcomingPayments() {
   function getStatusBadge(daysUntil: number) {
     if (daysUntil < 0) {
       return (
-        <Badge className="bg-red-100 text-red-700 border-red-200">
+        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
           <AlertTriangle className="w-3 h-3 mr-1" />
-          {Math.abs(daysUntil)} dagar sen
+          {Math.abs(daysUntil)}d sen
         </Badge>
       )
     }
     if (daysUntil === 0) {
       return (
-        <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
           <Clock className="w-3 h-3 mr-1" />
           Idag
         </Badge>
@@ -63,16 +63,16 @@ export function UpcomingPayments() {
     }
     if (daysUntil <= 7) {
       return (
-        <Badge className="bg-amber-50 text-amber-600 border-amber-100">
+        <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/20">
           <Clock className="w-3 h-3 mr-1" />
-          {daysUntil} dagar
+          {daysUntil}d
         </Badge>
       )
     }
     return (
-      <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100">
+      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">
         <CheckCircle className="w-3 h-3 mr-1" />
-        {daysUntil} dagar
+        {daysUntil}d
       </Badge>
     )
   }
@@ -80,14 +80,14 @@ export function UpcomingPayments() {
   const totalUnpaid = invoices.reduce((sum, inv) => sum + inv.total, 0)
 
   return (
-    <Card className="bg-gradient-to-br from-white to-amber-50/30 border-amber-100/50">
-      <CardHeader className="pb-2 pt-3">
+    <Card variant="glass" className="border-blue-500/20">
+      <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-amber-700">Obetalda</CardTitle>
-          <span className="text-sm font-semibold text-amber-600">{totalUnpaid.toLocaleString('sv-SE')} kr</span>
+          <CardTitle className="text-sm font-medium text-blue-400">Obetalda</CardTitle>
+          <span className="text-sm font-semibold text-white">{totalUnpaid.toLocaleString('sv-SE')} kr</span>
         </div>
       </CardHeader>
-      <CardContent className="pb-3">
+      <CardContent className="pb-4">
         {loading ? (
           <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
             Laddar...
@@ -104,15 +104,15 @@ export function UpcomingPayments() {
               return (
                 <div
                   key={invoice.id}
-                  className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs ${
-                    daysUntil < 0 ? 'bg-red-50' : ''
+                  className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
+                    daysUntil < 0 ? 'bg-red-500/10' : 'bg-white/5 hover:bg-white/10'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="font-medium truncate block">{invoice.client.name}</span>
+                    <span className="font-medium truncate block text-white">{invoice.client.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-semibold">{invoice.total.toLocaleString('sv-SE')} kr</span>
+                    <span className="font-semibold text-white">{invoice.total.toLocaleString('sv-SE')} kr</span>
                     {getStatusBadge(daysUntil)}
                   </div>
                 </div>
