@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Loader2, Upload, Image, X, Sparkles, AlertCircle, PenLine, AlertTriangle, FileText } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSubscription } from '@/lib/hooks/use-subscription'
 import { GigCombobox } from '@/components/expenses/gig-combobox'
 import { isValidReceiptFile, ALLOWED_RECEIPT_EXTENSIONS, ALLOWED_RECEIPT_TYPES } from '@/lib/upload/file-validation'
 
@@ -29,8 +31,8 @@ type UploadReceiptDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
-  gigId?: string  // Valfri koppling till uppdrag
-  gigTitle?: string  // Visa uppdragsnamn i dialogen
+  gigId?: string
+  gigTitle?: string
 }
 
 type Gig = {
@@ -59,7 +61,7 @@ type DuplicateInfo = {
   amount: number
   category: string | null
   matchType?: 'exact' | 'contains' | 'fuzzy'
-  inputSupplier?: string  // Leverantörsnamnet som användaren angav
+  inputSupplier?: string
 }
 
 const categories = [
@@ -84,6 +86,10 @@ export function UploadReceiptDialog({
   gigId,
   gigTitle,
 }: UploadReceiptDialogProps) {
+  const t = useTranslations('expense')
+  const tc = useTranslations('common')
+  const tt = useTranslations('toast')
+  const { canScanReceipt, limits } = useSubscription()
   const [step, setStep] = useState<'upload' | 'review' | 'saving'>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -183,7 +189,7 @@ export function UploadReceiptDialog({
       supplier: '',
       amount: 0,
       currency: 'SEK',
-      category: 'Resa', // Standard för uppdragsrelaterade kvitton
+      category: 'Resa',
       notes: '',
       confidence: 0,
     })
@@ -192,6 +198,11 @@ export function UploadReceiptDialog({
 
   const handleScan = async () => {
     if (!file) return
+    if (!canScanReceipt) {
+      toast.error(t('scanLimitReached', { limit: limits.receiptScans }))
+      handleSkipAI()
+      return
+    }
 
     setScanning(true)
     setError(null)
@@ -208,7 +219,7 @@ export function UploadReceiptDialog({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte skanna kvitto')
+        throw new Error(result.error || t('couldNotScanReceipt'))
       }
 
       setFormData({
@@ -221,10 +232,17 @@ export function UploadReceiptDialog({
         confidence: result.data.confidence,
       })
 
+      // Track usage
+      fetch('/api/usage/increment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'receipt_scan' }),
+      }).catch(() => {})
+
       setStep('review')
     } catch (err) {
       // Vid AI-fel, erbjud manuell inmatning istället
-      setError('AI kunde inte läsa kvittot. Du kan fylla i uppgifterna manuellt.')
+      setError(t('aiCouldNotReadReceipt'))
       handleSkipAI()
     } finally {
       setScanning(false)
@@ -245,7 +263,7 @@ export function UploadReceiptDialog({
       formDataToSend.append('supplier', formData.supplier)
       formDataToSend.append('amount', formData.amount.toString())
       formDataToSend.append('currency', formData.currency)
-      formDataToSend.append('amount_sek', formData.amount.toString()) // TODO: Valutakonvertering
+      formDataToSend.append('amount_base', formData.amount.toString()) // TODO: Valutakonvertering
       formDataToSend.append('category', formData.category)
       formDataToSend.append('notes', formData.notes || '')
       if (selectedGigId && selectedGigId !== 'none') {
@@ -267,14 +285,14 @@ export function UploadReceiptDialog({
         setDuplicateWarning({
           ...result.existingExpense,
           matchType: result.matchType,
-          inputSupplier: formData.supplier,  // Spara vad användaren angav
+          inputSupplier: formData.supplier,
         })
         setSaving(false)
         return
       }
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte spara utgift')
+        throw new Error(result.error || tt('couldNotSaveExpense'))
       }
 
       // Reset och stäng
@@ -282,7 +300,7 @@ export function UploadReceiptDialog({
       onSuccess()
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ett fel uppstod')
+      setError(err instanceof Error ? err.message : tt('genericError'))
     } finally {
       setSaving(false)
     }
@@ -318,13 +336,13 @@ export function UploadReceiptDialog({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {step === 'upload' ? 'Ladda upp kvitto' : 'Granska och spara'}
+            {step === 'upload' ? t('uploadReceipt') : t('reviewAndSave')}
             {gigTitle && <span className="text-muted-foreground font-normal text-base ml-2">– {gigTitle}</span>}
           </DialogTitle>
           <DialogDescription>
             {step === 'upload'
-              ? 'Ladda upp en bild på kvittot. Du kan skanna med AI eller fylla i manuellt.'
-              : 'Granska informationen och justera vid behov.'}
+              ? t('uploadReceiptDescription')
+              : t('reviewDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -342,18 +360,18 @@ export function UploadReceiptDialog({
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800">
                   {duplicateWarning.matchType === 'exact'
-                    ? 'Dublett hittad'
-                    : 'Möjlig dublett hittad'}
+                    ? t('duplicateFound')
+                    : t('possibleDuplicateFound')}
                 </p>
                 <p className="text-sm text-amber-700 mt-1">
-                  En liknande utgift finns redan: <strong>{duplicateWarning.supplier}</strong> - {duplicateWarning.amount.toLocaleString('sv-SE')} kr ({duplicateWarning.date})
+                  {t('similarExpenseExists')}: <strong>{duplicateWarning.supplier}</strong> - {duplicateWarning.amount.toLocaleString('sv-SE')} {tc('kr')} ({duplicateWarning.date})
                   {duplicateWarning.category && ` [${duplicateWarning.category}]`}
                 </p>
                 {duplicateWarning.matchType && duplicateWarning.matchType !== 'exact' &&
                  duplicateWarning.inputSupplier &&
                  duplicateWarning.inputSupplier.toLowerCase() !== duplicateWarning.supplier.toLowerCase() && (
                   <p className="text-xs text-amber-600 mt-1">
-                    Du angav: &quot;{duplicateWarning.inputSupplier}&quot; → matchad med &quot;{duplicateWarning.supplier}&quot;
+                    {t('youEntered')}: &quot;{duplicateWarning.inputSupplier}&quot; → {t('matchedWith')}: &quot;{duplicateWarning.supplier}&quot;
                   </p>
                 )}
                 <div className="flex gap-2 mt-3">
@@ -362,7 +380,7 @@ export function UploadReceiptDialog({
                     variant="outline"
                     onClick={() => setDuplicateWarning(null)}
                   >
-                    Avbryt
+                    {tc('cancel')}
                   </Button>
                   <Button
                     size="sm"
@@ -373,7 +391,7 @@ export function UploadReceiptDialog({
                     {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-1" />
                     ) : null}
-                    Spara ändå
+                    {t('saveAnyway')}
                   </Button>
                 </div>
               </div>
@@ -399,13 +417,13 @@ export function UploadReceiptDialog({
                   {preview ? (
                     <img
                       src={preview}
-                      alt="Kvitto"
+                      alt={t('receipt')}
                       className="max-h-48 mx-auto rounded-lg shadow-sm"
                     />
                   ) : (
                     <div className="flex flex-col items-center">
                       <FileText className="h-16 w-16 text-red-500" />
-                      <p className="text-sm text-gray-500 mt-2">PDF-fil</p>
+                      <p className="text-sm text-gray-500 mt-2">{t('pdfFile')}</p>
                     </div>
                   )}
                   <p className="text-sm text-green-600 font-medium">{file?.name}</p>
@@ -420,7 +438,7 @@ export function UploadReceiptDialog({
                     }}
                   >
                     <X className="h-4 w-4 mr-1" />
-                    Ta bort
+                    {tc('remove')}
                   </Button>
                 </div>
               ) : (
@@ -429,10 +447,10 @@ export function UploadReceiptDialog({
                     <Image className="h-6 w-6 text-gray-400" />
                   </div>
                   <p className="text-sm text-gray-600">
-                    Dra och släpp en bild här, eller klicka för att välja
+                    {t('dragAndDropOrClick')}
                   </p>
                   <p className="text-xs text-gray-400">
-                    PDF, JPEG, PNG, WebP upp till 10MB
+                    {t('fileFormats')}
                   </p>
                 </div>
               )}
@@ -456,7 +474,7 @@ export function UploadReceiptDialog({
                 {preview ? (
                   <img
                     src={preview}
-                    alt="Kvitto"
+                    alt={t('receipt')}
                     className="w-20 h-20 object-cover rounded-lg border"
                   />
                 ) : (
@@ -468,7 +486,7 @@ export function UploadReceiptDialog({
                   <p className="text-sm text-gray-600">{file?.name}</p>
                   {formData.confidence > 0 && (
                     <p className="text-xs text-gray-400 mt-1">
-                      AI-säkerhet: {Math.round(formData.confidence * 100)}%
+                      {t('aiConfidence')}: {Math.round(formData.confidence * 100)}%
                     </p>
                   )}
                 </div>
@@ -478,7 +496,7 @@ export function UploadReceiptDialog({
             {/* Form fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date">Datum</Label>
+                <Label htmlFor="date">{t('date')}</Label>
                 <Input
                   id="date"
                   type="date"
@@ -488,7 +506,7 @@ export function UploadReceiptDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="supplier">Leverantör</Label>
+                <Label htmlFor="supplier">{t('supplier')}</Label>
                 <Input
                   id="supplier"
                   value={formData.supplier}
@@ -498,7 +516,7 @@ export function UploadReceiptDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount">Belopp</Label>
+                <Label htmlFor="amount">{t('amount')}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -509,7 +527,7 @@ export function UploadReceiptDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="currency">Valuta</Label>
+                <Label htmlFor="currency">{t('currency')}</Label>
                 <Select
                   value={formData.currency}
                   onValueChange={(value) => setFormData({ ...formData, currency: value })}
@@ -526,7 +544,7 @@ export function UploadReceiptDialog({
               </div>
 
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="category">Kategori</Label>
+                <Label htmlFor="category">{t('category')}</Label>
                 <Select
                   value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
@@ -543,26 +561,26 @@ export function UploadReceiptDialog({
               </div>
 
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="notes">Anteckningar</Label>
+                <Label htmlFor="notes">{t('notes')}</Label>
                 <Input
                   id="notes"
                   value={formData.notes || ''}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Valfri beskrivning"
+                  placeholder={t('optionalDescription')}
                 />
               </div>
 
               {/* Visa uppdragsval om inte redan kopplat via prop */}
               {!gigId && (
                 <div className="col-span-2 space-y-2">
-                  <Label>Koppla till uppdrag</Label>
+                  <Label>{t('linkToGig')}</Label>
                   <GigCombobox
                     gigs={gigs}
                     value={selectedGigId}
                     onValueChange={setSelectedGigId}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Valfritt - koppla kvittot till ett uppdrag
+                    {t('optionalLinkReceiptToGig')}
                   </p>
                 </div>
               )}
@@ -574,23 +592,23 @@ export function UploadReceiptDialog({
           {step === 'upload' && (
             <div className="flex gap-2 w-full justify-between">
               <Button variant="outline" onClick={() => handleClose(false)}>
-                Avbryt
+                {tc('cancel')}
               </Button>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleSkipAI} disabled={!file || scanning}>
                   <PenLine className="mr-2 h-4 w-4" />
-                  Manuell inmatning
+                  {t('manualEntry')}
                 </Button>
                 <Button onClick={handleScan} disabled={!file || scanning}>
                   {scanning ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Läser kvitto...
+                      {t('scanningReceipt')}
                     </>
                   ) : (
                     <>
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Skanna med AI
+                      {t('scanWithAI')}
                     </>
                   )}
                 </Button>
@@ -601,18 +619,18 @@ export function UploadReceiptDialog({
           {step === 'review' && (
             <>
               <Button variant="outline" onClick={() => setStep('upload')}>
-                Tillbaka
+                {tc('back')}
               </Button>
               <Button onClick={() => handleSave()} disabled={saving || !formData.supplier}>
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sparar...
+                    {t('saving')}
                   </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    Spara utgift
+                    {t('saveExpense')}
                   </>
                 )}
               </Button>

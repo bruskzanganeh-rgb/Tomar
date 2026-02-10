@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateInvoicePdf } from '@/lib/pdf/generator'
+import { logActivity } from '@/lib/activity'
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +22,10 @@ export async function GET(
         vat_rate,
         vat_amount,
         total,
-        client:clients(name, org_number, address)
+        currency,
+        reference_person_override,
+        notes,
+        client:clients(name, org_number, address, payment_terms, reference_person, invoice_language)
       `)
       .eq('id', id)
       .single()
@@ -36,7 +40,7 @@ export async function GET(
     // Fetch company settings
     const { data: company, error: companyError } = await supabase
       .from('company_settings')
-      .select('company_name, org_number, address, email, phone, bank_account, logo_url')
+      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
       .single()
 
     if (companyError || !company) {
@@ -49,11 +53,76 @@ export async function GET(
     // Fetch invoice lines if they exist
     const { data: lines } = await supabase
       .from('invoice_lines')
-      .select('description, amount, is_vat_exempt')
+      .select('description, amount, vat_rate')
       .eq('invoice_id', id)
       .order('sort_order')
 
     // Generate PDF
+    const clientData = invoice.client as unknown as {
+      name: string
+      org_number: string | null
+      address: string | null
+      payment_terms: number
+      reference_person: string | null
+      invoice_language: string | null
+    }
+
+    // Check subscription for branding
+    const { data: { user } } = await supabase.auth.getUser()
+    let showBranding = true
+    let sponsor = null
+
+    if (user) {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('plan, status')
+        .eq('user_id', user.id)
+        .single()
+
+      const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+      showBranding = !isPro
+
+      // Find sponsor if free user
+      if (!isPro) {
+        const { data: userInstruments } = await supabase
+          .from('user_instruments')
+          .select('instrument_id, instrument:instruments(category_id)')
+          .eq('user_id', user.id)
+
+        const categoryIds = (userInstruments || [])
+          .map((ui: any) => ui.instrument?.category_id)
+          .filter(Boolean)
+
+        if (categoryIds.length > 0) {
+          const { data: sponsors } = await supabase
+            .from('sponsors')
+            .select('id, name, logo_url, tagline')
+            .in('instrument_category_id', categoryIds)
+            .eq('active', true)
+            .order('priority', { ascending: false })
+            .limit(1)
+
+          if (sponsors && sponsors.length > 0) {
+            sponsor = sponsors[0]
+
+            // Track impression
+            await supabase.from('sponsor_impressions').insert({
+              sponsor_id: sponsor.id,
+              user_id: user.id,
+              invoice_id: id,
+            })
+          }
+        }
+      }
+    }
+
+    // Fetch branding name from platform config
+    const { data: brandingConfig } = await supabase
+      .from('platform_config')
+      .select('value')
+      .eq('key', 'branding_name')
+      .single()
+
     const pdfBuffer = await generateInvoicePdf({
       invoice: {
         invoice_number: invoice.invoice_number,
@@ -63,11 +132,29 @@ export async function GET(
         vat_rate: invoice.vat_rate,
         vat_amount: invoice.vat_amount,
         total: invoice.total,
+        reference_person_override: invoice.reference_person_override,
+        notes: invoice.notes,
       },
-      client: invoice.client as unknown as { name: string; org_number: string | null; address: string | null },
+      client: clientData,
       company,
       lines: lines || undefined,
+      currency: (invoice as any).currency || 'SEK',
+      showBranding,
+      sponsor,
+      locale: clientData.invoice_language || 'sv',
+      brandingName: brandingConfig?.value || 'Babalisk Manager',
     })
+
+    // Log activity
+    if (user) {
+      await logActivity({
+        userId: user.id,
+        eventType: 'invoice_downloaded',
+        entityType: 'invoice',
+        entityId: id,
+        metadata: { invoice_number: invoice.invoice_number },
+      })
+    }
 
     // Return PDF
     return new NextResponse(new Uint8Array(pdfBuffer), {

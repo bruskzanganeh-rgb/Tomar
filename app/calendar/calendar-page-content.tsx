@@ -38,14 +38,7 @@ export function CalendarPageContent() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Kalender</h1>
-        <p className="text-muted-foreground">
-          Överblick över dina uppdrag och tillgänglighet
-        </p>
-      </div>
-
+    <div>
       <Tabs value={currentTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="calendar" className="gap-2">
@@ -58,13 +51,13 @@ export function CalendarPageContent() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-3">
           <Suspense fallback={<TabSkeleton />}>
             <CalendarTab />
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="availability" className="mt-6">
+        <TabsContent value="availability" className="mt-3">
           <Suspense fallback={<TabSkeleton />}>
             <AvailabilityTab />
           </Suspense>

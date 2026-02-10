@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Dialog,
   DialogContent,
@@ -31,7 +32,7 @@ type Expense = {
   supplier: string
   amount: number
   currency: string | null
-  amount_sek: number | null
+  amount_base: number | null
   category: string | null
   notes: string | null
   attachment_url: string | null
@@ -84,6 +85,10 @@ export function EditExpenseDialog({
   onSuccess,
   gigs,
 }: EditExpenseDialogProps) {
+  const t = useTranslations('expense')
+  const tc = useTranslations('common')
+  const tt = useTranslations('toast')
+  const tg = useTranslations('gig')
   const [saving, setSaving] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -144,7 +149,6 @@ export function EditExpenseDialog({
         const data = await response.json()
         setAttachmentUrl(data.url)
       } else {
-        // Kunde inte ladda - kanske bucket är tom eller fil saknas
         setAttachmentUrl(null)
       }
     } catch (error) {
@@ -171,14 +175,14 @@ export function EditExpenseDialog({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte ladda upp')
+        throw new Error(result.error || tt('couldNotUpload'))
       }
 
       setAttachmentUrl(result.url)
       setHasAttachment(true)
-      toast.success('Kvittobild uppladdad')
+      toast.success(tt('receiptUploaded'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ett fel uppstod')
+      toast.error(error instanceof Error ? error.message : tt('genericError'))
     } finally {
       setUploadingAttachment(false)
     }
@@ -196,14 +200,14 @@ export function EditExpenseDialog({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte ta bort')
+        throw new Error(result.error || tt('couldNotDelete'))
       }
 
       setAttachmentUrl(null)
       setHasAttachment(false)
-      toast.success('Kvittobild borttagen')
+      toast.success(tt('receiptDeleted'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ett fel uppstod')
+      toast.error(error instanceof Error ? error.message : tt('genericError'))
     } finally {
       setUploadingAttachment(false)
     }
@@ -238,7 +242,7 @@ export function EditExpenseDialog({
           supplier: formData.supplier,
           amount: formData.amount,
           currency: formData.currency,
-          amount_sek: formData.currency === 'SEK' ? formData.amount : expense.amount_sek,
+          amount_base: formData.currency === 'SEK' ? formData.amount : expense.amount_base,
           category: formData.category,
           notes: formData.notes || null,
           gig_id: formData.gig_id === 'none' ? null : formData.gig_id,
@@ -248,14 +252,14 @@ export function EditExpenseDialog({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte spara')
+        throw new Error(result.error || tt('couldNotSave'))
       }
 
-      toast.success('Utgift uppdaterad')
+      toast.success(tt('expenseUpdated'))
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ett fel uppstod')
+      toast.error(error instanceof Error ? error.message : tt('genericError'))
     } finally {
       setSaving(false)
     }
@@ -274,14 +278,14 @@ export function EditExpenseDialog({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte ta bort')
+        throw new Error(result.error || tt('couldNotDelete'))
       }
 
-      toast.success('Utgift borttagen')
+      toast.success(tt('expenseDeleted'))
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ett fel uppstod')
+      toast.error(error instanceof Error ? error.message : tt('genericError'))
     } finally {
       setDeleting(false)
       setDeleteConfirmOpen(false)
@@ -295,9 +299,9 @@ export function EditExpenseDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[1100px]">
           <DialogHeader>
-            <DialogTitle>Redigera utgift</DialogTitle>
+            <DialogTitle>{t('editExpense')}</DialogTitle>
             <DialogDescription>
-              Ändra information för denna utgift
+              {t('editExpenseDescription')}
             </DialogDescription>
           </DialogHeader>
 
@@ -305,19 +309,19 @@ export function EditExpenseDialog({
           <div className="flex gap-6">
             {/* Vänster kolumn: Kvittobild */}
             <div className="w-40 shrink-0 space-y-3">
-              <Label className="text-sm font-medium">Kvittobild</Label>
+              <Label className="text-sm font-medium">{t('receiptImage')}</Label>
 
               {attachmentLoading ? (
                 <div className="flex flex-col items-center justify-center h-56 text-sm text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mb-2" />
-                  Laddar...
+                  {tc('loading')}
                 </div>
               ) : hasAttachment && attachmentUrl ? (
                 <div className="space-y-2">
                   <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
                     <img
                       src={attachmentUrl}
-                      alt="Kvitto"
+                      alt={t('receipt')}
                       className="w-full h-56 object-cover rounded-lg border shadow-sm hover:opacity-90 transition-opacity"
                     />
                   </a>
@@ -334,7 +338,7 @@ export function EditExpenseDialog({
                       ) : (
                         <>
                           <Upload className="h-3 w-3 mr-1" />
-                          Byt
+                          {t('replace')}
                         </>
                       )}
                     </Button>
@@ -352,7 +356,7 @@ export function EditExpenseDialog({
               ) : hasAttachment && !attachmentUrl ? (
                 <div className="space-y-2">
                   <div className="w-full h-56 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 flex items-center justify-center">
-                    <p className="text-xs text-amber-600 text-center px-2">Kunde inte laddas</p>
+                    <p className="text-xs text-amber-600 text-center px-2">{t('couldNotLoad')}</p>
                   </div>
                   <Button
                     variant="outline"
@@ -366,7 +370,7 @@ export function EditExpenseDialog({
                     ) : (
                       <>
                         <Upload className="h-3 w-3 mr-1" />
-                        Ladda upp
+                        {tc('upload')}
                       </>
                     )}
                   </Button>
@@ -378,7 +382,7 @@ export function EditExpenseDialog({
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Image className="h-8 w-8 text-gray-300 mb-2" />
-                    <p className="text-xs text-gray-400">Ingen bild</p>
+                    <p className="text-xs text-gray-400">{t('noImage')}</p>
                   </div>
                   <Button
                     variant="outline"
@@ -392,7 +396,7 @@ export function EditExpenseDialog({
                     ) : (
                       <>
                         <Upload className="h-3 w-3 mr-1" />
-                        Ladda upp
+                        {tc('upload')}
                       </>
                     )}
                   </Button>
@@ -411,7 +415,7 @@ export function EditExpenseDialog({
             {/* Mitten kolumn: Formulärfält */}
             <div className="w-64 shrink-0 space-y-3">
               <div className="space-y-1">
-                <Label htmlFor="date">Datum</Label>
+                <Label htmlFor="date">{t('date')}</Label>
                 <Input
                   id="date"
                   type="date"
@@ -421,7 +425,7 @@ export function EditExpenseDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="supplier">Leverantör</Label>
+                <Label htmlFor="supplier">{t('supplier')}</Label>
                 <Input
                   id="supplier"
                   value={formData.supplier}
@@ -431,7 +435,7 @@ export function EditExpenseDialog({
 
               <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
-                  <Label htmlFor="amount">Belopp</Label>
+                  <Label htmlFor="amount">{t('amount')}</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -441,7 +445,7 @@ export function EditExpenseDialog({
                   />
                 </div>
                 <div className="w-24 space-y-1">
-                  <Label htmlFor="currency">Valuta</Label>
+                  <Label htmlFor="currency">{t('currency')}</Label>
                   <Select
                     value={formData.currency}
                     onValueChange={(value) => setFormData({ ...formData, currency: value })}
@@ -459,7 +463,7 @@ export function EditExpenseDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="category">Kategori</Label>
+                <Label htmlFor="category">{t('category')}</Label>
                 <Select
                   value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
@@ -476,26 +480,26 @@ export function EditExpenseDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="notes">Anteckningar</Label>
+                <Label htmlFor="notes">{t('notes')}</Label>
                 <Input
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Valfri beskrivning"
+                  placeholder={t('optionalDescription')}
                 />
               </div>
             </div>
 
             {/* Höger kolumn: Uppdragsväljare */}
             <div className="flex-1 space-y-2">
-              <Label>Uppdrag</Label>
+              <Label>{t('gig')}</Label>
               <GigCombobox
                 gigs={gigs}
                 value={formData.gig_id}
                 onValueChange={(value) => setFormData({ ...formData, gig_id: value })}
               />
               <p className="text-xs text-muted-foreground">
-                Koppla utgiften till ett uppdrag för att kunna fakturera den.
+                {t('linkExpenseToGigHint')}
               </p>
             </div>
           </div>
@@ -508,20 +512,20 @@ export function EditExpenseDialog({
               disabled={saving || deleting}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              Ta bort
+              {tc('delete')}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                Avbryt
+                {tc('cancel')}
               </Button>
               <Button onClick={handleSave} disabled={saving || !formData.supplier}>
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sparar...
+                    {t('saving')}
                   </>
                 ) : (
-                  'Spara'
+                  tc('save')
                 )}
               </Button>
             </div>
@@ -532,9 +536,9 @@ export function EditExpenseDialog({
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Ta bort utgift"
-        description="Är du säker på att du vill ta bort denna utgift? Detta går inte att ångra."
-        confirmLabel={deleting ? 'Tar bort...' : 'Ta bort'}
+        title={t('deleteExpense')}
+        description={t('deleteExpenseConfirm')}
+        confirmLabel={deleting ? t('deleting') : tc('delete')}
         variant="destructive"
         onConfirm={handleDelete}
       />

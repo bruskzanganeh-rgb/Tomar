@@ -4,9 +4,18 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
-import { EditGigDialog } from '@/components/gigs/edit-gig-dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, MapPin, Pencil, Edit, Trash2, Receipt } from 'lucide-react'
+import { GigDialog } from '@/components/gigs/gig-dialog'
+import { GigAttachments } from '@/components/gigs/gig-attachments'
+import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 type Gig = {
   id: string
@@ -18,15 +27,25 @@ type Gig = {
   fee: number | null
   travel_expense: number | null
   project_name: string | null
-  conductor: string | null
   status: string
   notes: string | null
-  client_id: string
+  client_id: string | null
   gig_type_id: string
-  client: { name: string }
-  gig_type: { name: string; color: string | null }
+  position_id: string | null
+  client: { name: string; payment_terms: number } | null
+  gig_type: { name: string; color: string | null; vat_rate: number } | null
+  position: { name: string } | null
   gig_dates: { date: string }[]
-  gig_works: { work: { title: string; composer: string; catalog_number: string | null } }[]
+}
+
+type GigExpense = {
+  id: string
+  date: string
+  supplier: string
+  amount: number
+  currency: string | null
+  category: string | null
+  attachment_url: string | null
 }
 
 // Helper function to format date as local YYYY-MM-DD (avoids timezone issues with toISOString)
@@ -46,28 +65,52 @@ const statusColors: Record<string, string> = {
   paid: 'bg-green-800',
 }
 
-const statusLabels: Record<string, string> = {
-  pending: 'Väntar',
-  accepted: 'Accepterat',
-  declined: 'Avböjt',
-  completed: 'Genomfört',
-  invoiced: 'Fakturerat',
-  paid: 'Betalt',
+const statusConfigColors: Record<string, string> = {
+  tentative: 'bg-orange-100 text-orange-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  accepted: 'bg-green-100 text-green-800',
+  declined: 'bg-red-100 text-red-800',
+  completed: 'bg-blue-100 text-blue-800',
+  invoiced: 'bg-purple-100 text-purple-800',
+  paid: 'bg-green-200 text-green-900',
 }
 
 type ViewMode = 'month' | 'year'
 
 export default function CalendarPage() {
+  const t = useTranslations('calendar')
+  const tc = useTranslations('common')
+  const tGig = useTranslations('gig')
+  const tStatus = useTranslations('status')
+  const tToast = useTranslations('toast')
+  const dateLocale = useDateLocale()
+  const formatLocale = useFormatLocale()
+
   const [gigs, setGigs] = useState<Gig[]>([])
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('month')
+  const [editingGig, setEditingGig] = useState<Gig | null>(null)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesText, setNotesText] = useState('')
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false)
+  const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [gigToDelete, setGigToDelete] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
     loadGigs()
   }, [])
+
+  useEffect(() => {
+    if (selectedGig) {
+      loadGigExpenses(selectedGig.id)
+    } else {
+      setGigExpenses([])
+    }
+  }, [selectedGig?.id])
 
   async function loadGigs() {
     setLoading(true)
@@ -75,10 +118,10 @@ export default function CalendarPage() {
       .from('gigs')
       .select(`
         *,
-        client:clients(name),
-        gig_type:gig_types(name, color),
-        gig_dates(date),
-        gig_works(work:works(title, composer, catalog_number))
+        client:clients(name, payment_terms),
+        gig_type:gig_types(name, color, vat_rate),
+        position:positions(name),
+        gig_dates(date)
       `)
       .order('date', { ascending: true })
 
@@ -88,6 +131,57 @@ export default function CalendarPage() {
       setGigs(data || [])
     }
     setLoading(false)
+  }
+
+  async function loadGigExpenses(gigId: string) {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('id, date, supplier, amount, currency, category, attachment_url')
+      .eq('gig_id', gigId)
+      .order('date', { ascending: false })
+
+    if (error) {
+      console.error('Error loading gig expenses:', error)
+    } else {
+      setGigExpenses(data || [])
+    }
+  }
+
+  async function saveNotes(id: string, notes: string) {
+    const { error } = await supabase
+      .from('gigs')
+      .update({ notes: notes || null })
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error saving notes:', error)
+      toast.error(tToast('notesError'))
+    } else {
+      setGigs(gigs.map(g => g.id === id ? { ...g, notes: notes || null } : g))
+      if (selectedGig?.id === id) {
+        setSelectedGig({ ...selectedGig, notes: notes || null })
+      }
+      setEditingNotes(false)
+    }
+  }
+
+  function confirmDeleteGig(id: string) {
+    setGigToDelete(id)
+    setDeleteConfirmOpen(true)
+  }
+
+  async function deleteGig(id: string) {
+    const { error } = await supabase
+      .from('gigs')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting gig:', error)
+      toast.error(tToast('deleteGigError'))
+    } else {
+      loadGigs()
+    }
   }
 
   // Get days in month
@@ -140,14 +234,12 @@ export default function CalendarPage() {
   // Get gigs for a specific month (for year view)
   function getGigsForMonth(year: number, month: number): Gig[] {
     return gigs.filter(gig => {
-      // If gig has specific dates in gig_dates, check if any fall in this month
       if (gig.gig_dates && gig.gig_dates.length > 0) {
         return gig.gig_dates.some(gd => {
-          const d = new Date(gd.date + 'T12:00:00') // Add noon to avoid timezone issues
+          const d = new Date(gd.date + 'T12:00:00')
           return d.getFullYear() === year && d.getMonth() === month
         })
       }
-      // Fallback for single day gig without gig_dates
       const gigDate = new Date(gig.date)
       return gigDate.getFullYear() === year && gigDate.getMonth() === month
     })
@@ -164,27 +256,27 @@ export default function CalendarPage() {
   const daysInMonth = getDaysInMonth(year, month)
   const firstDayOfMonth = getFirstDayOfMonth(year, month)
 
-  const monthNames = [
-    'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
-    'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
-  ]
+  const monthNames = Array.from({ length: 12 }, (_, i) =>
+    format(new Date(2024, i, 1), 'LLLL', { locale: dateLocale })
+  )
 
-  const dayNames = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
+  const dayNames = Array.from({ length: 7 }, (_, i) => {
+    // Monday=0 .. Sunday=6 → 2024-01-01 is a Monday
+    const d = new Date(2024, 0, 1 + i)
+    return format(d, 'EEE', { locale: dateLocale })
+  })
 
   // Generate calendar days
   const calendarDays: (number | null)[] = []
 
-  // Add empty cells for days before the first day of month
   for (let i = 0; i < firstDayOfMonth; i++) {
     calendarDays.push(null)
   }
 
-  // Add days of month
   for (let day = 1; day <= daysInMonth; day++) {
     calendarDays.push(day)
   }
 
-  // Check if date is today
   function isToday(day: number): boolean {
     const today = new Date()
     return (
@@ -195,68 +287,60 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kalender</h1>
-          <p className="text-muted-foreground">
-            Översikt över alla bokade uppdrag
-          </p>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-sm">
-        {Object.entries(statusLabels).map(([status, label]) => (
-          <div key={status} className="flex items-center gap-2">
-            <div className={cn('w-3 h-3 rounded-full', statusColors[status])} />
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
-
+    <div className="space-y-2">
       <Card>
-        <CardHeader>
+        <CardHeader className="py-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              {viewMode === 'year' ? year : `${monthNames[month]} ${year}`}
-            </CardTitle>
+            <div className="flex items-center gap-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CalendarIcon className="h-5 w-5" />
+                {viewMode === 'year' ? year : `${monthNames[month]} ${year}`}
+              </CardTitle>
+              {/* Compact legend */}
+              <div className="hidden md:flex items-center gap-3 text-xs text-muted-foreground">
+                {Object.entries(statusColors).map(([status, color]) => (
+                  <div key={status} className="flex items-center gap-1">
+                    <div className={cn('w-2 h-2 rounded-full', color)} />
+                    <span>{tStatus(status)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg border overflow-hidden">
                 <Button
                   variant={viewMode === 'month' ? 'default' : 'ghost'}
                   size="sm"
-                  className="rounded-none"
+                  className="rounded-none h-8"
                   onClick={() => setViewMode('month')}
                 >
-                  Månad
+                  {t('monthView')}
                 </Button>
                 <Button
                   variant={viewMode === 'year' ? 'default' : 'ghost'}
                   size="sm"
-                  className="rounded-none"
+                  className="rounded-none h-8"
                   onClick={() => setViewMode('year')}
                 >
-                  År
+                  {t('yearView')}
                 </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={goToToday}>
-                Idag
+              <Button variant="outline" size="sm" className="h-8" onClick={goToToday}>
+                {t('today')}
               </Button>
-              <Button variant="outline" size="icon" onClick={previous}>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={previous}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={next}>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={next}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Laddar...
+              {tc('loading')}
             </div>
           ) : viewMode === 'year' ? (
             /* Year View */
@@ -281,10 +365,10 @@ export default function CalendarPage() {
                       {monthName}
                     </h3>
                     {monthGigs.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Inga uppdrag</p>
+                      <p className="text-sm text-muted-foreground">{t('noGigs')}</p>
                     ) : (
                       <div className="space-y-1">
-                        <p className="text-sm font-medium">{monthGigs.length} uppdrag</p>
+                        <p className="text-sm font-medium">{t('gigCount', { count: monthGigs.length })}</p>
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(
                             monthGigs.reduce((acc, gig) => {
@@ -298,7 +382,7 @@ export default function CalendarPage() {
                                 'w-5 h-5 rounded-full flex items-center justify-center text-xs text-white font-medium',
                                 statusColors[status]
                               )}
-                              title={`${statusLabels[status]}: ${count}`}
+                              title={`${tStatus(status)}: ${count}`}
                             >
                               {count}
                             </div>
@@ -317,7 +401,7 @@ export default function CalendarPage() {
               {dayNames.map(day => (
                 <div
                   key={day}
-                  className="text-center text-sm font-medium text-muted-foreground py-2"
+                  className="text-center text-xs font-medium text-muted-foreground py-1"
                 >
                   {day}
                 </div>
@@ -326,7 +410,7 @@ export default function CalendarPage() {
               {/* Calendar days */}
               {calendarDays.map((day, index) => {
                 if (day === null) {
-                  return <div key={`empty-${index}`} className="min-h-24 bg-gray-50" />
+                  return <div key={`empty-${index}`} className="min-h-20 bg-gray-50" />
                 }
 
                 const date = new Date(year, month, day)
@@ -337,34 +421,37 @@ export default function CalendarPage() {
                   <div
                     key={day}
                     className={cn(
-                      'min-h-24 border rounded-lg p-1 transition-colors',
+                      'min-h-20 border rounded-lg p-1 transition-colors',
                       today ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50',
                       dayGigs.length > 0 && 'cursor-pointer'
                     )}
                   >
                     <div className={cn(
-                      'text-sm font-medium mb-1',
+                      'text-xs font-medium mb-0.5',
                       today && 'text-blue-600'
                     )}>
                       {day}
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       {dayGigs.slice(0, 3).map(gig => (
                         <div
                           key={gig.id}
                           className={cn(
-                            'text-xs p-1 rounded truncate cursor-pointer text-white',
+                            'text-[11px] px-1 py-0.5 rounded truncate cursor-pointer text-white',
                             statusColors[gig.status]
                           )}
-                          onClick={() => setSelectedGig(gig)}
-                          title={`${gig.client.name} - ${gig.project_name || gig.gig_type.name}`}
+                          onClick={() => {
+                            setSelectedGig(gig)
+                            setEditingNotes(false)
+                          }}
+                          title={`${gig.client ? gig.client.name : tGig('clientNotSpecified')} - ${gig.project_name || (gig.gig_type ? gig.gig_type.name : '')}`}
                         >
-                          {gig.project_name || gig.client.name}
+                          {gig.project_name || (gig.client ? gig.client.name : tGig('clientNotSpecified'))}
                         </div>
                       ))}
                       {dayGigs.length > 3 && (
-                        <div className="text-xs text-muted-foreground">
-                          +{dayGigs.length - 3} till
+                        <div className="text-[10px] text-muted-foreground">
+                          +{dayGigs.length - 3} {tc('more')}
                         </div>
                       )}
                     </div>
@@ -376,60 +463,326 @@ export default function CalendarPage() {
         </CardContent>
       </Card>
 
-      {/* Selected gig details */}
-      {selectedGig && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              {selectedGig.project_name || selectedGig.gig_type.name}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p><strong>Kund:</strong> {selectedGig.client.name}</p>
-            <p><strong>Typ:</strong> {selectedGig.gig_type.name}</p>
-            <p><strong>Datum:</strong> {selectedGig.start_date && selectedGig.total_days > 1
-              ? `${selectedGig.start_date} - ${selectedGig.end_date} (${selectedGig.total_days} dagar)`
-              : new Date(selectedGig.date).toLocaleDateString('sv-SE')
-            }</p>
-            {selectedGig.venue && <p><strong>Plats:</strong> {selectedGig.venue}</p>}
-            <p><strong>Arvode:</strong> {selectedGig.fee !== null ? `${selectedGig.fee.toLocaleString('sv-SE')} kr` : 'Ej angivet'}</p>
-            <p><strong>Status:</strong> {statusLabels[selectedGig.status]}</p>
-            {selectedGig.conductor && <p><strong>Dirigent:</strong> {selectedGig.conductor}</p>}
-            {selectedGig.gig_works && selectedGig.gig_works.length > 0 && (
-              <div>
-                <strong>Program:</strong>
-                <ul className="list-disc list-inside ml-2 mt-1">
-                  {selectedGig.gig_works.map((gw, idx) => (
-                    <li key={idx} className="text-sm">
-                      {gw.work.composer}: {gw.work.title}
-                      {gw.work.catalog_number && <span className="text-muted-foreground"> ({gw.work.catalog_number})</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {selectedGig.notes && <p><strong>Anteckningar:</strong> {selectedGig.notes}</p>}
-            <div className="flex gap-2 pt-2">
-              <Button size="sm" onClick={() => {
-                // This will open the edit dialog
-                const editGig = gigs.find(g => g.id === selectedGig.id)
-                if (editGig) setSelectedGig(editGig)
-              }}>
-                Redigera
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setSelectedGig(null)}>
-                Stäng
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Edit gig dialog */}
+      <GigDialog
+        gig={editingGig}
+        open={editingGig !== null}
+        onOpenChange={(open) => !open && setEditingGig(null)}
+        onSuccess={() => {
+          loadGigs()
+          if (editingGig && selectedGig?.id === editingGig.id) {
+            setSelectedGig(null)
+          }
+        }}
+      />
 
-      <EditGigDialog
-        gig={selectedGig}
-        open={false}
-        onOpenChange={() => {}}
-        onSuccess={loadGigs}
+      <UploadReceiptDialog
+        open={showReceiptDialog}
+        onOpenChange={setShowReceiptDialog}
+        onSuccess={() => {
+          setShowReceiptDialog(false)
+          if (selectedGig) {
+            loadGigExpenses(selectedGig.id)
+          }
+        }}
+        gigId={selectedGig?.id}
+        gigTitle={selectedGig?.project_name || selectedGig?.gig_type?.name}
+      />
+
+      {/* Detail Panel Backdrop */}
+      <div
+        className={`fixed inset-0 z-40 transition-all duration-500 ${
+          selectedGig
+            ? 'bg-black/40 backdrop-blur-sm opacity-100'
+            : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setSelectedGig(null)}
+      />
+
+      {/* Detail Panel - Bottom Sheet */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+          selectedGig ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{ height: '50vh', minHeight: '320px' }}
+      >
+        <div className="h-full bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+
+          <div className="flex justify-center pt-2 pb-0">
+            <div className="w-10 h-1 rounded-full bg-gray-300/80" />
+          </div>
+
+          {selectedGig && (
+            <div className="h-full flex flex-col px-5">
+              {/* Header */}
+              <div className="flex items-start justify-between py-3">
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-1 h-12 rounded-full mt-0.5"
+                    style={{ backgroundColor: selectedGig.gig_type?.color || '#6366f1' }}
+                  />
+                  <div className="space-y-0.5">
+                    <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                      {selectedGig.project_name || selectedGig.gig_type?.name || tGig('newGig')}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {selectedGig.client?.name || <span className="italic">{tGig('clientNotSpecified')}</span>}
+                    </p>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          statusConfigColors[selectedGig.status] || 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {tStatus(selectedGig.status)}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {selectedGig.gig_type?.name}
+                        {selectedGig.position && ` · ${selectedGig.position.name}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full hover:bg-gray-100 -mt-1"
+                  onClick={() => setSelectedGig(null)}
+                >
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                </Button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto pb-2">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Column 1 - Arvode, Plats, Datum */}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 border border-emerald-100">
+                        <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{tGig('fee')}</p>
+                        <p className="text-base font-bold text-emerald-700">
+                          {selectedGig.fee !== null
+                            ? `${selectedGig.fee.toLocaleString(formatLocale)} ${tc('kr')}`
+                            : '—'
+                          }
+                        </p>
+                        {selectedGig.travel_expense && (
+                          <p className="text-xs text-emerald-600 mt-1">
+                            + {selectedGig.travel_expense.toLocaleString(formatLocale)} {tc('kr')} {tGig('travelShort')}
+                          </p>
+                        )}
+                      </div>
+                      {selectedGig.venue ? (
+                        <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <MapPin className="h-3 w-3 text-gray-400" />
+                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{tGig('venue')}</p>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900">{selectedGig.venue}</p>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{tGig('venue')}</p>
+                          <p className="text-sm text-gray-400">—</p>
+                        </div>
+                      )}
+                    </div>
+                    {/* Datum */}
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-3 border border-gray-100">
+                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
+                        {tGig('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
+                      </p>
+                      {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {selectedGig.gig_dates
+                            .sort((a, b) => a.date.localeCompare(b.date))
+                            .map((gd, i) => {
+                              const dateObj = new Date(gd.date + 'T12:00:00')
+                              const dayName = format(dateObj, 'EEE', { locale: dateLocale })
+                              const dayNum = format(dateObj, 'd', { locale: dateLocale })
+                              const mon = format(dateObj, 'MMM', { locale: dateLocale })
+                              return (
+                                <div
+                                  key={i}
+                                  className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]"
+                                >
+                                  <span className="text-[8px] font-medium text-gray-400 uppercase">{dayName}</span>
+                                  <span className="text-sm font-bold text-gray-900">{dayNum}</span>
+                                  <span className="text-[8px] font-medium text-gray-500">{mon}</span>
+                                </div>
+                              )
+                            })}
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold text-gray-900">
+                          {format(new Date(selectedGig.date), 'PPP', { locale: dateLocale })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column 2 - Notes */}
+                  <div>
+                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm h-full">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{tGig('notes')}</p>
+                        {!editingNotes && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              setNotesText(selectedGig.notes || '')
+                              setEditingNotes(true)
+                            }}
+                          >
+                            <Pencil className="h-3 w-3 text-gray-400" />
+                          </Button>
+                        )}
+                      </div>
+                      {editingNotes ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={notesText}
+                            onChange={(e) => setNotesText(e.target.value)}
+                            className="text-sm min-h-[120px] resize-none"
+                            placeholder={tc('writeNotesHere')}
+                            autoFocus
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingNotes(false)}
+                            >
+                              {tc('cancel')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => saveNotes(selectedGig.id, notesText)}
+                            >
+                              {tc('save')}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap leading-snug">
+                          {selectedGig.notes || <span className="text-gray-400 italic">{tc('noNotes')}</span>}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column 3 - Attachments & Expenses */}
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                      <GigAttachments gigId={selectedGig.id} />
+                    </div>
+
+                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <Receipt className="h-3 w-3" />
+                          {tGig('receipts')} ({gigExpenses.length})
+                        </p>
+                      </div>
+                      {gigExpenses.length === 0 ? (
+                        <p className="text-sm text-gray-400 italic">{tGig('noReceiptsLinked')}</p>
+                      ) : (
+                        <ul className="space-y-1.5">
+                          {gigExpenses.map((exp) => (
+                            <li key={exp.id} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {exp.attachment_url && (
+                                  <a
+                                    href={exp.attachment_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-500 hover:text-blue-700 shrink-0"
+                                    title={t('viewReceipt')}
+                                  >
+                                    <Receipt className="h-3.5 w-3.5" />
+                                  </a>
+                                )}
+                                <span className="text-gray-700 truncate">{exp.supplier}</span>
+                                {exp.category && (
+                                  <span className="text-[10px] text-gray-400 shrink-0">({exp.category})</span>
+                                )}
+                              </div>
+                              <span className="font-medium text-gray-900 shrink-0 ml-2">
+                                {exp.amount.toLocaleString(formatLocale)} {exp.currency === 'SEK' ? tc('kr') : exp.currency}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {gigExpenses.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-sm">
+                          <span className="text-gray-500">{tc('total')}</span>
+                          <span className="font-semibold text-gray-900">
+                            {gigExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString(formatLocale)} {tc('kr')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer with actions */}
+              <div className="py-3 pb-5 border-t border-gray-100 flex items-center gap-2">
+                <Button
+                  className="bg-gray-900 hover:bg-gray-800 text-white rounded-lg px-4 h-9 text-sm shadow-lg shadow-gray-900/10"
+                  onClick={() => setEditingGig(selectedGig)}
+                >
+                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                  {tc('edit')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
+                  onClick={() => setShowReceiptDialog(true)}
+                >
+                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
+                  {tGig('addReceipt')}
+                </Button>
+                <div className="flex-1" />
+                <Button
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 h-9 text-sm"
+                  onClick={() => confirmDeleteGig(selectedGig.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  {tc('delete')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open)
+          if (!open) setGigToDelete(null)
+        }}
+        title={tGig('deleteGig')}
+        description={tGig('deleteConfirm')}
+        confirmLabel={tc('delete')}
+        variant="destructive"
+        onConfirm={() => {
+          if (gigToDelete) {
+            deleteGig(gigToDelete)
+            if (selectedGig?.id === gigToDelete) {
+              setSelectedGig(null)
+            }
+          }
+          setDeleteConfirmOpen(false)
+          setGigToDelete(null)
+        }}
       />
     </div>
   )

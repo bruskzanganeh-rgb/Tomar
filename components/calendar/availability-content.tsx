@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, Calendar, CheckCircle, Clock, AlertCircle, Grid3X3, CalendarDays } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, isSameDay, getWeek, startOfMonth, endOfMonth, addMonths, subMonths, startOfYear, endOfYear, getMonth } from 'date-fns'
-import { sv } from 'date-fns/locale'
 
 type GigDate = {
   date: string
@@ -35,6 +36,11 @@ type WeekInfo = {
 type ViewMode = 'month' | 'year'
 
 export default function AvailabilityPage() {
+  const t = useTranslations('calendar')
+  const tc = useTranslations('common')
+  const tStatus = useTranslations('status')
+  const dateLocale = useDateLocale()
+
   const [gigDates, setGigDates] = useState<GigDate[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('year')
@@ -192,11 +198,11 @@ export default function AvailabilityPage() {
   function getStatusLabel(status: WeekStatus): string {
     switch (status) {
       case 'free':
-        return 'Ledig'
+        return t('free')
       case 'partial':
-        return 'Delvis'
+        return t('partial')
       case 'busy':
-        return 'Bokad'
+        return t('booked')
     }
   }
 
@@ -215,9 +221,9 @@ export default function AvailabilityPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Lediga veckor</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('availableWeeks')}</h1>
           <p className="text-muted-foreground">
-            Översikt över din tillgänglighet
+            {t('availabilityOverview')}
           </p>
         </div>
         {/* View Mode Toggle */}
@@ -229,7 +235,7 @@ export default function AvailabilityPage() {
             className="gap-2"
           >
             <CalendarDays className="h-4 w-4" />
-            Månad
+            {t('monthView')}
           </Button>
           <Button
             variant={viewMode === 'year' ? 'default' : 'ghost'}
@@ -238,7 +244,7 @@ export default function AvailabilityPage() {
             className="gap-2"
           >
             <Grid3X3 className="h-4 w-4" />
-            År
+            {t('yearView')}
           </Button>
         </div>
       </div>
@@ -261,7 +267,7 @@ export default function AvailabilityPage() {
         <h2 className="text-xl font-semibold min-w-[200px] text-center">
           {viewMode === 'year'
             ? currentYear
-            : format(currentMonth, 'MMMM yyyy', { locale: sv })
+            : format(currentMonth, 'MMMM yyyy', { locale: dateLocale })
           }
         </h2>
         <Button
@@ -283,7 +289,7 @@ export default function AvailabilityPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-emerald-200/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-700">Lediga veckor</CardTitle>
+            <CardTitle className="text-sm font-medium text-emerald-700">{t('freeWeeks')}</CardTitle>
             <CheckCircle className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
@@ -293,7 +299,7 @@ export default function AvailabilityPage() {
 
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100/30 border-amber-200/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-700">Delvis bokade</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-700">{t('partiallyBooked')}</CardTitle>
             <Clock className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
@@ -303,7 +309,7 @@ export default function AvailabilityPage() {
 
         <Card className="bg-gradient-to-br from-red-50 to-red-100/30 border-red-200/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Fullbokade</CardTitle>
+            <CardTitle className="text-sm font-medium text-red-700">{t('fullyBooked')}</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -318,12 +324,12 @@ export default function AvailabilityPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Grid3X3 className="h-5 w-5" />
-              Årsöversikt {currentYear}
+              {t('yearOverview')} {currentYear}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-center py-8 text-muted-foreground">Laddar...</p>
+              <p className="text-center py-8 text-muted-foreground">{tc('loading')}</p>
             ) : (
               <div className="grid gap-1.5 grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-13">
                 {weeks.map((week) => (
@@ -334,9 +340,9 @@ export default function AvailabilityPage() {
                       selectedWeek?.weekNumber === week.weekNumber ? 'ring-2 ring-offset-1 ring-blue-500' : ''
                     }`}
                   >
-                    <div className="text-xs font-semibold">V{week.weekNumber}</div>
+                    <div className="text-xs font-semibold">{t('weekShort')}{week.weekNumber}</div>
                     <div className="text-[10px] opacity-70">
-                      {format(week.startDate, 'd', { locale: sv })}-{format(week.endDate, 'd MMM', { locale: sv })}
+                      {format(week.startDate, 'd', { locale: dateLocale })}-{format(week.endDate, 'd MMM', { locale: dateLocale })}
                     </div>
                   </button>
                 ))}
@@ -352,12 +358,12 @@ export default function AvailabilityPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Veckoöversikt
+              {t('weekOverview')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-center py-8 text-muted-foreground">Laddar...</p>
+              <p className="text-center py-8 text-muted-foreground">{tc('loading')}</p>
             ) : (
               <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
                 {weeks.map((week) => (
@@ -369,18 +375,18 @@ export default function AvailabilityPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold">Vecka {week.weekNumber}</span>
+                      <span className="font-semibold">{t('week')} {week.weekNumber}</span>
                       {getStatusIcon(week.status)}
                     </div>
                     <p className="text-sm opacity-80">
-                      {format(week.startDate, 'd MMM', { locale: sv })} - {format(week.endDate, 'd MMM', { locale: sv })}
+                      {format(week.startDate, 'd MMM', { locale: dateLocale })} - {format(week.endDate, 'd MMM', { locale: dateLocale })}
                     </p>
                     <div className="flex items-center justify-between mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {getStatusLabel(week.status)}
                       </Badge>
                       <span className="text-xs opacity-70">
-                        {week.gigDays} dagar bokade
+                        {t('daysBooked', { count: week.gigDays })}
                       </span>
                     </div>
                   </button>
@@ -396,7 +402,7 @@ export default function AvailabilityPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Vecka {selectedWeek.weekNumber} detaljer</span>
+              <span>{t('week')} {selectedWeek.weekNumber} {t('details')}</span>
               <Badge className={getStatusColor(selectedWeek.status)}>
                 {getStatusLabel(selectedWeek.status)}
               </Badge>
@@ -405,13 +411,13 @@ export default function AvailabilityPage() {
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground mb-4">
-                {format(selectedWeek.startDate, 'EEEE d MMMM', { locale: sv })} — {format(selectedWeek.endDate, 'EEEE d MMMM yyyy', { locale: sv })}
+                {format(selectedWeek.startDate, 'EEEE d MMMM', { locale: dateLocale })} — {format(selectedWeek.endDate, 'EEEE d MMMM yyyy', { locale: dateLocale })}
               </p>
 
               {selectedWeek.gigs.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <CheckCircle className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
-                  <p>Helt ledig denna vecka!</p>
+                  <p>{t('entirelyFreeThisWeek')}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -420,23 +426,20 @@ export default function AvailabilityPage() {
                     return (
                       <div key={date} className="p-3 bg-muted/50 rounded-lg">
                         <p className="font-medium text-sm mb-1">
-                          {format(new Date(date), 'EEEE d MMMM', { locale: sv })}
+                          {format(new Date(date), 'EEEE d MMMM', { locale: dateLocale })}
                         </p>
                         {dayGigs.map((gig, idx) => (
                           <div key={idx} className="flex items-center justify-between text-sm">
                             <span>
-                              {gig.gig.client?.name || gig.gig.project_name || 'Okänd gig'}
+                              {gig.gig.client?.name || gig.gig.project_name || t('unknownGig')}
                             </span>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
-                                {gig.gig.status === 'accepted' ? 'Bokad' :
-                                 gig.gig.status === 'pending' ? 'Väntar' :
-                                 gig.gig.status === 'tentative' ? 'Ej bekräftat' :
-                                 gig.gig.status}
+                                {tStatus(gig.gig.status)}
                               </Badge>
                               {gig.gig.fee && (
                                 <span className="text-muted-foreground">
-                                  {gig.gig.fee.toLocaleString('sv-SE')} kr
+                                  {gig.gig.fee.toLocaleString('sv-SE')} {tc('kr')}
                                 </span>
                               )}
                             </div>

@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Receipt, Plus, Loader2, ExternalLink, Trash2 } from 'lucide-react'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
 import { format } from 'date-fns'
-import { sv } from 'date-fns/locale'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 type Expense = {
@@ -17,7 +18,7 @@ type Expense = {
   supplier: string
   amount: number
   currency: string | null
-  amount_sek: number | null
+  amount_base: number | null
   category: string | null
   attachment_url: string | null
 }
@@ -29,6 +30,10 @@ type GigReceiptsProps = {
 }
 
 export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
+  const t = useTranslations('gig')
+  const tc = useTranslations('common')
+  const tToast = useTranslations('toast')
+  const dateLocale = useDateLocale()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
@@ -45,7 +50,7 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
     setLoading(true)
     const { data, error } = await supabase
       .from('expenses')
-      .select('id, date, supplier, amount, currency, amount_sek, category, attachment_url')
+      .select('id, date, supplier, amount, currency, amount_base, category, attachment_url')
       .eq('gig_id', gigId)
       .order('date', { ascending: false })
 
@@ -71,24 +76,24 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
 
     if (error) {
       console.error('Error deleting expense:', error)
-      toast.error('Kunde inte ta bort kvitto')
+      toast.error(tToast('deleteReceiptError'))
     } else {
       loadExpenses()
     }
     setDeleting(null)
   }
 
-  const totalAmount = expenses.reduce((sum, e) => sum + (e.amount_sek || e.amount), 0)
+  const totalAmount = expenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Receipt className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-medium">Kvitton</h3>
+          <h3 className="font-medium">{t('receipts')}</h3>
           {expenses.length > 0 && (
             <Badge variant="secondary" className="text-xs">
-              {expenses.length} st • {totalAmount.toLocaleString('sv-SE')} kr
+              {expenses.length} {tc('items')} • {totalAmount.toLocaleString('sv-SE')} {tc('kr')}
             </Badge>
           )}
         </div>
@@ -100,7 +105,7 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
           disabled={disabled}
         >
           <Plus className="h-4 w-4 mr-1" />
-          Lägg till
+          {tc('add')}
         </Button>
       </div>
 
@@ -110,7 +115,7 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
         </div>
       ) : expenses.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">
-          Inga kvitton kopplade till detta uppdrag
+          {t('noReceiptsLinked')}
         </p>
       ) : (
         <div className="space-y-2">
@@ -131,14 +136,14 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {format(new Date(expense.date), 'PPP', { locale: sv })} •{' '}
+                  {format(new Date(expense.date), 'PPP', { locale: dateLocale })} •{' '}
                   {expense.currency && expense.currency !== 'SEK' ? (
                     <>
                       {expense.amount.toLocaleString('sv-SE')} {expense.currency === 'EUR' ? '€' : expense.currency}{' '}
-                      ({expense.amount_sek?.toLocaleString('sv-SE')} kr)
+                      ({expense.amount_base?.toLocaleString('sv-SE')} {tc('kr')})
                     </>
                   ) : (
-                    <>{expense.amount.toLocaleString('sv-SE')} kr</>
+                    <>{expense.amount.toLocaleString('sv-SE')} {tc('kr')}</>
                   )}
                 </p>
               </div>
@@ -149,7 +154,7 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1.5 rounded hover:bg-gray-100"
-                    title="Visa kvitto"
+                    title={t('viewReceipt')}
                   >
                     <ExternalLink className="h-4 w-4 text-blue-600" />
                   </a>
@@ -191,9 +196,9 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
           setDeleteConfirmOpen(open)
           if (!open) setExpenseToDelete(null)
         }}
-        title="Ta bort kvitto"
-        description="Är du säker på att du vill ta bort detta kvitto?"
-        confirmLabel="Ta bort"
+        title={t('deleteReceipt')}
+        description={t('deleteReceiptConfirm')}
+        confirmLabel={tc('delete')}
         variant="destructive"
         onConfirm={() => {
           if (expenseToDelete) {

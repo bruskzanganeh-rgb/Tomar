@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -21,6 +22,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Loader2, Download, FileArchive, FileText, Files, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
 type ExportDialogProps = {
   open: boolean
@@ -35,12 +37,11 @@ type MonthSummary = {
   total: number
 }
 
-const monthNames = [
-  'Januari', 'Februari', 'Mars', 'April', 'Maj', 'Juni',
-  'Juli', 'Augusti', 'September', 'Oktober', 'November', 'December'
-]
-
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
+  const t = useTranslations('expense')
+  const tc = useTranslations('common')
+  const tt = useTranslations('toast')
+  const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
   const [availableMonths, setAvailableMonths] = useState<MonthSummary[]>([])
@@ -59,7 +60,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     setLoading(true)
     const { data: expenses } = await supabase
       .from('expenses')
-      .select('date, amount, amount_sek, attachment_url')
+      .select('date, amount, amount_base, attachment_url')
       .order('date', { ascending: false })
 
     if (expenses) {
@@ -84,7 +85,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
         const summary = monthMap.get(key)!
         summary.count++
-        summary.total += expense.amount_sek || expense.amount
+        summary.total += expense.amount_base || expense.amount
         if (expense.attachment_url) {
           summary.withReceipts++
         }
@@ -121,7 +122,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
   async function handleExport(format: 'zip' | 'pdf' | 'individual') {
     if (!selectedYear || !selectedMonth) {
-      toast.error('Välj år och månad')
+      toast.error(t('selectYearAndMonth'))
       return
     }
 
@@ -136,14 +137,14 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         const result = await response.json()
 
         if (!response.ok) {
-          throw new Error(result.error || 'Export misslyckades')
+          throw new Error(result.error || t('exportFailed'))
         }
 
         // Öppna varje kvitto i ny flik (endast de med bilagor)
         const expensesWithReceipts = result.expenses.filter((e: { attachment_url: string | null }) => e.attachment_url)
 
         if (expensesWithReceipts.length === 0) {
-          toast.error('Inga kvitton med bilagor för vald månad')
+          toast.error(t('noReceiptsForMonth'))
           return
         }
 
@@ -151,7 +152,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
           window.open(expense.attachment_url, '_blank')
         }
 
-        toast.success(`Öppnade ${expensesWithReceipts.length} kvitton`)
+        toast.success(t('openedReceipts', { count: expensesWithReceipts.length }))
       } else {
         // Ladda ner ZIP eller PDF
         const response = await fetch(
@@ -160,7 +161,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
         if (!response.ok) {
           const errorData = await response.json()
-          throw new Error(errorData.error || 'Export misslyckades')
+          throw new Error(errorData.error || t('exportFailed'))
         }
 
         // Skapa download
@@ -174,10 +175,10 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
 
-        toast.success(`Laddade ner ${format.toUpperCase()}-fil`)
+        toast.success(t('downloadedFile', { format: format.toUpperCase() }))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Export misslyckades')
+      toast.error(err instanceof Error ? err.message : t('exportFailed'))
     } finally {
       setExporting(null)
     }
@@ -189,10 +190,10 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Exportera kvitton
+            {t('exportReceipts')}
           </DialogTitle>
           <DialogDescription>
-            Ladda ner kvitton för en vald månad
+            {t('downloadReceiptsForMonth')}
           </DialogDescription>
         </DialogHeader>
 
@@ -203,14 +204,14 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         ) : availableMonths.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Inga utgifter att exportera</p>
+            <p>{t('noExpensesToExport')}</p>
           </div>
         ) : (
           <div className="space-y-6 py-4">
             {/* Välj år och månad */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>År</Label>
+                <Label>{t('year')}</Label>
                 <Select
                   value={selectedYear}
                   onValueChange={(value) => {
@@ -223,7 +224,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Välj år" />
+                    <SelectValue placeholder={t('selectYear')} />
                   </SelectTrigger>
                   <SelectContent>
                     {years.map((year) => (
@@ -236,18 +237,18 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
               </div>
 
               <div className="space-y-2">
-                <Label>Månad</Label>
+                <Label>{t('month')}</Label>
                 <Select
                   value={selectedMonth}
                   onValueChange={setSelectedMonth}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Välj månad" />
+                    <SelectValue placeholder={t('selectMonth')} />
                   </SelectTrigger>
                   <SelectContent>
                     {monthsForYear.map((m) => (
                       <SelectItem key={m.month} value={m.month.toString()}>
-                        {monthNames[m.month - 1]} ({m.count} st)
+                        {t(`monthNames.${m.month - 1}`)} ({m.count} {tc('items')})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -259,21 +260,21 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
             {selectedSummary && (
               <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                 <h4 className="font-medium">
-                  {monthNames[selectedSummary.month - 1]} {selectedSummary.year}
+                  {t(`monthNames.${selectedSummary.month - 1}`)} {selectedSummary.year}
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Antal utgifter:</span>
+                    <span className="text-muted-foreground">{t('expenseCount')}:</span>
                     <span className="ml-2 font-medium">{selectedSummary.count}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Med kvitto:</span>
+                    <span className="text-muted-foreground">{t('withReceipt')}:</span>
                     <span className="ml-2 font-medium">{selectedSummary.withReceipts}</span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-muted-foreground">Total summa:</span>
+                    <span className="text-muted-foreground">{t('totalSum')}:</span>
                     <span className="ml-2 font-medium">
-                      {Math.round(selectedSummary.total).toLocaleString('sv-SE')} kr
+                      {Math.round(selectedSummary.total).toLocaleString(formatLocale)} {tc('kr')}
                     </span>
                   </div>
                 </div>
@@ -282,7 +283,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
             {/* Export-knappar */}
             <div className="space-y-2">
-              <Label>Exportformat</Label>
+              <Label>{t('exportFormat')}</Label>
               <div className="grid grid-cols-1 gap-2">
                 <Button
                   variant="outline"
@@ -296,9 +297,9 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                     <FileArchive className="mr-3 h-5 w-5 text-amber-600" />
                   )}
                   <div className="text-left">
-                    <div className="font-medium">Ladda ner som ZIP</div>
+                    <div className="font-medium">{t('downloadAsZip')}</div>
                     <div className="text-xs text-muted-foreground">
-                      Alla kvittobilder + CSV-summering
+                      {t('zipDescription')}
                     </div>
                   </div>
                 </Button>
@@ -315,9 +316,9 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                     <FileText className="mr-3 h-5 w-5 text-red-600" />
                   )}
                   <div className="text-left">
-                    <div className="font-medium">Ladda ner som PDF</div>
+                    <div className="font-medium">{t('downloadAsPdf')}</div>
                     <div className="text-xs text-muted-foreground">
-                      Summering + alla kvitton i en fil
+                      {t('pdfDescription')}
                     </div>
                   </div>
                 </Button>
@@ -334,9 +335,9 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                     <Files className="mr-3 h-5 w-5 text-blue-600" />
                   )}
                   <div className="text-left">
-                    <div className="font-medium">Öppna enskilda filer</div>
+                    <div className="font-medium">{t('openIndividualFiles')}</div>
                     <div className="text-xs text-muted-foreground">
-                      Öppna varje kvitto i ny flik
+                      {t('individualDescription')}
                     </div>
                   </div>
                 </Button>
@@ -344,7 +345,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
               {selectedSummary && selectedSummary.withReceipts === 0 && (
                 <p className="text-xs text-amber-600 mt-2">
-                  Inga kvitton med bilagor för vald månad
+                  {t('noReceiptsForMonth')}
                 </p>
               )}
             </div>
@@ -353,7 +354,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Stäng
+            {tc('close')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,23 +1,30 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
-import { format, differenceInDays } from 'date-fns'
-import { sv } from 'date-fns/locale'
+import { differenceInDays } from 'date-fns'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
 
 type Invoice = {
   id: string
   invoice_number: number
   total: number
+  currency: string | null
   due_date: string
   status: string
   client: { name: string }
 }
 
 export function UpcomingPayments() {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
+  const formatLocale = useFormatLocale()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -31,7 +38,7 @@ export function UpcomingPayments() {
 
     const { data } = await supabase
       .from('invoices')
-      .select('id, invoice_number, total, due_date, status, client:clients(name)')
+      .select('id, invoice_number, total, currency, due_date, status, client:clients(name)')
       .in('status', ['sent', 'overdue'])
       .order('due_date', { ascending: true })
       .limit(8)
@@ -47,30 +54,30 @@ export function UpcomingPayments() {
   function getStatusBadge(daysUntil: number) {
     if (daysUntil < 0) {
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+        <Badge variant="destructive" className="text-[10px]">
           <AlertTriangle className="w-3 h-3 mr-1" />
-          {Math.abs(daysUntil)}d sen
+          {Math.abs(daysUntil)} {t('daysLate')}
         </Badge>
       )
     }
     if (daysUntil === 0) {
       return (
-        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+        <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px]">
           <Clock className="w-3 h-3 mr-1" />
-          Idag
+          {tc('today')}
         </Badge>
       )
     }
     if (daysUntil <= 7) {
       return (
-        <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/20">
+        <Badge variant="secondary" className="text-[10px]">
           <Clock className="w-3 h-3 mr-1" />
           {daysUntil}d
         </Badge>
       )
     }
     return (
-      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20">
+      <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px]">
         <CheckCircle className="w-3 h-3 mr-1" />
         {daysUntil}d
       </Badge>
@@ -80,22 +87,30 @@ export function UpcomingPayments() {
   const totalUnpaid = invoices.reduce((sum, inv) => sum + inv.total, 0)
 
   return (
-    <Card variant="glass" className="border-blue-500/20">
+    <Card>
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-blue-400">Obetalda</CardTitle>
-          <span className="text-sm font-semibold text-white">{totalUnpaid.toLocaleString('sv-SE')} kr</span>
+          <CardTitle className="text-sm font-medium">{t('unpaidInvoices')}</CardTitle>
+          <span className="text-sm font-semibold">{totalUnpaid.toLocaleString(formatLocale)} {tc('kr')}</span>
         </div>
       </CardHeader>
       <CardContent className="pb-4">
         {loading ? (
-          <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
-            Laddar...
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50">
+                <Skeleton className="h-4 w-24" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : invoices.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
-            <CheckCircle className="h-6 w-6 mx-auto mb-1 text-emerald-400" />
-            <p className="text-xs">Allt betalt!</p>
+            <CheckCircle className="h-6 w-6 mx-auto mb-1 text-emerald-600 dark:text-emerald-400" />
+            <p className="text-xs">{t('allPaid')}</p>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -105,14 +120,14 @@ export function UpcomingPayments() {
                 <div
                   key={invoice.id}
                   className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
-                    daysUntil < 0 ? 'bg-red-500/10' : 'bg-white/5 hover:bg-white/10'
+                    daysUntil < 0 ? 'bg-red-500/10' : 'bg-secondary/50 hover:bg-secondary'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <span className="font-medium truncate block text-white">{invoice.client.name}</span>
+                    <span className="font-medium truncate block">{invoice.client.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-semibold text-white">{invoice.total.toLocaleString('sv-SE')} kr</span>
+                    <span className="font-semibold">{formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}</span>
                     {getStatusBadge(daysUntil)}
                   </div>
                 </div>

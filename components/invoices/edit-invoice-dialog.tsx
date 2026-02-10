@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Dialog,
   DialogContent,
@@ -54,13 +55,6 @@ type EditInvoiceDialogProps = {
   clients: Client[]
 }
 
-const statuses = [
-  { value: 'draft', label: 'Utkast' },
-  { value: 'sent', label: 'Skickad' },
-  { value: 'paid', label: 'Betald' },
-  { value: 'overdue', label: 'Försenad' },
-]
-
 export function EditInvoiceDialog({
   invoice,
   open,
@@ -68,6 +62,8 @@ export function EditInvoiceDialog({
   onSuccess,
   clients,
 }: EditInvoiceDialogProps) {
+  const t = useTranslations('invoice')
+  const tc = useTranslations('common')
   const [saving, setSaving] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -91,7 +87,14 @@ export function EditInvoiceDialog({
     paid_date: '',
   })
 
-  // Uppdatera form och ladda PDF när invoice ändras
+  const statuses = [
+    { value: 'draft', label: t('status.draft') },
+    { value: 'sent', label: t('status.sent') },
+    { value: 'paid', label: t('status.paid') },
+    { value: 'overdue', label: t('status.overdue') },
+  ]
+
+  // Update form and load PDF when invoice changes
   useEffect(() => {
     if (invoice && open) {
       setFormData({
@@ -108,7 +111,7 @@ export function EditInvoiceDialog({
       })
       setHasPdf(!!invoice.original_pdf_url)
 
-      // Ladda signerad URL om det finns PDF
+      // Load signed URL if PDF exists
       if (invoice.original_pdf_url) {
         loadPdf(invoice.id)
       } else {
@@ -117,7 +120,7 @@ export function EditInvoiceDialog({
     }
   }, [invoice, open])
 
-  // Rensa state när dialogen stängs
+  // Clear state when dialog closes
   useEffect(() => {
     if (!open) {
       setPdfUrl(null)
@@ -167,11 +170,11 @@ export function EditInvoiceDialog({
 
       if (error) throw error
 
-      toast.success('Faktura uppdaterad')
+      toast.success(t('invoiceUpdated'))
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ett fel uppstod')
+      toast.error(error instanceof Error ? error.message : t('errorOccurred'))
     } finally {
       setSaving(false)
     }
@@ -183,7 +186,7 @@ export function EditInvoiceDialog({
     setDeleting(true)
 
     try {
-      // Ta bort invoice_lines först
+      // Delete invoice_lines first
       await supabase
         .from('invoice_lines')
         .delete()
@@ -196,11 +199,11 @@ export function EditInvoiceDialog({
 
       if (error) throw error
 
-      toast.success('Faktura borttagen')
+      toast.success(t('invoiceDeleted'))
       onSuccess()
       onOpenChange(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Ett fel uppstod')
+      toast.error(error instanceof Error ? error.message : t('errorOccurred'))
     } finally {
       setDeleting(false)
       setDeleteConfirmOpen(false)
@@ -214,22 +217,22 @@ export function EditInvoiceDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[900px]">
           <DialogHeader>
-            <DialogTitle>Redigera faktura #{invoice.invoice_number}</DialogTitle>
+            <DialogTitle>{t('editInvoice', { number: invoice.invoice_number })}</DialogTitle>
             <DialogDescription>
-              {invoice.imported_from_pdf ? 'Importerad faktura' : 'Skapad faktura'}
+              {invoice.imported_from_pdf ? t('importedInvoice') : t('createdInvoice')}
             </DialogDescription>
           </DialogHeader>
 
-          {/* 2-kolumns layout: PDF | Formulär */}
+          {/* 2-column layout: PDF | Form */}
           <div className="flex gap-6">
-            {/* Vänster kolumn: PDF-förhandsvisning */}
+            {/* Left column: PDF preview */}
             <div className="w-64 shrink-0 space-y-3">
-              <Label className="text-sm font-medium">Original-PDF</Label>
+              <Label className="text-sm font-medium">{t('originalPdf')}</Label>
 
               {pdfLoading ? (
                 <div className="flex flex-col items-center justify-center h-80 text-sm text-gray-500 border rounded-lg">
                   <Loader2 className="h-6 w-6 animate-spin mb-2" />
-                  Laddar...
+                  {tc('loading')}
                 </div>
               ) : hasPdf && pdfUrl ? (
                 <div className="space-y-2">
@@ -247,24 +250,24 @@ export function EditInvoiceDialog({
                     onClick={() => window.open(pdfUrl, '_blank')}
                   >
                     <ExternalLink className="h-3 w-3 mr-1" />
-                    Öppna i nytt fönster
+                    {t('openInNewWindow')}
                   </Button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-80 text-sm text-gray-400 border-2 border-dashed rounded-lg">
                   <FileText className="h-12 w-12 mb-2 opacity-50" />
-                  <p>Ingen PDF</p>
+                  <p>{t('noPdf')}</p>
                   {!invoice.imported_from_pdf && (
-                    <p className="text-xs mt-1">Fakturan skapades manuellt</p>
+                    <p className="text-xs mt-1">{t('createdManually')}</p>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Höger kolumn: Formulärfält */}
+            {/* Right column: Form fields */}
             <div className="flex-1 grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="invoice_number">Fakturanummer</Label>
+                <Label htmlFor="invoice_number">{t('invoiceNumber')}</Label>
                 <Input
                   id="invoice_number"
                   type="number"
@@ -274,13 +277,13 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="client_id">Kund</Label>
+                <Label htmlFor="client_id">{t('customer')}</Label>
                 <Select
                   value={formData.client_id}
                   onValueChange={(value) => setFormData({ ...formData, client_id: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Välj kund" />
+                    <SelectValue placeholder={t('selectClient')} />
                   </SelectTrigger>
                   <SelectContent>
                     {clients.map((c) => (
@@ -291,7 +294,7 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="invoice_date">Fakturadatum</Label>
+                <Label htmlFor="invoice_date">{t('invoiceDate')}</Label>
                 <Input
                   id="invoice_date"
                   type="date"
@@ -301,7 +304,7 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="due_date">Förfallodatum</Label>
+                <Label htmlFor="due_date">{t('dueDate')}</Label>
                 <Input
                   id="due_date"
                   type="date"
@@ -311,7 +314,7 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="subtotal">Nettobelopp</Label>
+                <Label htmlFor="subtotal">{t('netAmount')}</Label>
                 <Input
                   id="subtotal"
                   type="number"
@@ -322,7 +325,7 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="vat_rate">Momssats (%)</Label>
+                <Label htmlFor="vat_rate">{t('vatRate')}</Label>
                 <Select
                   value={formData.vat_rate.toString()}
                   onValueChange={(value) => setFormData({ ...formData, vat_rate: parseInt(value) })}
@@ -339,7 +342,7 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="vat_amount">Momsbelopp</Label>
+                <Label htmlFor="vat_amount">{t('vatAmount')}</Label>
                 <Input
                   id="vat_amount"
                   type="number"
@@ -350,7 +353,7 @@ export function EditInvoiceDialog({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="total">Totalbelopp</Label>
+                <Label htmlFor="total">{t('totalAmount')}</Label>
                 <Input
                   id="total"
                   type="number"
@@ -379,7 +382,7 @@ export function EditInvoiceDialog({
 
               {formData.status === 'paid' && (
                 <div className="space-y-1">
-                  <Label htmlFor="paid_date">Betalningsdatum</Label>
+                  <Label htmlFor="paid_date">{t('paidDate')}</Label>
                   <Input
                     id="paid_date"
                     type="date"
@@ -399,20 +402,20 @@ export function EditInvoiceDialog({
               disabled={saving || deleting}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              Ta bort
+              {tc('delete')}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                Avbryt
+                {tc('cancel')}
               </Button>
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sparar...
+                    {t('saving')}
                   </>
                 ) : (
-                  'Spara'
+                  tc('save')
                 )}
               </Button>
             </div>
@@ -423,9 +426,9 @@ export function EditInvoiceDialog({
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Ta bort faktura"
-        description={`Är du säker på att du vill ta bort faktura #${invoice.invoice_number}? Detta går inte att ångra.`}
-        confirmLabel={deleting ? 'Tar bort...' : 'Ta bort'}
+        title={t('deleteInvoice')}
+        description={t('deleteInvoiceConfirm', { number: invoice.invoice_number })}
+        confirmLabel={deleting ? t('deleting') : tc('delete')}
         variant="destructive"
         onConfirm={handleDelete}
       />

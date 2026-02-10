@@ -22,20 +22,14 @@ import {
 } from '@/lib/supabase/storage'
 import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCheck } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useTranslations } from 'next-intl'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
-const categoryConfig: Record<AttachmentCategory, { label: string; description: string; color: string; icon: typeof FileText }> = {
-  gig_info: {
-    label: 'Gig-info',
-    description: 'Noter, schema, repertoar',
-    color: 'bg-blue-100 text-blue-800',
-    icon: Music
-  },
-  invoice_doc: {
-    label: 'Fakturaunderlag',
-    description: 'Kontrakt, PO, avtal',
-    color: 'bg-green-100 text-green-800',
-    icon: FileCheck
-  }
+type CategoryConfig = Record<AttachmentCategory, { label: string; description: string; color: string; icon: typeof FileText }>
+
+const categoryColors: Record<AttachmentCategory, { color: string; icon: typeof FileText }> = {
+  gig_info: { color: 'bg-blue-100 text-blue-800', icon: Music },
+  invoice_doc: { color: 'bg-green-100 text-green-800', icon: FileCheck },
 }
 
 type GigAttachmentsProps = {
@@ -48,9 +42,13 @@ type AttachmentRowProps = {
   onDownload: (attachment: GigAttachment) => void
   onDelete: (attachment: GigAttachment) => void
   disabled?: boolean
+  categoryConfig: CategoryConfig
+  openFileLabel: string
+  deleteFileLabel: string
+  formatLocale: string
 }
 
-function AttachmentRow({ attachment, onDownload, onDelete, disabled }: AttachmentRowProps) {
+function AttachmentRow({ attachment, onDownload, onDelete, disabled, categoryConfig, openFileLabel, deleteFileLabel, formatLocale }: AttachmentRowProps) {
   const category = attachment.category || 'gig_info'
   const config = categoryConfig[category]
   const Icon = config.icon
@@ -68,7 +66,7 @@ function AttachmentRow({ attachment, onDownload, onDelete, disabled }: Attachmen
           </div>
           <p className="text-xs text-muted-foreground">
             {formatFileSize(attachment.file_size)} •{' '}
-            {new Date(attachment.uploaded_at).toLocaleDateString('sv-SE')}
+            {new Date(attachment.uploaded_at).toLocaleDateString(formatLocale)}
           </p>
         </div>
       </div>
@@ -78,7 +76,7 @@ function AttachmentRow({ attachment, onDownload, onDelete, disabled }: Attachmen
           variant="ghost"
           size="sm"
           onClick={() => onDownload(attachment)}
-          title="Öppna fil"
+          title={openFileLabel}
         >
           <Download className="h-4 w-4" />
         </Button>
@@ -88,7 +86,7 @@ function AttachmentRow({ attachment, onDownload, onDelete, disabled }: Attachmen
           size="sm"
           onClick={() => onDelete(attachment)}
           disabled={disabled}
-          title="Ta bort fil"
+          title={deleteFileLabel}
         >
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
@@ -98,6 +96,9 @@ function AttachmentRow({ attachment, onDownload, onDelete, disabled }: Attachmen
 }
 
 export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
+  const t = useTranslations('gig')
+  const tc = useTranslations('common')
+  const formatLocale = useFormatLocale()
   const [attachments, setAttachments] = useState<GigAttachment[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -106,6 +107,19 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   const [attachmentToDelete, setAttachmentToDelete] = useState<GigAttachment | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory>('gig_info')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const categoryConfig: CategoryConfig = {
+    gig_info: {
+      label: t('gigInfo'),
+      description: t('gigInfoDescription'),
+      ...categoryColors.gig_info,
+    },
+    invoice_doc: {
+      label: t('invoiceDoc'),
+      description: t('invoiceDocDescription'),
+      ...categoryColors.invoice_doc,
+    },
+  }
 
   useEffect(() => {
     loadAttachments()
@@ -118,7 +132,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       const data = await getGigAttachments(gigId)
       setAttachments(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte ladda bilagor')
+      setError(err instanceof Error ? err.message : t('loadError'))
     } finally {
       setLoading(false)
     }
@@ -135,13 +149,13 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       for (const file of Array.from(files)) {
         // Validate file type
         if (file.type !== 'application/pdf') {
-          setError('Endast PDF-filer är tillåtna')
+          setError(t('onlyPdf'))
           continue
         }
 
         // Validate file size (10 MB max)
         if (file.size > 10 * 1024 * 1024) {
-          setError('Filen är för stor (max 10 MB)')
+          setError(t('fileTooLarge'))
           continue
         }
 
@@ -149,7 +163,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
         setAttachments(prev => [attachment, ...prev])
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte ladda upp fil')
+      setError(err instanceof Error ? err.message : t('uploadError'))
     } finally {
       setUploading(false)
       // Reset file input
@@ -170,7 +184,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       await deleteGigAttachment(attachment.id, attachment.file_path)
       setAttachments(prev => prev.filter(a => a.id !== attachment.id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte ta bort fil')
+      setError(err instanceof Error ? err.message : t('deleteError'))
     }
   }
 
@@ -181,10 +195,10 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       if (url) {
         window.open(url, '_blank')
       } else {
-        setError('Kunde inte hämta nedladdningslänk')
+        setError(t('downloadError'))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte öppna fil')
+      setError(err instanceof Error ? err.message : t('openError'))
     }
   }
 
@@ -195,7 +209,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label>Bilagor (PDF)</Label>
+        <Label>{t('attachmentsPdf')}</Label>
         <div className="flex items-center gap-2">
           <Select
             value={selectedCategory}
@@ -209,13 +223,13 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
               <SelectItem value="gig_info">
                 <span className="flex items-center gap-1">
                   <Music className="h-3 w-3" />
-                  Gig-info
+                  {t('gigInfo')}
                 </span>
               </SelectItem>
               <SelectItem value="invoice_doc">
                 <span className="flex items-center gap-1">
                   <FileCheck className="h-3 w-3" />
-                  Fakturaunderlag
+                  {t('invoiceDoc')}
                 </span>
               </SelectItem>
             </SelectContent>
@@ -241,7 +255,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
             ) : (
               <Upload className="h-4 w-4 mr-1" />
             )}
-            Ladda upp
+            {tc('upload')}
           </Button>
         </div>
       </div>
@@ -254,11 +268,11 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground py-2">Laddar bilagor...</div>
+        <div className="text-sm text-muted-foreground py-2">{t('loadingAttachments')}</div>
       ) : attachments.length === 0 ? (
         <div className="text-sm text-muted-foreground py-2 border border-dashed rounded-lg text-center p-4">
           <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          Inga bilagor uppladdade
+          {t('noAttachments')}
         </div>
       ) : (
         <div className="space-y-4">
@@ -267,7 +281,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Music className="h-3 w-3" />
-                <span>Gig-info ({gigInfoAttachments.length})</span>
+                <span>{t('gigInfo')} ({gigInfoAttachments.length})</span>
               </div>
               {gigInfoAttachments.map(attachment => (
                 <AttachmentRow
@@ -276,6 +290,10 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                   onDownload={handleDownload}
                   onDelete={confirmDelete}
                   disabled={disabled}
+                  categoryConfig={categoryConfig}
+                  openFileLabel={t('openFile')}
+                  deleteFileLabel={t('deleteFile')}
+                  formatLocale={formatLocale}
                 />
               ))}
             </div>
@@ -286,7 +304,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <FileCheck className="h-3 w-3" />
-                <span>Fakturaunderlag ({invoiceDocAttachments.length})</span>
+                <span>{t('invoiceDoc')} ({invoiceDocAttachments.length})</span>
               </div>
               {invoiceDocAttachments.map(attachment => (
                 <AttachmentRow
@@ -295,6 +313,10 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                   onDownload={handleDownload}
                   onDelete={confirmDelete}
                   disabled={disabled}
+                  categoryConfig={categoryConfig}
+                  openFileLabel={t('openFile')}
+                  deleteFileLabel={t('deleteFile')}
+                  formatLocale={formatLocale}
                 />
               ))}
             </div>
@@ -308,9 +330,9 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
           setDeleteConfirmOpen(open)
           if (!open) setAttachmentToDelete(null)
         }}
-        title="Ta bort bilaga"
-        description={`Är du säker på att du vill ta bort "${attachmentToDelete?.file_name}"?`}
-        confirmLabel="Ta bort"
+        title={t('deleteAttachment')}
+        description={t('deleteAttachmentConfirm', { name: attachmentToDelete?.file_name || '' })}
+        confirmLabel={tc('delete')}
         variant="destructive"
         onConfirm={() => {
           if (attachmentToDelete) {

@@ -19,7 +19,7 @@ export async function PATCH(
       supplier,
       amount,
       currency,
-      amount_sek,
+      amount_base,
       category,
       notes,
       gig_id,
@@ -32,14 +32,14 @@ export async function PATCH(
     if (supplier !== undefined) updateData.supplier = supplier
     if (amount !== undefined) updateData.amount = amount
     if (currency !== undefined) updateData.currency = currency
-    if (amount_sek !== undefined) updateData.amount_sek = amount_sek
+    if (amount_base !== undefined) updateData.amount_base = amount_base
     if (category !== undefined) updateData.category = category
     if (notes !== undefined) updateData.notes = notes || null
     if (gig_id !== undefined) updateData.gig_id = gig_id || null
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
-        { error: 'Inga fält att uppdatera' },
+        { error: 'No fields to update' },
         { status: 400 }
       )
     }
@@ -54,7 +54,7 @@ export async function PATCH(
     if (error) {
       console.error('Update expense error:', error)
       return NextResponse.json(
-        { error: 'Kunde inte uppdatera utgift: ' + error.message },
+        { error: 'Could not update expense: ' + error.message },
         { status: 500 }
       )
     }
@@ -66,7 +66,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Expense PATCH error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kunde inte uppdatera utgift' },
+      { error: error instanceof Error ? error.message : 'Could not update expense' },
       { status: 500 }
     )
   }
@@ -87,7 +87,7 @@ export async function DELETE(
     if (error) {
       console.error('Delete expense error:', error)
       return NextResponse.json(
-        { error: 'Kunde inte ta bort utgift: ' + error.message },
+        { error: 'Could not delete expense: ' + error.message },
         { status: 500 }
       )
     }
@@ -98,7 +98,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Expense DELETE error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kunde inte ta bort utgift' },
+      { error: error instanceof Error ? error.message : 'Could not delete expense' },
       { status: 500 }
     )
   }

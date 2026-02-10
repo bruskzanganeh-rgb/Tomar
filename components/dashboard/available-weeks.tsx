@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CalendarCheck, CheckCircle, Clock, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, CalendarCheck, CheckCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, isSameDay, getWeek } from 'date-fns'
-import { sv } from 'date-fns/locale'
 
 type GigDate = {
   date: string
@@ -27,6 +28,7 @@ type WeekInfo = {
 }
 
 export function AvailableWeeks() {
+  const t = useTranslations('dashboard')
   const [weeks, setWeeks] = useState<WeekInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
@@ -43,7 +45,6 @@ export function AvailableWeeks() {
     loadWeeks()
   }, [selectedYear])
 
-  // Auto-scroll till nuvarande vecka när data laddats
   useEffect(() => {
     if (!loading && currentWeekRef.current && selectedYear === currentYear) {
       currentWeekRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
@@ -71,7 +72,6 @@ export function AvailableWeeks() {
       d.gig && !['cancelled', 'declined'].includes(d.gig.status)
     ) as unknown as GigDate[]
 
-    // Beräkna alla veckor i året
     const weekInfos: WeekInfo[] = []
     let currentWeekStart = startOfWeek(yearStart, { weekStartsOn: 1 })
 
@@ -111,11 +111,11 @@ export function AvailableWeeks() {
   function getStatusStyle(status: WeekStatus) {
     switch (status) {
       case 'free':
-        return { bg: 'bg-emerald-500/15', text: 'text-emerald-400', icon: CheckCircle }
+        return { bg: 'bg-sky-500/5', text: 'text-sky-600 dark:text-sky-400', icon: Calendar }
       case 'partial':
-        return { bg: 'bg-amber-500/15', text: 'text-amber-400', icon: Clock }
+        return { bg: 'bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400', icon: Clock }
       case 'busy':
-        return { bg: 'bg-red-500/15', text: 'text-red-400', icon: AlertCircle }
+        return { bg: 'bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400', icon: CheckCircle }
     }
   }
 
@@ -125,28 +125,28 @@ export function AvailableWeeks() {
   const totalWeeks = weeks.length
 
   return (
-    <Card variant="glass" className="border-emerald-500/20 self-start">
+    <Card>
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-emerald-400 flex items-center gap-1.5">
-            <CalendarCheck className="h-3.5 w-3.5" />
-            Tillgänglighet
+          <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+            <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            {t('availableWeeks')}
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 hover:bg-white/10"
+              className="h-6 w-6"
               onClick={() => setSelectedYear(y => Math.max(minYear, y - 1))}
               disabled={selectedYear <= minYear}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-xs font-medium min-w-[40px] text-center text-white">{selectedYear}</span>
+            <span className="text-xs font-medium min-w-[40px] text-center">{selectedYear}</span>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 hover:bg-white/10"
+              className="h-6 w-6"
               onClick={() => setSelectedYear(y => Math.min(maxYear, y + 1))}
               disabled={selectedYear >= maxYear}
             >
@@ -157,28 +157,44 @@ export function AvailableWeeks() {
       </CardHeader>
       <CardContent className="pb-4">
         {loading ? (
-          <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
-            Laddar...
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="text-center p-2 rounded-lg bg-secondary/50">
+                  <Skeleton className="h-6 w-8 mx-auto mb-1" />
+                  <Skeleton className="h-2 w-10 mx-auto" />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-secondary/30">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                  <Skeleton className="h-4 w-10" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <>
-            {/* Säsongssammanfattning */}
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="text-center p-2 rounded-lg bg-emerald-500/15">
-                <p className="text-lg font-bold text-emerald-400">{freeCount}</p>
-                <p className="text-[10px] text-emerald-300">Lediga</p>
+              <div className="text-center p-2 rounded-lg bg-sky-500/5">
+                <p className="text-lg font-bold text-sky-600 dark:text-sky-400">{freeCount}</p>
+                <p className="text-[10px] text-muted-foreground">{t('free')}</p>
               </div>
               <div className="text-center p-2 rounded-lg bg-amber-500/15">
-                <p className="text-lg font-bold text-amber-400">{partialCount}</p>
-                <p className="text-[10px] text-amber-300">Delvis</p>
+                <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{partialCount}</p>
+                <p className="text-[10px] text-muted-foreground">{t('partial')}</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-red-500/15">
-                <p className="text-lg font-bold text-red-400">{busyCount}</p>
-                <p className="text-[10px] text-red-300">Fulla</p>
+              <div className="text-center p-2 rounded-lg bg-emerald-500/15">
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{busyCount}</p>
+                <p className="text-[10px] text-muted-foreground">{t('full')}</p>
               </div>
             </div>
 
-            {/* Alla veckor - scrollbar */}
             <div
               ref={scrollContainerRef}
               className="space-y-1 h-[168px] overflow-y-auto pr-1"
@@ -191,19 +207,19 @@ export function AvailableWeeks() {
                   <div
                     key={`${selectedYear}-${index}`}
                     ref={isCurrentWeek ? currentWeekRef : null}
-                    className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${style.bg} hover:bg-white/10 ${isCurrentWeek ? 'ring-1 ring-emerald-400' : ''}`}
+                    className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${style.bg} ${isCurrentWeek ? 'border-l-4 border-blue-500' : ''}`}
                   >
                     <div className="flex items-center gap-2">
                       <Icon className={`h-3 w-3 ${style.text}`} />
-                      <span className="font-medium text-white">V{week.weekNumber}</span>
+                      <span className="font-medium">V{week.weekNumber}</span>
                     </div>
                     <Badge
                       variant="secondary"
                       className={`text-[10px] ${style.text} bg-transparent border-0`}
                     >
-                      {week.status === 'free' ? 'Ledig' :
+                      {week.status === 'free' ? t('freeWeek') :
                        week.status === 'partial' ? `${week.gigDays}d` :
-                       'Full'}
+                       t('fullWeek')}
                     </Badge>
                   </div>
                 )
@@ -211,9 +227,9 @@ export function AvailableWeeks() {
             </div>
           </>
         )}
-        <div className="mt-2 pt-2 border-t border-white/10 text-center">
+        <div className="mt-2 pt-2 border-t text-center">
           <p className="text-[10px] text-muted-foreground">
-            jan–dec {selectedYear} • {totalWeeks} veckor totalt
+            jan–dec {selectedYear} • {totalWeeks} {t('weeksTotalLabel')}
           </p>
         </div>
       </CardContent>

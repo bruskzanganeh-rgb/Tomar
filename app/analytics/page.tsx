@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { BarChart3, TrendingUp, XCircle, Calendar, Music, CalendarClock, Wallet, HelpCircle } from 'lucide-react'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
 type Gig = {
   id: string
@@ -37,6 +39,13 @@ type Client = { id: string; name: string }
 type Position = { id: string; name: string }
 
 export default function AnalyticsPage() {
+  const t = useTranslations('analytics')
+  const tc = useTranslations('common')
+  const tGig = useTranslations('gig')
+  const tStatus = useTranslations('status')
+  const tConfig = useTranslations('config')
+  const formatLocale = useFormatLocale()
+
   const [gigs, setGigs] = useState<Gig[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [positions, setPositions] = useState<Position[]>([])
@@ -103,12 +112,10 @@ export default function AnalyticsPage() {
   const completedGigs = filteredGigs.filter(g => ['completed', 'invoiced', 'paid'].includes(g.status))
   const declinedGigs = filteredGigs.filter(g => g.status === 'declined')
 
-  // Kommande accepterade gigs (accepted status, datum >= idag)
   const upcomingGigs = filteredGigs.filter(g =>
     g.status === 'accepted' && new Date(g.date) >= today
   )
 
-  // Ej bekräftade gigs (tentative status)
   const tentativeGigs = filteredGigs.filter(g =>
     g.status === 'tentative' && new Date(g.date) >= today
   )
@@ -118,14 +125,12 @@ export default function AnalyticsPage() {
   const declinedAmount = declinedGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
   const avgPerDay = totalDays > 0 ? totalRevenue / totalDays : 0
 
-  // Kommande statistik
   const upcomingRevenue = upcomingGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
   const upcomingDays = upcomingGigs.reduce((sum, g) => sum + g.total_days, 0)
   const nextGig = upcomingGigs.length > 0
     ? upcomingGigs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
     : null
 
-  // Ej bekräftade statistik
   const tentativeRevenue = tentativeGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
   const tentativeDays = tentativeGigs.reduce((sum, g) => sum + g.total_days, 0)
 
@@ -159,7 +164,7 @@ export default function AnalyticsPage() {
   const noPositionGigs = completedGigs.filter(g => !g.position_id)
   const noPositionStats = {
     id: 'none',
-    name: 'Ingen position',
+    name: t('noPosition'),
     gigCount: noPositionGigs.length,
     totalDays: noPositionGigs.reduce((sum, g) => sum + g.total_days, 0),
     totalRevenue: noPositionGigs.reduce((sum, g) => sum + (g.fee || 0), 0),
@@ -173,9 +178,9 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Analytik</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          Statistik och översikt över dina uppdrag
+          {t('subtitle')}
         </p>
       </div>
 
@@ -184,10 +189,10 @@ export default function AnalyticsPage() {
         <div className="w-48">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger>
-              <SelectValue placeholder="Välj år" />
+              <SelectValue placeholder={t('selectYear')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alla år</SelectItem>
+              <SelectItem value="all">{t('allYears')}</SelectItem>
               {years.map(year => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
@@ -199,10 +204,10 @@ export default function AnalyticsPage() {
         <div className="w-64">
           <Select value={selectedClient} onValueChange={setSelectedClient}>
             <SelectTrigger>
-              <SelectValue placeholder="Välj uppdragsgivare" />
+              <SelectValue placeholder={t('selectClient')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alla uppdragsgivare</SelectItem>
+              <SelectItem value="all">{t('allClients')}</SelectItem>
               {clients.map(client => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
@@ -215,11 +220,11 @@ export default function AnalyticsPage() {
           <div className="w-56">
             <Select value={selectedPosition} onValueChange={setSelectedPosition}>
               <SelectTrigger>
-                <SelectValue placeholder="Välj position" />
+                <SelectValue placeholder={t('selectPosition')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alla positioner</SelectItem>
-                <SelectItem value="none">Ingen position</SelectItem>
+                <SelectItem value="all">{t('allPositions')}</SelectItem>
+                <SelectItem value="none">{t('noPosition')}</SelectItem>
                 {positions.map(position => (
                   <SelectItem key={position.id} value={position.id}>
                     {position.name}
@@ -232,111 +237,111 @@ export default function AnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Laddar...</div>
+        <div className="text-center py-8 text-muted-foreground">{tc('loading')}</div>
       ) : (
         <>
-          {/* Kommande gigs */}
+          {/* Upcoming gigs */}
           <div className="grid gap-4 md:grid-cols-3">
             <Card className="border-blue-200 bg-blue-50/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-900">Kommande intäkter</CardTitle>
+                <CardTitle className="text-sm font-medium text-blue-900">{t('upcomingRevenue')}</CardTitle>
                 <Wallet className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-900">
-                  {upcomingRevenue.toLocaleString('sv-SE')} kr
+                  {upcomingRevenue.toLocaleString(formatLocale)} {tc('kr')}
                 </div>
                 <p className="text-xs text-blue-700">
-                  {upcomingGigs.length} accepterade uppdrag
+                  {t('acceptedGigsCount', { count: upcomingGigs.length })}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-blue-200 bg-blue-50/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-900">Kommande arbetsdagar</CardTitle>
+                <CardTitle className="text-sm font-medium text-blue-900">{t('upcomingWorkDays')}</CardTitle>
                 <CalendarClock className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-900">{upcomingDays} dagar</div>
+                <div className="text-2xl font-bold text-blue-900">{upcomingDays} {tc('days')}</div>
                 <p className="text-xs text-blue-700">
                   {nextGig
-                    ? `Nästa: ${new Date(nextGig.date).toLocaleDateString('sv-SE')}`
-                    : 'Inga kommande gigs'}
+                    ? t('nextGig', { date: new Date(nextGig.date).toLocaleDateString(formatLocale) })
+                    : t('noUpcomingGigs')}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-orange-200 bg-orange-50/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-900">Ej bekräftade</CardTitle>
+                <CardTitle className="text-sm font-medium text-orange-900">{tStatus('tentative')}</CardTitle>
                 <HelpCircle className="h-4 w-4 text-orange-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-900">
-                  {tentativeGigs.length} st
+                  {t('tentativeCount', { count: tentativeGigs.length })}
                 </div>
                 <p className="text-xs text-orange-700">
-                  {tentativeRevenue > 0 ? `${tentativeRevenue.toLocaleString('sv-SE')} kr potentiellt` : `${tentativeDays} dagar potentiellt`}
+                  {tentativeRevenue > 0 ? t('potentialRevenue', { amount: tentativeRevenue.toLocaleString(formatLocale) }) : t('potentialDays', { count: tentativeDays })}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Historik */}
+          {/* History */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Genomförda intäkter</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('completedRevenue')}</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {totalRevenue.toLocaleString('sv-SE')} kr
+                  {totalRevenue.toLocaleString(formatLocale)} {tc('kr')}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {completedGigs.length} genomförda uppdrag
+                  {t('completedGigsCount', { count: completedGigs.length })}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Genomförda dagar</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('completedDays')}</CardTitle>
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalDays} dagar</div>
+                <div className="text-2xl font-bold">{totalDays} {tc('days')}</div>
                 <p className="text-xs text-muted-foreground">
-                  Totalt antal dagar
+                  {t('totalDaysCount')}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avböjda</CardTitle>
+                <CardTitle className="text-sm font-medium">{tStatus('declined')}</CardTitle>
                 <XCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{declinedGigs.length} st</div>
+                <div className="text-2xl font-bold">{t('declinedCount', { count: declinedGigs.length })}</div>
                 <p className="text-xs text-muted-foreground">
-                  {declinedAmount.toLocaleString('sv-SE')} kr totalt
+                  {declinedAmount.toLocaleString(formatLocale)} {tc('kr')} {tc('total').toLowerCase()}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Snitt/dag</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('avgPerDay')}</CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {Math.round(avgPerDay).toLocaleString('sv-SE')} kr
+                  {Math.round(avgPerDay).toLocaleString(formatLocale)} {tc('kr')}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Genomsnitt per arbetsdag
+                  {t('avgPerWorkDay')}
                 </p>
               </CardContent>
             </Card>
@@ -347,40 +352,40 @@ export default function AnalyticsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Bäst betalda per dag
+                {t('bestPayingPerDay')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {gigsWithDayRate.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
-                  Inga genomförda uppdrag med arvode
+                  {t('noCompletedGigsWithFee')}
                 </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Projekt</TableHead>
-                      <TableHead>Uppdragsgivare</TableHead>
-                      <TableHead>Typ</TableHead>
-                      <TableHead className="text-right">Arvode</TableHead>
-                      <TableHead className="text-right">Dagar</TableHead>
-                      <TableHead className="text-right">Per dag</TableHead>
+                      <TableHead>{tGig('project')}</TableHead>
+                      <TableHead>{tGig('client')}</TableHead>
+                      <TableHead>{tGig('type')}</TableHead>
+                      <TableHead className="text-right">{tGig('fee')}</TableHead>
+                      <TableHead className="text-right">{tc('days')}</TableHead>
+                      <TableHead className="text-right">{t('perDay')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {gigsWithDayRate.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">
-                          {gig.project_name || new Date(gig.date).toLocaleDateString('sv-SE')}
+                          {gig.project_name || new Date(gig.date).toLocaleDateString(formatLocale)}
                         </TableCell>
-                        <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">Ej angiven</span>}</TableCell>
+                        <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}</TableCell>
                         <TableCell>{gig.gig_type.name}</TableCell>
                         <TableCell className="text-right">
-                          {(gig.fee || 0).toLocaleString('sv-SE')} kr
+                          {(gig.fee || 0).toLocaleString(formatLocale)} {tc('kr')}
                         </TableCell>
                         <TableCell className="text-right">{gig.total_days}</TableCell>
                         <TableCell className="text-right font-semibold text-green-600">
-                          {Math.round(gig.dayRate).toLocaleString('sv-SE')} kr/dag
+                          {Math.round(gig.dayRate).toLocaleString(formatLocale)} {t('krPerDay')}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -396,18 +401,18 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Music className="h-5 w-5" />
-                  Statistik per position
+                  {t('statsByPosition')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Position</TableHead>
-                      <TableHead className="text-right">Antal gigs</TableHead>
-                      <TableHead className="text-right">Dagar</TableHead>
-                      <TableHead className="text-right">Total intäkt</TableHead>
-                      <TableHead className="text-right">Snitt/dag</TableHead>
+                      <TableHead>{tGig('position')}</TableHead>
+                      <TableHead className="text-right">{t('gigCount')}</TableHead>
+                      <TableHead className="text-right">{tc('days')}</TableHead>
+                      <TableHead className="text-right">{t('totalRevenue')}</TableHead>
+                      <TableHead className="text-right">{t('avgPerDay')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -417,10 +422,10 @@ export default function AnalyticsPage() {
                         <TableCell className="text-right">{stat.gigCount}</TableCell>
                         <TableCell className="text-right">{stat.totalDays}</TableCell>
                         <TableCell className="text-right">
-                          {stat.totalRevenue.toLocaleString('sv-SE')} kr
+                          {stat.totalRevenue.toLocaleString(formatLocale)} {tc('kr')}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-green-600">
-                          {Math.round(stat.avgPerDay).toLocaleString('sv-SE')} kr/dag
+                          {Math.round(stat.avgPerDay).toLocaleString(formatLocale)} {t('krPerDay')}
                         </TableCell>
                       </TableRow>
                     ))}

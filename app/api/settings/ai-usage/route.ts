@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Failed to fetch AI usage logs:', error)
       return NextResponse.json(
-        { error: 'Kunde inte hämta AI-användningsdata' },
+        { error: 'Could not fetch AI usage data' },
         { status: 500 }
       )
     }
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('AI usage API error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }

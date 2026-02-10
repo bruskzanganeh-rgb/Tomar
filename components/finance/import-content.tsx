@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -151,6 +152,10 @@ function findHistoricalMatch(
 }
 
 export default function ImportPage() {
+  const t = useTranslations('expense')
+  const tc = useTranslations('common')
+  const tt = useTranslations('toast')
+  const ti = useTranslations('invoice')
   const [currentStep, setCurrentStep] = useState<Step>('select')
   const [files, setFiles] = useState<AnalyzedFile[]>([])
   const [analyzing, setAnalyzing] = useState(false)
@@ -218,7 +223,7 @@ export default function ImportPage() {
     })
 
     if (validFiles.length === 0) {
-      setError('Inga giltiga filer hittades. Använd PDF eller bilder (JPEG/PNG/WebP/GIF).')
+      setError(t('noValidFilesFound'))
       return
     }
 
@@ -244,7 +249,7 @@ export default function ImportPage() {
 
     setFiles(newFiles)
     setError(null)
-  }, [])
+  }, [t])
 
   // Drag & drop handlers
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -290,7 +295,7 @@ export default function ImportPage() {
           const result = await response.json()
 
           if (!response.ok) {
-            throw new Error(result.error || 'Analys misslyckades')
+            throw new Error(result.error || t('analysisFailed'))
           }
 
           setFiles(prev => prev.map(f => {
@@ -341,7 +346,7 @@ export default function ImportPage() {
             f.id === file.id ? {
               ...f,
               status: 'error' as const,
-              error: err instanceof Error ? err.message : 'Okänt fel',
+              error: err instanceof Error ? err.message : t('unknownError'),
             } : f
           ))
         }
@@ -354,7 +359,6 @@ export default function ImportPage() {
 
   // Kontrollera dubletter mot befintliga utgifter
   const checkDuplicates = async () => {
-    // Hämta alla analyserade utgifter med datum, leverantör och belopp
     const currentFiles = files.filter(f => f.status === 'done' && f.type === 'expense')
     const expensesToCheck = currentFiles
       .map(f => {
@@ -363,7 +367,7 @@ export default function ImportPage() {
           id: f.id,
           date: data.date,
           supplier: data.supplier,
-          amount: data.total, // Använd total för duplicatkontroll
+          amount: data.total,
         }
       })
       .filter(e => e.date && e.supplier && e.amount > 0)
@@ -385,12 +389,10 @@ export default function ImportPage() {
 
       if (response.ok) {
         const data = await response.json()
-        // Matcha resultat med filer baserat på index
         setFiles(prev => prev.map(f => {
           if (f.type !== 'expense' || f.status !== 'done') return f
 
           const fileData = f.data as ExpenseData
-          // Hitta matchande resultat
           const matchIndex = expensesToCheck.findIndex(
             e => e.date === fileData.date &&
                  e.supplier === fileData.supplier &&
@@ -403,7 +405,6 @@ export default function ImportPage() {
               ...f,
               isDuplicate: dupResult.isDuplicate,
               existingExpense: dupResult.existingExpense,
-              // Avmarkera dubletter som default - användaren kan välja att importera ändå
               selected: dupResult.isDuplicate ? false : f.selected,
             }
           }
@@ -412,7 +413,6 @@ export default function ImportPage() {
       }
     } catch (err) {
       console.error('Duplicate check failed:', err)
-      // Fortsätt ändå - duplicatkontroll är inte kritiskt
     }
   }
 
@@ -441,20 +441,20 @@ export default function ImportPage() {
         const invoiceData = f.data as InvoiceData
         newData = {
           date: invoiceData.invoiceDate || null,
-          supplier: invoiceData.clientName || 'Okänd leverantör',
+          supplier: invoiceData.clientName || t('unknownSupplier'),
           subtotal: invoiceData.subtotal || 0,
           vatRate: invoiceData.vatRate || 25,
           vatAmount: invoiceData.vatAmount || 0,
           total: invoiceData.total || 0,
           currency: 'SEK',
           category: 'Övrigt',
-          notes: `Konverterad från faktura #${invoiceData.invoiceNumber}`,
+          notes: t('convertedFromInvoice', { number: invoiceData.invoiceNumber }),
         }
       } else {
         const expenseData = f.data as ExpenseData
         newData = {
           invoiceNumber: 0,
-          clientName: expenseData.supplier || 'Okänd kund',
+          clientName: expenseData.supplier || t('unknownClient'),
           invoiceDate: expenseData.date || new Date().toISOString().split('T')[0],
           dueDate: expenseData.date || new Date().toISOString().split('T')[0],
           subtotal: expenseData.subtotal || 0,
@@ -476,7 +476,7 @@ export default function ImportPage() {
   // Importera valda filer
   const handleImport = async () => {
     if (selectedFiles.length === 0) {
-      toast.error('Välj minst en fil att importera')
+      toast.error(t('selectAtLeastOneFile'))
       return
     }
 
@@ -494,7 +494,6 @@ export default function ImportPage() {
         suggestedFilename: f.suggestedFilename,
       }))
       formData.append('metadata', JSON.stringify(metadata))
-      // Dubletter hanteras i UI - användaren väljer själv vilka som ska importeras
       formData.append('skipDuplicates', 'false')
 
       selectedFiles.forEach(f => {
@@ -509,7 +508,7 @@ export default function ImportPage() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Import misslyckades')
+        throw new Error(result.error || t('importFailed'))
       }
 
       setImportResults(result.results)
@@ -520,13 +519,13 @@ export default function ImportPage() {
       const skipped = result.summary.skipped
 
       if (succeeded > 0 && failed === 0) {
-        toast.success(`Importerade ${succeeded} fil${succeeded > 1 ? 'er' : ''}${skipped > 0 ? `, ${skipped} hoppades över` : ''}`)
+        toast.success(t('importedFiles', { count: succeeded }) + (skipped > 0 ? `, ${t('skippedFiles', { count: skipped })}` : ''))
       } else if (failed > 0) {
-        toast.warning(`${succeeded} lyckades, ${failed} misslyckades`)
+        toast.warning(t('importPartialSuccess', { succeeded, failed }))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import misslyckades')
-      toast.error('Import misslyckades')
+      setError(err instanceof Error ? err.message : t('importFailed'))
+      toast.error(t('importFailed'))
     } finally {
       setImporting(false)
     }
@@ -544,18 +543,18 @@ export default function ImportPage() {
     <div className="container mx-auto py-8 space-y-8 max-w-5xl">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Importera dokument</h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-2">{t('importDocuments')}</h1>
         <p className="text-muted-foreground text-lg">
-          AI analyserar och kategoriserar dina kvitton och fakturor
+          {t('importDocumentsDescription')}
         </p>
       </div>
 
       {/* Progress stepper - modern */}
       <div className="flex items-center justify-center gap-4 py-4">
         {[
-          { step: 'select', label: 'Välj filer', num: 1 },
-          { step: 'review', label: 'Granska', num: 2 },
-          { step: 'complete', label: 'Klart', num: 3 },
+          { step: 'select', label: t('selectFiles'), num: 1 },
+          { step: 'review', label: t('review'), num: 2 },
+          { step: 'complete', label: t('done'), num: 3 },
         ].map((item, index) => {
           const isActive = currentStep === item.step
           const isComplete =
@@ -633,13 +632,13 @@ export default function ImportPage() {
               </div>
 
               <p className="text-xl font-semibold mb-2">
-                Dra och släpp filer här
+                {t('dragAndDropFiles')}
               </p>
               <p className="text-muted-foreground mb-4">
-                eller klicka för att välja filer
+                {t('orClickToSelect')}
               </p>
               <p className="text-sm text-muted-foreground/70">
-                PDF, JPEG, PNG, WebP, GIF (max 10MB per fil)
+                {t('fileFormatsWithSize')}
               </p>
 
               <input
@@ -656,11 +655,11 @@ export default function ImportPage() {
               <div className="border-t p-6 bg-muted/30">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{files.length} fil{files.length > 1 ? 'er' : ''} valda</span>
+                    <span className="text-sm font-medium">{t('filesSelected', { count: files.length })}</span>
                     {Object.keys(supplierMapping).length > 0 && (
                       <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         <History className="h-3 w-3" />
-                        Lär från {Object.keys(supplierMapping).length} leverantörer
+                        {t('learningFromSuppliers', { count: Object.keys(supplierMapping).length })}
                       </span>
                     )}
                   </div>
@@ -668,12 +667,12 @@ export default function ImportPage() {
                     {analyzing ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyserar... {analyzeProgress}%
+                        {t('analyzing')} {analyzeProgress}%
                       </>
                     ) : (
                       <>
                         <Sparkles className="mr-2 h-4 w-4" />
-                        Analysera med AI
+                        {t('analyzeWithAI')}
                       </>
                     )}
                   </Button>
@@ -722,14 +721,14 @@ export default function ImportPage() {
           <div className="grid grid-cols-4 gap-3">
             <Card className="bg-gradient-to-br from-background to-muted/30">
               <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Analyserade</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">{t('analyzed')}</p>
                 <p className="text-3xl font-bold">{analyzedFiles.length}</p>
               </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/20 dark:to-orange-900/10">
               <CardContent className="p-4">
                 <p className="text-xs text-orange-600 dark:text-orange-400 uppercase tracking-wide flex items-center gap-1">
-                  <Receipt className="h-3 w-3" /> Utgifter
+                  <Receipt className="h-3 w-3" /> {t('expenses')}
                 </p>
                 <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{expenses.length}</p>
               </CardContent>
@@ -737,7 +736,7 @@ export default function ImportPage() {
             <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/10">
               <CardContent className="p-4">
                 <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide flex items-center gap-1">
-                  <FileText className="h-3 w-3" /> Fakturor
+                  <FileText className="h-3 w-3" /> {ti('invoices')}
                 </p>
                 <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{invoices.length}</p>
               </CardContent>
@@ -745,7 +744,7 @@ export default function ImportPage() {
             <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/20 dark:to-amber-900/10">
               <CardContent className="p-4">
                 <p className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> Dubletter
+                  <AlertTriangle className="h-3 w-3" /> {t('duplicates')}
                 </p>
                 <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{duplicates.length}</p>
               </CardContent>
@@ -786,8 +785,8 @@ export default function ImportPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="expense">Utgift</SelectItem>
-                        <SelectItem value="invoice">Faktura</SelectItem>
+                        <SelectItem value="expense">{t('expenseType')}</SelectItem>
+                        <SelectItem value="invoice">{t('invoiceType')}</SelectItem>
                       </SelectContent>
                     </Select>
 
@@ -806,14 +805,14 @@ export default function ImportPage() {
                             : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                         }
                       `}>
-                        {Math.round(file.confidence * 100)}% säker
+                        {Math.round(file.confidence * 100)}% {t('confident')}
                       </span>
 
                       {/* Historical data badge */}
                       {file.usedHistoricalData && (
                         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                           <History className="h-3 w-3" />
-                          Baserat på {file.historicalMatchCount} tidigare
+                          {t('basedOnPrevious', { count: file.historicalMatchCount ?? 0 })}
                         </span>
                       )}
 
@@ -821,7 +820,7 @@ export default function ImportPage() {
                       {file.isDuplicate && (
                         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                           <AlertTriangle className="h-3 w-3" />
-                          Dublett
+                          {t('duplicate')}
                         </span>
                       )}
                     </div>
@@ -835,10 +834,10 @@ export default function ImportPage() {
                           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                           <div>
                             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                              Denna utgift finns redan i systemet
+                              {t('expenseAlreadyExists')}
                             </p>
                             <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                              {file.existingExpense.supplier} - {file.existingExpense.amount.toLocaleString('sv-SE')} kr ({file.existingExpense.date})
+                              {file.existingExpense.supplier} - {file.existingExpense.amount.toLocaleString('sv-SE')} {tc('kr')} ({file.existingExpense.date})
                             </p>
                           </div>
                         </div>
@@ -849,7 +848,7 @@ export default function ImportPage() {
                             className={`h-7 text-xs ${file.selected ? 'bg-amber-100 border-amber-300' : ''}`}
                             onClick={() => updateFile(file.id, { selected: true })}
                           >
-                            Importera ändå
+                            {t('importAnyway')}
                           </Button>
                           <Button
                             variant="outline"
@@ -857,7 +856,7 @@ export default function ImportPage() {
                             className={`h-7 text-xs ${!file.selected ? 'bg-muted' : ''}`}
                             onClick={() => updateFile(file.id, { selected: false })}
                           >
-                            Hoppa över
+                            {t('skip')}
                           </Button>
                         </div>
                       </div>
@@ -867,10 +866,10 @@ export default function ImportPage() {
                   {/* Inline editable fields */}
                   {file.type === 'expense' ? (
                     <div className="ml-8 space-y-3">
-                      {/* Main row: 4 columns - Datum, Leverantör, Belopp, Kategori */}
+                      {/* Main row: 4 columns */}
                       <div className="grid grid-cols-[120px_1fr_180px_160px] gap-3 items-end">
                         <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Datum</label>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('date')}</label>
                           <Input
                             type="date"
                             value={(file.data as ExpenseData).date || ''}
@@ -879,16 +878,16 @@ export default function ImportPage() {
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Leverantör</label>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('supplier')}</label>
                           <Input
                             value={(file.data as ExpenseData).supplier}
                             onChange={(e) => updateFileData(file.id, { supplier: e.target.value })}
-                            placeholder="Leverantör"
+                            placeholder={t('supplier')}
                             className="h-9 mt-1"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Belopp</label>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('amount')}</label>
                           <div className="flex items-center gap-2 mt-1">
                             <Input
                               type="number"
@@ -909,7 +908,7 @@ export default function ImportPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Kategori</label>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('category')}</label>
                           <Select
                             value={(file.data as ExpenseData).category}
                             onValueChange={(value) => updateFileData(file.id, { category: value })}
@@ -919,7 +918,7 @@ export default function ImportPage() {
                             </SelectTrigger>
                             <SelectContent>
                               {categories.map(c => (
-                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                                <SelectItem key={c} value={c}>{t('categories.' + c)}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -935,12 +934,12 @@ export default function ImportPage() {
                         {file.showVatDetails ? (
                           <>
                             <ChevronUp className="h-3.5 w-3.5" />
-                            Dölj momsdetaljer
+                            {t('hideVatDetails')}
                           </>
                         ) : (
                           <>
                             <ChevronDown className="h-3.5 w-3.5" />
-                            Visa momsdetaljer
+                            {t('showVatDetails')}
                           </>
                         )}
                       </button>
@@ -949,7 +948,7 @@ export default function ImportPage() {
                       {file.showVatDetails && (
                         <div className="grid grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 border">
                           <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Valuta</label>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('currency')}</label>
                             <Select
                               value={(file.data as ExpenseData).currency}
                               onValueChange={(value) => updateFileData(file.id, { currency: value })}
@@ -965,7 +964,7 @@ export default function ImportPage() {
                             </Select>
                           </div>
                           <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Netto</label>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('net')}</label>
                             <Input
                               type="number"
                               step="0.01"
@@ -980,7 +979,7 @@ export default function ImportPage() {
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Momssats</label>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('vatRate')}</label>
                             <Select
                               value={(file.data as ExpenseData).vatRate.toString()}
                               onValueChange={(value) => {
@@ -1002,7 +1001,7 @@ export default function ImportPage() {
                             </Select>
                           </div>
                           <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Momsbelopp</label>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('vatAmount')}</label>
                             <Input
                               type="number"
                               step="0.01"
@@ -1017,7 +1016,7 @@ export default function ImportPage() {
                   ) : (
                     <div className="grid grid-cols-6 gap-3 ml-8">
                       <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Fakturanr</label>
+                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{ti('invoiceNumberShort')}</label>
                         <Input
                           type="number"
                           value={(file.data as InvoiceData).invoiceNumber}
@@ -1026,16 +1025,16 @@ export default function ImportPage() {
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Kund</label>
+                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{ti('customer')}</label>
                         <Input
                           value={(file.data as InvoiceData).clientName}
                           onChange={(e) => updateFileData(file.id, { clientName: e.target.value })}
-                          placeholder="Kundnamn"
+                          placeholder={ti('customer')}
                           className="h-9 mt-1"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Datum</label>
+                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('date')}</label>
                         <Input
                           type="date"
                           value={(file.data as InvoiceData).invoiceDate || ''}
@@ -1044,7 +1043,7 @@ export default function ImportPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Förfaller</label>
+                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{ti('dueDate')}</label>
                         <Input
                           type="date"
                           value={(file.data as InvoiceData).dueDate || ''}
@@ -1053,7 +1052,7 @@ export default function ImportPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Totalt</label>
+                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{tc('total')}</label>
                         <Input
                           type="number"
                           step="0.01"
@@ -1073,7 +1072,7 @@ export default function ImportPage() {
               <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
                 <CardContent className="p-4">
                   <h4 className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
-                    Kunde inte analyseras:
+                    {t('couldNotAnalyze')}:
                   </h4>
                   {files.filter(f => f.status === 'error').map((file) => (
                     <p key={file.id} className="text-sm text-red-600 dark:text-red-400">
@@ -1089,7 +1088,7 @@ export default function ImportPage() {
           <div className="flex justify-between pt-4">
             <Button variant="outline" onClick={handleReset}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Börja om
+              {t('startOver')}
             </Button>
             <Button
               onClick={handleImport}
@@ -1099,11 +1098,11 @@ export default function ImportPage() {
               {importing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Importerar...
+                  {t('importing')}
                 </>
               ) : (
                 <>
-                  Importera {selectedFiles.length} fil{selectedFiles.length !== 1 ? 'er' : ''}
+                  {t('importFiles', { count: selectedFiles.length })}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
@@ -1126,9 +1125,12 @@ export default function ImportPage() {
               </div>
             </div>
 
-            <h2 className="text-2xl font-bold mb-2">Import klar!</h2>
+            <h2 className="text-2xl font-bold mb-2">{t('importComplete')}</h2>
             <p className="text-muted-foreground mb-8">
-              {importResults.filter(r => r.success).length} av {importResults.length} filer importerades framgångsrikt
+              {t('importCompleteDescription', {
+                succeeded: importResults.filter(r => r.success).length,
+                total: importResults.length
+              })}
             </p>
 
             {/* Results list */}
@@ -1150,7 +1152,7 @@ export default function ImportPage() {
                   )}
                   <span className="text-sm truncate flex-1">{result.filename}</span>
                   {result.skippedAsDuplicate && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400">Dublett</span>
+                    <span className="text-xs text-amber-600 dark:text-amber-400">{t('duplicate')}</span>
                   )}
                   {result.error && (
                     <span className="text-xs text-red-600 dark:text-red-400">{result.error}</span>
@@ -1163,18 +1165,18 @@ export default function ImportPage() {
             <div className="flex justify-center gap-3">
               <Button onClick={handleReset} size="lg">
                 <Upload className="mr-2 h-4 w-4" />
-                Importera fler
+                {t('importMore')}
               </Button>
               <Button variant="outline" asChild>
                 <Link href="/expenses">
                   <Receipt className="mr-2 h-4 w-4" />
-                  Visa utgifter
+                  {t('viewExpenses')}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link href="/invoices">
                   <FileText className="mr-2 h-4 w-4" />
-                  Visa fakturor
+                  {t('viewInvoices')}
                 </Link>
               </Button>
             </div>

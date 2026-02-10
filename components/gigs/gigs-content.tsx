@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,17 +16,67 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { GigAttachments } from '@/components/gigs/gig-attachments'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
-import { CreateGigDialog } from '@/components/gigs/create-gig-dialog'
-import { EditGigDialog } from '@/components/gigs/edit-gig-dialog'
-import { CreateInvoiceDialog } from '@/components/invoices/create-invoice-dialog'
+import { GigDialog } from '@/components/gigs/gig-dialog'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
 import { format } from 'date-fns'
-import { sv } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { cn } from '@/lib/utils'
+import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
+
+function fmtFee(amount: number, currency?: string | null): string {
+  return formatCurrency(amount, (currency || 'SEK') as SupportedCurrency)
+}
+
+type SortColumn = 'date' | 'client' | 'type' | 'venue' | 'fee' | 'status'
+type SortDir = 'asc' | 'desc'
+type SortConfig = { column: SortColumn; direction: SortDir }
+
+function sortGigs(gigs: Gig[], config: SortConfig): Gig[] {
+  return [...gigs].sort((a, b) => {
+    let cmp = 0
+    switch (config.column) {
+      case 'date': cmp = a.date.localeCompare(b.date); break
+      case 'client': cmp = (a.client?.name || '').localeCompare(b.client?.name || ''); break
+      case 'type': cmp = a.gig_type.name.localeCompare(b.gig_type.name); break
+      case 'venue': cmp = (a.venue || '').localeCompare(b.venue || ''); break
+      case 'fee': cmp = (a.fee || 0) - (b.fee || 0); break
+      case 'status': cmp = a.status.localeCompare(b.status); break
+    }
+    return config.direction === 'asc' ? cmp : -cmp
+  })
+}
+
+function SortableHead({ column, sort, onSort, children, className }: {
+  column: SortColumn
+  sort: SortConfig
+  onSort: (col: SortColumn) => void
+  children: React.ReactNode
+  className?: string
+}) {
+  const active = sort.column === column
+  return (
+    <TableHead
+      className={cn("cursor-pointer select-none hover:bg-muted/50", className)}
+      onClick={() => onSort(column)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {active
+          ? (sort.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+          : <ArrowUpDown className="h-3 w-3 opacity-30" />
+        }
+      </div>
+    </TableHead>
+  )
+}
 
 type Gig = {
   id: string
@@ -36,18 +88,18 @@ type Gig = {
   fee: number | null
   travel_expense: number | null
   project_name: string | null
-  conductor: string | null
   status: string
   notes: string | null
   response_deadline: string | null
   client_id: string | null
   gig_type_id: string
   position_id: string | null
+  currency: string | null
+  fee_base: number | null
   client: { name: string; payment_terms: number } | null
   gig_type: { name: string; vat_rate: number; color: string | null }
   position: { name: string } | null
   gig_dates: { date: string }[]
-  gig_works: { work: { title: string; composer: string; catalog_number: string | null } }[]
 }
 
 type GigExpense = {
@@ -60,17 +112,17 @@ type GigExpense = {
   attachment_url: string | null
 }
 
-function formatGigDates(gig: Gig): string {
+function formatGigDates(gig: Gig, locale: Locale): string {
   if (!gig.total_days || gig.total_days === 1) {
-    return format(new Date(gig.date), 'PPP', { locale: sv })
+    return format(new Date(gig.date), 'PPP', { locale })
   }
 
-  const start = format(new Date(gig.start_date!), 'd MMM', { locale: sv })
-  const end = format(new Date(gig.end_date!), 'd MMM yyyy', { locale: sv })
+  const start = format(new Date(gig.start_date!), 'd MMM', { locale })
+  const end = format(new Date(gig.end_date!), 'd MMM yyyy', { locale })
   return `${start} - ${end}`
 }
 
-function getDeadlineStatus(deadline: string | null): { label: string; color: string; urgent: boolean } | null {
+function getDeadlineStatus(deadline: string | null, locale: Locale): { label: string; color: string; urgent: boolean; key?: string } | null {
   if (!deadline) return null
 
   const today = new Date()
@@ -81,44 +133,69 @@ function getDeadlineStatus(deadline: string | null): { label: string; color: str
   const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
   if (diffDays < 0) {
-    return { label: 'Försenad!', color: 'bg-red-100 text-red-800', urgent: true }
+    return { label: '', color: 'bg-red-100 text-red-800', urgent: true, key: 'overdue' }
   } else if (diffDays === 0) {
-    return { label: 'Idag!', color: 'bg-red-100 text-red-800', urgent: true }
+    return { label: '', color: 'bg-red-100 text-red-800', urgent: true, key: 'todayDeadline' }
   } else if (diffDays <= 2) {
-    return { label: `${diffDays} dag${diffDays > 1 ? 'ar' : ''}`, color: 'bg-orange-100 text-orange-800', urgent: true }
+    return { label: `${diffDays}`, color: 'bg-orange-100 text-orange-800', urgent: true, key: 'daysCount' }
   } else if (diffDays <= 7) {
-    return { label: format(deadlineDate, 'd MMM', { locale: sv }), color: 'bg-yellow-100 text-yellow-800', urgent: false }
+    return { label: format(deadlineDate, 'd MMM', { locale }), color: 'bg-yellow-100 text-yellow-800', urgent: false }
   } else {
-    return { label: format(deadlineDate, 'd MMM', { locale: sv }), color: 'bg-gray-100 text-gray-600', urgent: false }
+    return { label: format(deadlineDate, 'd MMM', { locale }), color: 'bg-gray-100 text-gray-600', urgent: false }
   }
 }
 
+function gigHasPassed(gig: Gig): boolean {
+  const lastDate = gig.end_date || gig.date
+  const today = new Date().toISOString().split('T')[0]
+  return lastDate < today
+}
+
 const statusConfig = {
-  tentative: { label: 'Ej bekräftat', icon: HelpCircle, color: 'bg-orange-100 text-orange-800' },
-  pending: { label: 'Väntar på svar', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
-  accepted: { label: 'Accepterat', icon: Check, color: 'bg-green-100 text-green-800' },
-  declined: { label: 'Avböjt', icon: X, color: 'bg-red-100 text-red-800' },
-  completed: { label: 'Genomfört', icon: Check, color: 'bg-blue-100 text-blue-800' },
-  invoiced: { label: 'Fakturerat', icon: FileText, color: 'bg-purple-100 text-purple-800' },
-  paid: { label: 'Betalt', icon: DollarSign, color: 'bg-green-200 text-green-900' },
+  tentative: { icon: HelpCircle, color: 'bg-orange-100 text-orange-800' },
+  pending: { icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
+  accepted: { icon: Check, color: 'bg-green-100 text-green-800' },
+  declined: { icon: X, color: 'bg-red-100 text-red-800' },
+  completed: { icon: Check, color: 'bg-blue-100 text-blue-800' },
+  invoiced: { icon: FileText, color: 'bg-purple-100 text-purple-800' },
+  paid: { icon: DollarSign, color: 'bg-green-200 text-green-900' },
 }
 
 export default function GigsPage() {
+  const t = useTranslations('gig')
+  const tStatus = useTranslations('status')
+  const tc = useTranslations('common')
+  const tToast = useTranslations('toast')
+  const dateLocale = useDateLocale()
+  const formatLocale = useFormatLocale()
+
   const [gigs, setGigs] = useState<Gig[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false)
-  const [selectedGigForInvoice, setSelectedGigForInvoice] = useState<Gig | null>(null)
   const [editingGig, setEditingGig] = useState<Gig | null>(null)
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null)
-  const [filter, setFilter] = useState<string>('all')
+  const [activeTab, setActiveTab] = useState('upcoming')
+  const [upcomingSort, setUpcomingSort] = useState<SortConfig>({ column: 'date', direction: 'asc' })
+  const [historySort, setHistorySort] = useState<SortConfig>({ column: 'date', direction: 'desc' })
+  const [declinedSort, setDeclinedSort] = useState<SortConfig>({ column: 'date', direction: 'desc' })
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesText, setNotesText] = useState('')
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
   const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
+  const [showScrollHint, setShowScrollHint] = useState(true)
   const supabase = createClient()
+  const upcomingScrollRef = useRef<HTMLDivElement>(null)
+  const historyScrollRef = useRef<HTMLDivElement>(null)
+  const declinedScrollRef = useRef<HTMLDivElement>(null)
+
+  function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50
+    const noScroll = el.scrollHeight <= el.clientHeight
+    setShowScrollHint(!nearBottom && !noScroll)
+  }
 
   useEffect(() => {
     loadGigs()
@@ -141,8 +218,7 @@ export default function GigsPage() {
         client:clients(name, payment_terms),
         gig_type:gig_types(name, vat_rate, color),
         position:positions(name),
-        gig_dates(date),
-        gig_works(work:works(title, composer, catalog_number))
+        gig_dates(date)
       `)
       .order('date', { ascending: false })
 
@@ -176,9 +252,18 @@ export default function GigsPage() {
 
     if (error) {
       console.error('Error updating status:', error)
-      toast.error('Kunde inte uppdatera status')
+      toast.error(tToast('statusUpdateError'))
     } else {
       loadGigs()
+      if (status === 'completed') {
+        toast.success(tToast('gigCompleted'), {
+          action: {
+            label: tToast('invoiceNow'),
+            onClick: () => { window.location.href = '/finance' },
+          },
+          duration: 6000,
+        })
+      }
     }
   }
 
@@ -195,10 +280,30 @@ export default function GigsPage() {
 
     if (error) {
       console.error('Error deleting gig:', error)
-      toast.error('Kunde inte ta bort uppdrag')
+      toast.error(tToast('deleteGigError'))
     } else {
       loadGigs()
     }
+  }
+
+  async function openEditById(gigId: string) {
+    const { data, error } = await supabase
+      .from('gigs')
+      .select(`
+        *,
+        client:clients(name, payment_terms),
+        gig_type:gig_types(name, vat_rate, color),
+        position:positions(name),
+        gig_dates(date)
+      `)
+      .eq('id', gigId)
+      .single()
+
+    if (error) {
+      console.error('Error loading gig:', error)
+      return
+    }
+    setEditingGig(data)
   }
 
   async function saveNotes(id: string, notes: string) {
@@ -209,7 +314,7 @@ export default function GigsPage() {
 
     if (error) {
       console.error('Error saving notes:', error)
-      toast.error('Kunde inte spara anteckningar')
+      toast.error(tToast('notesError'))
     } else {
       // Update local state
       setGigs(gigs.map(g => g.id === id ? { ...g, notes: notes || null } : g))
@@ -220,114 +325,143 @@ export default function GigsPage() {
     }
   }
 
-  const filteredGigs = filter === 'all'
-    ? gigs
-    : gigs.filter(g => g.status === filter)
+  async function batchMarkCompleted(gigIds: string[]) {
+    const { error } = await supabase
+      .from('gigs')
+      .update({ status: 'completed' })
+      .in('id', gigIds)
+
+    if (error) {
+      console.error('Error batch updating:', error)
+      toast.error(tToast('statusUpdateError'))
+    } else {
+      toast.success(tToast('gigsCompleted', { count: gigIds.length }), {
+        action: {
+          label: tToast('goToFinance'),
+          onClick: () => { window.location.href = '/finance' },
+        },
+        duration: 6000,
+      })
+      loadGigs()
+    }
+  }
+
+  function toggleSort(setter: (s: SortConfig) => void, current: SortConfig, column: SortColumn) {
+    setter(current.column === column
+      ? { column, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+      : { column, direction: 'asc' })
+  }
+
+  function renderDeadlineLabel(deadlineInfo: { label: string; color: string; urgent: boolean; key?: string }) {
+    if (deadlineInfo.key === 'overdue') return t('overdue')
+    if (deadlineInfo.key === 'todayDeadline') return t('todayDeadline')
+    if (deadlineInfo.key === 'daysCount') return `${deadlineInfo.label} ${tc('days')}`
+    return deadlineInfo.label
+  }
+
+  // Computed groups
+  const activeStatuses = new Set(['tentative', 'pending', 'accepted'])
+  const historyStatuses = new Set(['completed', 'invoiced', 'paid'])
+
+  const pastNeedingAction = useMemo(() =>
+    gigs
+      .filter(g => activeStatuses.has(g.status) && gigHasPassed(g))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    [gigs]
+  )
+
+  const pastAccepted = pastNeedingAction.filter(g => g.status === 'accepted')
+  const pastUnanswered = pastNeedingAction.filter(g => g.status === 'pending' || g.status === 'tentative')
+
+  const sortedUpcoming = useMemo(() =>
+    sortGigs(gigs.filter(g => activeStatuses.has(g.status) && !gigHasPassed(g)), upcomingSort),
+    [gigs, upcomingSort]
+  )
+
+  const sortedHistory = useMemo(() =>
+    sortGigs(gigs.filter(g => historyStatuses.has(g.status)), historySort),
+    [gigs, historySort]
+  )
+
+  const sortedDeclined = useMemo(() =>
+    sortGigs(gigs.filter(g => g.status === 'declined'), declinedSort),
+    [gigs, declinedSort]
+  )
+
+  const pipelineCounts = useMemo(() => ({
+    completed: gigs.filter(g => g.status === 'completed').length,
+    invoiced: gigs.filter(g => g.status === 'invoiced').length,
+    paid: gigs.filter(g => g.status === 'paid').length,
+  }), [gigs])
+
+  const upcomingVirtualizer = useVirtualizer({
+    count: sortedUpcoming.length,
+    getScrollElement: () => upcomingScrollRef.current,
+    estimateSize: () => 65,
+    overscan: 5,
+  })
+
+  const historyVirtualizer = useVirtualizer({
+    count: sortedHistory.length,
+    getScrollElement: () => historyScrollRef.current,
+    estimateSize: () => 65,
+    overscan: 5,
+  })
+
+  const declinedVirtualizer = useVirtualizer({
+    count: sortedDeclined.length,
+    getScrollElement: () => declinedScrollRef.current,
+    estimateSize: () => 65,
+    overscan: 5,
+  })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Uppdrag</h1>
-          <p className="text-muted-foreground">
-            Hantera alla dina gigs och uppdrag
-          </p>
-        </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nytt uppdrag
-        </Button>
-      </div>
-
-      {/* Filter tabs */}
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('all')}
-        >
-          Alla ({gigs.length})
-        </Button>
-        <Button
-          variant={filter === 'pending' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('pending')}
-        >
-          Väntar på svar ({gigs.filter(g => g.status === 'pending').length})
-        </Button>
-        <Button
-          variant={filter === 'accepted' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('accepted')}
-        >
-          Accepterade ({gigs.filter(g => g.status === 'accepted').length})
-        </Button>
-        <Button
-          variant={filter === 'completed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('completed')}
-        >
-          Genomförda ({gigs.filter(g => g.status === 'completed').length})
-        </Button>
-        <Button
-          variant={filter === 'declined' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('declined')}
-        >
-          Avböjda ({gigs.filter(g => g.status === 'declined').length})
-        </Button>
-      </div>
-
-      {/* Statistics for declined gigs */}
-      {filter === 'declined' && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-800">
-            <span className="font-semibold">Avböjda uppdrag:</span>{' '}
-            {gigs.filter(g => g.status === 'declined').length} st,{' '}
-            totalt {gigs
-              .filter(g => g.status === 'declined')
-              .reduce((sum, g) => sum + (g.fee || 0), 0)
-              .toLocaleString('sv-SE')} kr
-          </p>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            {filter === 'all' ? 'Alla uppdrag' : statusConfig[filter as keyof typeof statusConfig]?.label || 'Uppdrag'} ({filteredGigs.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <TableSkeleton columns={7} rows={5} />
-          ) : filteredGigs.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Inga uppdrag än</p>
-              <p className="text-sm">Klicka på "Nytt uppdrag" för att komma igång</p>
+      {/* Section 1: Past gigs needing action */}
+      {pastNeedingAction.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-amber-800">
+                <AlertTriangle className="h-5 w-5" />
+                {t('needsActionCount', { count: pastNeedingAction.length })}
+              </CardTitle>
+              {pastAccepted.length > 1 && (
+                <Button
+                  size="sm"
+                  onClick={() => batchMarkCompleted(pastAccepted.map(g => g.id))}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  {t('markAllCompleted', { count: pastAccepted.length })}
+                </Button>
+              )}
             </div>
-          ) : (
+          </CardHeader>
+          <CardContent>
+            {pastUnanswered.length > 0 && (
+              <div className="mb-4 p-3 rounded-lg bg-yellow-100/50 border border-yellow-200 text-sm text-yellow-800">
+                <AlertTriangle className="h-4 w-4 inline mr-1.5" />
+                {t('passedNoResponse', { count: pastUnanswered.length })}
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Datum</TableHead>
-                  <TableHead>Uppdragsgivare</TableHead>
-                  <TableHead>Typ</TableHead>
-                  <TableHead>Plats</TableHead>
-                  <TableHead>Arvode</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Åtgärder</TableHead>
+                  <TableHead>{t('date')}</TableHead>
+                  <TableHead>{t('client')}</TableHead>
+                  <TableHead>{t('type')}</TableHead>
+                  <TableHead>{t('fee')}</TableHead>
+                  <TableHead>{t('status')}</TableHead>
+                  <TableHead className="text-right">{t('action')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGigs.map((gig) => {
+                {pastNeedingAction.map((gig) => {
                   const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
                   return (
                     <TableRow
                       key={gig.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="cursor-pointer hover:bg-amber-100/50"
                       onClick={() => {
                         setSelectedGig(gig)
                         setEditingNotes(false)
@@ -335,174 +469,416 @@ export default function GigsPage() {
                     >
                       <TableCell className="font-medium">
                         <div>
-                          {formatGigDates(gig)}
+                          {formatGigDates(gig, dateLocale)}
                           {gig.total_days > 1 && (
                             <span className="text-xs text-muted-foreground ml-1">
-                              ({gig.total_days} dagar)
+                              ({gig.total_days} {tc('days')})
                             </span>
                           )}
                           {gig.project_name && (
-                            <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>
-                              {gig.project_name}
-                            </div>
+                            <div className="text-sm text-muted-foreground truncate max-w-[200px]">{gig.project_name}</div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {gig.client?.name || <span className="text-muted-foreground italic">Ej angiven</span>}
-                      </TableCell>
+                      <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: gig.gig_type.color || '#gray' }}
-                          />
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
                           <span className="text-sm">{gig.gig_type.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {gig.gig_type.vat_rate}%
-                          </Badge>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {gig.venue || '-'}
-                        </span>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {gig.fee !== null ? (
-                          `${gig.fee.toLocaleString('sv-SE')} kr`
-                        ) : (
-                          <span className="text-muted-foreground italic">Ej angivet</span>
-                        )}
+                        {gig.fee !== null ? fmtFee(gig.fee, gig.currency) : <span className="text-muted-foreground italic">{t('notSet')}</span>}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
-                            {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
-                            {statusConfig[gig.status as keyof typeof statusConfig]?.label}
-                          </Badge>
-                          {(gig.status === 'pending' || gig.status === 'tentative') && gig.response_deadline && (() => {
-                            const deadlineInfo = getDeadlineStatus(gig.response_deadline)
-                            if (!deadlineInfo) return null
-                            return (
-                              <Badge variant="outline" className={`text-xs ${deadlineInfo.color}`}>
-                                {deadlineInfo.urgent && <AlertTriangle className="h-3 w-3 mr-1" />}
-                                Svar: {deadlineInfo.label}
-                              </Badge>
-                            )
-                          })()}
-                        </div>
+                        <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                          {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                          {tStatus(gig.status)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          {gig.status === 'pending' && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => updateStatus(gig.id, 'accepted')}
-                              >
-                                <Check className="h-4 w-4 text-green-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => updateStatus(gig.id, 'declined')}
-                              >
-                                <X className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </>
-                          )}
-                          {gig.status === 'accepted' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => updateStatus(gig.id, 'completed')}
-                            >
-                              Markera genomfört
-                            </Button>
-                          )}
-                          {gig.status === 'completed' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (!gig.client) {
-                                  toast.warning('Ange uppdragsgivare först innan du skapar faktura')
-                                  setEditingGig(gig)
-                                  return
-                                }
-                                if (gig.fee === null) {
-                                  toast.warning('Ange arvode först innan du skapar faktura')
-                                  setEditingGig(gig)
-                                  return
-                                }
-                                setSelectedGigForInvoice(gig)
-                                setShowInvoiceDialog(true)
-                              }}
-                            >
-                              <FileText className="h-4 w-4 mr-1" />
-                              Skapa faktura
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingGig(gig)}
-                            title="Redigera uppdrag"
-                          >
-                            <Edit className="h-4 w-4" />
+                        {gig.status === 'accepted' ? (
+                          <Button size="sm" onClick={() => updateStatus(gig.id, 'completed')}>
+                            <Check className="h-4 w-4 mr-1" />
+                            {t('markCompleted')}
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => confirmDeleteGig(gig.id)}
-                            title="Ta bort uppdrag"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'accepted')}>
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'declined')}>
+                              <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   )
                 })}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main 3-tab card */}
+      <Card>
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setShowScrollHint(true) }}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="upcoming" className="gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {t('upcoming')} ({sortedUpcoming.length})
+                </TabsTrigger>
+                <TabsTrigger value="history" className="gap-2">
+                  <History className="h-4 w-4" />
+                  {t('history')} ({sortedHistory.length})
+                </TabsTrigger>
+                <TabsTrigger value="declined" className="gap-2">
+                  <Ban className="h-4 w-4" />
+                  {t('declined')} ({sortedDeclined.length})
+                </TabsTrigger>
+              </TabsList>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('newGig')}
+              </Button>
+            </div>
+            {activeTab === 'history' && (
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {pipelineCounts.completed > 0 && (
+                  <Badge className="bg-blue-100 text-blue-800">
+                    <Check className="h-3 w-3 mr-1" />
+                    {pipelineCounts.completed} {t('completedPipeline')}
+                  </Badge>
+                )}
+                {pipelineCounts.completed > 0 && pipelineCounts.invoiced > 0 && (
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                )}
+                {pipelineCounts.invoiced > 0 && (
+                  <Badge className="bg-purple-100 text-purple-800">
+                    <FileText className="h-3 w-3 mr-1" />
+                    {pipelineCounts.invoiced} {t('invoicedPipeline')}
+                  </Badge>
+                )}
+                {pipelineCounts.invoiced > 0 && pipelineCounts.paid > 0 && (
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                )}
+                {pipelineCounts.paid > 0 && (
+                  <Badge className="bg-green-200 text-green-900">
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    {pipelineCounts.paid} {t('paidPipeline')}
+                  </Badge>
+                )}
+              </div>
+            )}
+            {activeTab === 'declined' && sortedDeclined.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {tc('total')}: {sortedDeclined.reduce((sum, g) => sum + (g.fee_base || g.fee || 0), 0).toLocaleString(formatLocale)} {tc('kr')}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            {/* Upcoming */}
+            <TabsContent value="upcoming" className="mt-0">
+              {loading ? (
+                <TableSkeleton columns={7} rows={5} />
+              ) : sortedUpcoming.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>{t('noUpcoming')}</p>
+                  <p className="text-sm">{t('noUpcomingHint')}</p>
+                </div>
+              ) : (
+                <div className="relative">
+                <div ref={upcomingScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
+                  <table className="w-full caption-bottom text-sm table-fixed">
+                    <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
+                      <TableRow>
+                        <SortableHead column="date" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[18%]">{t('date')}</SortableHead>
+                        <SortableHead column="client" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[18%]">{t('client')}</SortableHead>
+                        <SortableHead column="type" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[14%]">{t('type')}</SortableHead>
+                        <SortableHead column="venue" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[12%]">{t('venue')}</SortableHead>
+                        <SortableHead column="fee" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[10%]">{t('fee')}</SortableHead>
+                        <SortableHead column="status" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[12%]">{t('status')}</SortableHead>
+                        <TableHead className="w-[16%] text-right">{t('actions')}</TableHead>
+                      </TableRow>
+                    </thead>
+                    <tbody className="[&_tr:last-child]:border-0">
+                      {upcomingVirtualizer.getVirtualItems().length > 0 && (
+                        <tr><td colSpan={7} style={{ height: upcomingVirtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                      )}
+                      {upcomingVirtualizer.getVirtualItems().map((virtualRow) => {
+                        const gig = sortedUpcoming[virtualRow.index]
+                        const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                        return (
+                          <TableRow
+                            key={gig.id}
+                            data-index={virtualRow.index}
+                            ref={upcomingVirtualizer.measureElement}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}
+                          >
+                            <TableCell className="font-medium">
+                              <div>
+                                {formatGigDates(gig, dateLocale)}
+                                {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
+                                {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
+                              </div>
+                            </TableCell>
+                            <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                                <span className="text-sm">{gig.gig_type.name}</span>
+                                <Badge variant="outline" className="text-xs">{gig.gig_type.vat_rate}%</Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell><span className="text-sm text-muted-foreground">{gig.venue || '-'}</span></TableCell>
+                            <TableCell className="font-medium">
+                              {gig.fee !== null ? fmtFee(gig.fee, gig.currency) : <span className="text-muted-foreground italic">{t('notSet')}</span>}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                                  {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                  {tStatus(gig.status)}
+                                </Badge>
+                                {(gig.status === 'pending' || gig.status === 'tentative') && gig.response_deadline && (() => {
+                                  const deadlineInfo = getDeadlineStatus(gig.response_deadline, dateLocale)
+                                  if (!deadlineInfo) return null
+                                  return (
+                                    <Badge variant="outline" className={`text-xs ${deadlineInfo.color}`}>
+                                      {deadlineInfo.urgent && <AlertTriangle className="h-3 w-3 mr-1" />}
+                                      {t('response')}: {renderDeadlineLabel(deadlineInfo)}
+                                    </Badge>
+                                  )
+                                })()}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                {gig.status === 'pending' && (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-4 w-4 text-green-600" /></Button>
+                                    <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'declined')}><X className="h-4 w-4 text-red-600" /></Button>
+                                  </>
+                                )}
+                                {gig.status === 'accepted' && (
+                                  <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'completed')}>{t('markCompleted')}</Button>
+                                )}
+                                <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => confirmDeleteGig(gig.id)} title={t('deleteGig')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      {upcomingVirtualizer.getVirtualItems().length > 0 && (
+                        <tr><td colSpan={7} style={{ height: upcomingVirtualizer.getTotalSize() - (upcomingVirtualizer.getVirtualItems().at(-1)?.end ?? 0), padding: 0, border: 'none' }} /></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {showScrollHint && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none animate-bounce">
+                    <ChevronDown className="h-5 w-5 text-muted-foreground/40" />
+                  </div>
+                )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* History */}
+            <TabsContent value="history" className="mt-0">
+              {sortedHistory.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">{t('noHistory')}</p>
+              ) : (
+                <div className="relative">
+                <div ref={historyScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
+                  <table className="w-full caption-bottom text-sm table-fixed">
+                    <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
+                      <TableRow>
+                        <SortableHead column="date" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[18%]">{t('date')}</SortableHead>
+                        <SortableHead column="client" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[18%]">{t('client')}</SortableHead>
+                        <SortableHead column="type" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[16%]">{t('type')}</SortableHead>
+                        <SortableHead column="venue" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[14%]">{t('venue')}</SortableHead>
+                        <SortableHead column="fee" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[12%]">{t('fee')}</SortableHead>
+                        <SortableHead column="status" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[10%]">{t('status')}</SortableHead>
+                        <TableHead className="w-[12%] text-right">{t('actions')}</TableHead>
+                      </TableRow>
+                    </thead>
+                    <tbody className="[&_tr:last-child]:border-0">
+                      {historyVirtualizer.getVirtualItems().length > 0 && (
+                        <tr><td colSpan={7} style={{ height: historyVirtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                      )}
+                      {historyVirtualizer.getVirtualItems().map((virtualRow) => {
+                        const gig = sortedHistory[virtualRow.index]
+                        const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                        return (
+                          <TableRow
+                            key={gig.id}
+                            data-index={virtualRow.index}
+                            ref={historyVirtualizer.measureElement}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}
+                          >
+                            <TableCell className="font-medium">
+                              <div>
+                                {formatGigDates(gig, dateLocale)}
+                                {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
+                                {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
+                              </div>
+                            </TableCell>
+                            <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                                <span className="text-sm">{gig.gig_type.name}</span>
+                                <Badge variant="outline" className="text-xs">{gig.gig_type.vat_rate}%</Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell><span className="text-sm text-muted-foreground">{gig.venue || '-'}</span></TableCell>
+                            <TableCell className="font-medium">
+                              {gig.fee !== null ? fmtFee(gig.fee, gig.currency) : <span className="text-muted-foreground italic">{t('notSet')}</span>}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                {tStatus(gig.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => confirmDeleteGig(gig.id)} title={t('deleteGig')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      {historyVirtualizer.getVirtualItems().length > 0 && (
+                        <tr><td colSpan={7} style={{ height: historyVirtualizer.getTotalSize() - (historyVirtualizer.getVirtualItems().at(-1)?.end ?? 0), padding: 0, border: 'none' }} /></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {showScrollHint && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none animate-bounce">
+                    <ChevronDown className="h-5 w-5 text-muted-foreground/40" />
+                  </div>
+                )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Declined */}
+            <TabsContent value="declined" className="mt-0">
+              {sortedDeclined.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">{t('noDeclined')}</p>
+              ) : (
+                <div className="relative">
+                <div ref={declinedScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
+                  <table className="w-full caption-bottom text-sm table-fixed">
+                    <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
+                      <TableRow>
+                        <SortableHead column="date" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[18%]">{t('date')}</SortableHead>
+                        <SortableHead column="client" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[18%]">{t('client')}</SortableHead>
+                        <SortableHead column="type" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[16%]">{t('type')}</SortableHead>
+                        <SortableHead column="venue" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[14%]">{t('venue')}</SortableHead>
+                        <SortableHead column="fee" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[12%]">{t('fee')}</SortableHead>
+                        <SortableHead column="status" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[10%]">{t('status')}</SortableHead>
+                        <TableHead className="w-[12%] text-right">{t('actions')}</TableHead>
+                      </TableRow>
+                    </thead>
+                    <tbody className="[&_tr:last-child]:border-0">
+                      {declinedVirtualizer.getVirtualItems().length > 0 && (
+                        <tr><td colSpan={7} style={{ height: declinedVirtualizer.getVirtualItems()[0].start, padding: 0, border: 'none' }} /></tr>
+                      )}
+                      {declinedVirtualizer.getVirtualItems().map((virtualRow) => {
+                        const gig = sortedDeclined[virtualRow.index]
+                        const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                        return (
+                          <TableRow
+                            key={gig.id}
+                            data-index={virtualRow.index}
+                            ref={declinedVirtualizer.measureElement}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}
+                          >
+                            <TableCell className="font-medium">
+                              <div>
+                                {formatGigDates(gig, dateLocale)}
+                                {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
+                                {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
+                              </div>
+                            </TableCell>
+                            <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                                <span className="text-sm">{gig.gig_type.name}</span>
+                                <Badge variant="outline" className="text-xs">{gig.gig_type.vat_rate}%</Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell><span className="text-sm text-muted-foreground">{gig.venue || '-'}</span></TableCell>
+                            <TableCell className="font-medium">
+                              {gig.fee !== null ? fmtFee(gig.fee, gig.currency) : <span className="text-muted-foreground italic">{t('notSet')}</span>}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                {tStatus(gig.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => confirmDeleteGig(gig.id)} title={t('deleteGig')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                      {declinedVirtualizer.getVirtualItems().length > 0 && (
+                        <tr><td colSpan={7} style={{ height: declinedVirtualizer.getTotalSize() - (declinedVirtualizer.getVirtualItems().at(-1)?.end ?? 0), padding: 0, border: 'none' }} /></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {showScrollHint && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none animate-bounce">
+                    <ChevronDown className="h-5 w-5 text-muted-foreground/40" />
+                  </div>
+                )}
+                </div>
+              )}
+            </TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
 
-      <CreateGigDialog
+      <GigDialog
+        gig={null}
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onSuccess={loadGigs}
-      />
-
-      <CreateInvoiceDialog
-        open={showInvoiceDialog}
-        onOpenChange={(open) => {
-          setShowInvoiceDialog(open)
-          if (!open) setSelectedGigForInvoice(null)
+        onCreated={(gigId) => {
+          toast.success(tToast('gigCreated'), {
+            description: tToast('gigCreatedHint'),
+            action: {
+              label: tToast('addAttachments'),
+              onClick: () => openEditById(gigId),
+            },
+            duration: 6000,
+          })
         }}
-        onSuccess={loadGigs}
-        initialGig={selectedGigForInvoice && selectedGigForInvoice.client ? {
-          id: selectedGigForInvoice.id,
-          fee: selectedGigForInvoice.fee!, // Already validated as non-null before opening dialog
-          travel_expense: selectedGigForInvoice.travel_expense,
-          date: selectedGigForInvoice.date,
-          start_date: selectedGigForInvoice.start_date,
-          end_date: selectedGigForInvoice.end_date,
-          total_days: selectedGigForInvoice.total_days,
-          project_name: selectedGigForInvoice.project_name,
-          client_id: selectedGigForInvoice.client_id!,
-          client_name: selectedGigForInvoice.client.name,
-          gig_type_name: selectedGigForInvoice.gig_type.name,
-          gig_type_vat_rate: selectedGigForInvoice.gig_type.vat_rate,
-          client_payment_terms: selectedGigForInvoice.client.payment_terms,
-        } : undefined}
       />
 
-      <EditGigDialog
+
+      <GigDialog
         gig={editingGig}
         open={editingGig !== null}
         onOpenChange={(open) => !open && setEditingGig(null)}
@@ -570,7 +946,7 @@ export default function GigsPage() {
                       {selectedGig.project_name || selectedGig.gig_type.name}
                     </h2>
                     <p className="text-sm text-gray-500">
-                      {selectedGig.client?.name || <span className="italic">Uppdragsgivare ej angiven</span>}
+                      {selectedGig.client?.name || <span className="italic">{t('clientNotSpecified')}</span>}
                     </p>
                     <div className="flex items-center gap-2 pt-0.5">
                       <span
@@ -578,7 +954,7 @@ export default function GigsPage() {
                           statusConfig[selectedGig.status as keyof typeof statusConfig]?.color
                         }`}
                       >
-                        {statusConfig[selectedGig.status as keyof typeof statusConfig]?.label}
+                        {tStatus(selectedGig.status)}
                       </span>
                       <span className="text-xs text-gray-400">
                         {selectedGig.gig_type.name}
@@ -600,21 +976,21 @@ export default function GigsPage() {
               {/* Content */}
               <div className="flex-1 overflow-y-auto pb-2">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Column 1 - Arvode, Datum, Plats, Program */}
+                  {/* Column 1 - Fee, Date, Venue */}
                   <div className="space-y-3">
-                    {/* Arvode + Plats på samma rad */}
+                    {/* Fee + Venue on same row */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 border border-emerald-100">
-                        <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">Arvode</p>
+                        <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{t('fee')}</p>
                         <p className="text-base font-bold text-emerald-700">
                           {selectedGig.fee !== null
-                            ? `${selectedGig.fee.toLocaleString('sv-SE')} kr`
+                            ? fmtFee(selectedGig.fee, selectedGig.currency)
                             : '—'
                           }
                         </p>
                         {selectedGig.travel_expense && (
                           <p className="text-xs text-emerald-600 mt-1">
-                            + {selectedGig.travel_expense.toLocaleString('sv-SE')} kr resa
+                            + {fmtFee(selectedGig.travel_expense, selectedGig.currency)} {t('travelShort')}
                           </p>
                         )}
                       </div>
@@ -622,21 +998,21 @@ export default function GigsPage() {
                         <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
                           <div className="flex items-center gap-1.5 mb-0.5">
                             <MapPin className="h-3 w-3 text-gray-400" />
-                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Plats</p>
+                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{t('venue')}</p>
                           </div>
                           <p className="text-sm font-medium text-gray-900">{selectedGig.venue}</p>
                         </div>
                       ) : (
                         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">Plats</p>
+                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{t('venue')}</p>
                           <p className="text-sm text-gray-400">—</p>
                         </div>
                       )}
                     </div>
-                    {/* Datum */}
+                    {/* Dates */}
                     <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-3 border border-gray-100">
                       <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-                        Datum ({selectedGig.gig_dates?.length || selectedGig.total_days} dagar)
+                        {t('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
                       </p>
                       {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
@@ -644,9 +1020,9 @@ export default function GigsPage() {
                             .sort((a, b) => a.date.localeCompare(b.date))
                             .map((gd, i) => {
                               const date = new Date(gd.date + 'T12:00:00')
-                              const dayName = format(date, 'EEE', { locale: sv })
-                              const dayNum = format(date, 'd', { locale: sv })
-                              const month = format(date, 'MMM', { locale: sv })
+                              const dayName = format(date, 'EEE', { locale: dateLocale })
+                              const dayNum = format(date, 'd', { locale: dateLocale })
+                              const month = format(date, 'MMM', { locale: dateLocale })
                               return (
                                 <div
                                   key={i}
@@ -661,39 +1037,17 @@ export default function GigsPage() {
                         </div>
                       ) : (
                         <p className="text-sm font-semibold text-gray-900">
-                          {formatGigDates(selectedGig)}
+                          {formatGigDates(selectedGig, dateLocale)}
                         </p>
                       )}
                     </div>
-                    {(selectedGig.conductor || (selectedGig.gig_works && selectedGig.gig_works.length > 0)) && (
-                      <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Program</p>
-                        {selectedGig.conductor && (
-                          <p className="text-sm text-gray-600 mb-1">
-                            <span className="font-medium">Dir:</span> {selectedGig.conductor}
-                          </p>
-                        )}
-                        {selectedGig.gig_works && selectedGig.gig_works.length > 0 && (
-                          <ul className="space-y-0.5">
-                            {selectedGig.gig_works.map((gw, idx) => (
-                              <li key={idx} className="text-sm text-gray-900">
-                                <span className="font-medium">{gw.work.composer}:</span> {gw.work.title}
-                                {gw.work.catalog_number && (
-                                  <span className="text-gray-500 text-xs ml-1">({gw.work.catalog_number})</span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   {/* Column 2 - Notes */}
                   <div>
                     <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm h-full">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Anteckningar</p>
+                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{t('notes')}</p>
                         {!editingNotes && (
                           <Button
                             variant="ghost"
@@ -714,7 +1068,7 @@ export default function GigsPage() {
                             value={notesText}
                             onChange={(e) => setNotesText(e.target.value)}
                             className="text-sm min-h-[120px] resize-none"
-                            placeholder="Skriv anteckningar här..."
+                            placeholder={tc('writeNotesHere')}
                             autoFocus
                           />
                           <div className="flex gap-2 justify-end">
@@ -723,19 +1077,19 @@ export default function GigsPage() {
                               size="sm"
                               onClick={() => setEditingNotes(false)}
                             >
-                              Avbryt
+                              {tc('cancel')}
                             </Button>
                             <Button
                               size="sm"
                               onClick={() => saveNotes(selectedGig.id, notesText)}
                             >
-                              Spara
+                              {tc('save')}
                             </Button>
                           </div>
                         </div>
                       ) : (
                         <p className="text-sm text-gray-600 whitespace-pre-wrap leading-snug">
-                          {selectedGig.notes || <span className="text-gray-400 italic">Inga anteckningar</span>}
+                          {selectedGig.notes || <span className="text-gray-400 italic">{tc('noNotes')}</span>}
                         </p>
                       )}
                     </div>
@@ -747,16 +1101,16 @@ export default function GigsPage() {
                       <GigAttachments gigId={selectedGig.id} />
                     </div>
 
-                    {/* Kopplade kvitton */}
+                    {/* Linked receipts */}
                     <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                           <Receipt className="h-3 w-3" />
-                          Kvitton ({gigExpenses.length})
+                          {t('receipts')} ({gigExpenses.length})
                         </p>
                       </div>
                       {gigExpenses.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">Inga kvitton kopplade</p>
+                        <p className="text-sm text-gray-400 italic">{t('noReceiptsLinked')}</p>
                       ) : (
                         <ul className="space-y-1.5">
                           {gigExpenses.map((exp) => (
@@ -768,7 +1122,7 @@ export default function GigsPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-blue-500 hover:text-blue-700 shrink-0"
-                                    title="Visa kvitto"
+                                    title={t('receipts')}
                                   >
                                     <Receipt className="h-3.5 w-3.5" />
                                   </a>
@@ -779,7 +1133,7 @@ export default function GigsPage() {
                                 )}
                               </div>
                               <span className="font-medium text-gray-900 shrink-0 ml-2">
-                                {exp.amount.toLocaleString('sv-SE')} {exp.currency === 'SEK' ? 'kr' : exp.currency}
+                                {exp.amount.toLocaleString(formatLocale)} {exp.currency === 'SEK' ? tc('kr') : exp.currency}
                               </span>
                             </li>
                           ))}
@@ -787,9 +1141,9 @@ export default function GigsPage() {
                       )}
                       {gigExpenses.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-sm">
-                          <span className="text-gray-500">Totalt</span>
+                          <span className="text-gray-500">{tc('total')}</span>
                           <span className="font-semibold text-gray-900">
-                            {gigExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString('sv-SE')} kr
+                            {gigExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString(formatLocale)} {tc('kr')}
                           </span>
                         </div>
                       )}
@@ -805,7 +1159,7 @@ export default function GigsPage() {
                   onClick={() => setEditingGig(selectedGig)}
                 >
                   <Edit className="h-3.5 w-3.5 mr-1.5" />
-                  Redigera
+                  {tc('edit')}
                 </Button>
                 <Button
                   variant="outline"
@@ -813,21 +1167,8 @@ export default function GigsPage() {
                   onClick={() => setShowReceiptDialog(true)}
                 >
                   <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                  Lägg till kvitto
+                  {t('addReceipt')}
                 </Button>
-                {selectedGig.status === 'completed' && selectedGig.fee !== null && selectedGig.client && (
-                  <Button
-                    variant="outline"
-                    className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
-                    onClick={() => {
-                      setSelectedGigForInvoice(selectedGig)
-                      setShowInvoiceDialog(true)
-                    }}
-                  >
-                    <FileText className="h-3.5 w-3.5 mr-1.5" />
-                    Skapa faktura
-                  </Button>
-                )}
                 <div className="flex-1" />
                 <Button
                   variant="ghost"
@@ -835,7 +1176,7 @@ export default function GigsPage() {
                   onClick={() => confirmDeleteGig(selectedGig.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  Ta bort
+                  {tc('delete')}
                 </Button>
               </div>
             </div>
@@ -849,9 +1190,9 @@ export default function GigsPage() {
           setDeleteConfirmOpen(open)
           if (!open) setGigToDelete(null)
         }}
-        title="Ta bort uppdrag"
-        description="Är du säker på att du vill ta bort detta uppdrag? Detta går inte att ångra."
-        confirmLabel="Ta bort"
+        title={t('deleteGig')}
+        description={t('deleteConfirm')}
+        confirmLabel={tc('delete')}
         variant="destructive"
         onConfirm={() => {
           if (gigToDelete) {

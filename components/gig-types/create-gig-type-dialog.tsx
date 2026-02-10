@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -13,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Languages } from 'lucide-react'
 import { toast } from 'sonner'
 
 type CreateGigTypeDialogProps = {
@@ -28,13 +29,36 @@ export function CreateGigTypeDialog({
   onSuccess,
 }: CreateGigTypeDialogProps) {
   const [loading, setLoading] = useState(false)
+  const [translating, setTranslating] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
+    name_en: '',
     vat_rate: '0',
     color: '#3b82f6',
   })
 
   const supabase = createClient()
+  const t = useTranslations('gigTypes')
+  const tc = useTranslations('common')
+
+  async function handleTranslate() {
+    if (!formData.name.trim()) return
+    setTranslating(true)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: formData.name, targetLang: 'en' }),
+      })
+      const data = await res.json()
+      if (data.translation) {
+        setFormData(prev => ({ ...prev, name_en: data.translation }))
+      }
+    } catch {
+      // Silently fail — user can type manually
+    }
+    setTranslating(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,6 +67,7 @@ export function CreateGigTypeDialog({
     const { error } = await supabase.from('gig_types').insert([
       {
         name: formData.name,
+        name_en: formData.name_en || null,
         vat_rate: parseFloat(formData.vat_rate),
         color: formData.color,
         is_default: false,
@@ -53,10 +78,11 @@ export function CreateGigTypeDialog({
 
     if (error) {
       console.error('Error creating gig type:', error)
-      toast.error('Kunde inte skapa uppdragstyp: ' + error.message)
+      toast.error(t('createError') + ': ' + error.message)
     } else {
       setFormData({
         name: '',
+        name_en: '',
         vat_rate: '0',
         color: '#3b82f6',
       })
@@ -70,20 +96,20 @@ export function CreateGigTypeDialog({
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Ny uppdragstyp</DialogTitle>
+            <DialogTitle>{t('newGigType')}</DialogTitle>
             <DialogDescription>
-              Skapa en ny typ av uppdrag med egen momssats
+              {t('newGigTypeDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">
-                Namn <span className="text-destructive">*</span>
+                {t('name')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
-                placeholder="T.ex. Session, Arrangemang"
+                placeholder={t('namePlaceholder')}
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -93,8 +119,41 @@ export function CreateGigTypeDialog({
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="name_en">
+                {t('nameEn')}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="name_en"
+                  placeholder={t('nameEnPlaceholder')}
+                  value={formData.name_en}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name_en: e.target.value })
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTranslate}
+                  disabled={translating || !formData.name.trim()}
+                  className="shrink-0"
+                >
+                  {translating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Languages className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('nameEnHint')}
+              </p>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="vat_rate">
-                Momssats (%) <span className="text-destructive">*</span>
+                {t('vatRate')} (%) <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="vat_rate"
@@ -109,12 +168,12 @@ export function CreateGigTypeDialog({
                 required
               />
               <p className="text-xs text-muted-foreground">
-                T.ex. 0, 6, 12, 25
+                {t('vatRateHint')}
               </p>
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="color">Färg</Label>
+              <Label htmlFor="color">{t('color')}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="color"
@@ -139,11 +198,11 @@ export function CreateGigTypeDialog({
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Avbryt
+              {tc('cancel')}
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Skapa
+              {tc('create')}
             </Button>
           </DialogFooter>
         </form>

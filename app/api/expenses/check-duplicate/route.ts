@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     if (!date || !supplier || amount === undefined) {
       return NextResponse.json(
-        { error: 'Datum, leverantör och belopp krävs' },
+        { error: 'Date, supplier, and amount are required' },
         { status: 400 }
       )
     }
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Duplicate check error:', error)
       return NextResponse.json(
-        { error: 'Kunde inte kontrollera dublett' },
+        { error: 'Could not check for duplicate' },
         { status: 500 }
       )
     }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Check duplicate error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest) {
 
     if (!expenses || !Array.isArray(expenses)) {
       return NextResponse.json(
-        { error: 'Lista med utgifter krävs' },
+        { error: 'List of expenses is required' },
         { status: 400 }
       )
     }
@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest) {
     if (error) {
       console.error('Batch duplicate check error:', error)
       return NextResponse.json(
-        { error: 'Kunde inte kontrollera dubletter' },
+        { error: 'Could not check for duplicates' },
         { status: 500 }
       )
     }
@@ -100,7 +100,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Batch check duplicate error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }

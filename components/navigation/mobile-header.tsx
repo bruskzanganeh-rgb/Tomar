@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Menu, X, PlusCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import { navigationItems } from './nav-items'
 export function MobileHeader() {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const t = useTranslations('nav')
 
   return (
     <div className="md:hidden flex h-14 items-center justify-between border-b bg-gray-900 px-4">
@@ -27,7 +29,7 @@ export function MobileHeader() {
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="text-white hover:bg-gray-800">
             <Menu className="h-6 w-6" />
-            <span className="sr-only">Meny</span>
+            <span className="sr-only">{t('menu')}</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-72 bg-gray-900 text-white p-0 border-gray-800">
@@ -40,7 +42,7 @@ export function MobileHeader() {
               const isActive = pathname === item.href
               return (
                 <Link
-                  key={item.name}
+                  key={item.nameKey}
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
@@ -51,7 +53,7 @@ export function MobileHeader() {
                   )}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.name}
+                  {t(item.nameKey)}
                 </Link>
               )
             })}
@@ -64,7 +66,7 @@ export function MobileHeader() {
               className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               <PlusCircle className="h-4 w-4" />
-              Nytt uppdrag
+              {t('newGig')}
             </Link>
           </div>
         </SheetContent>

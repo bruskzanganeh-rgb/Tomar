@@ -26,7 +26,7 @@ export async function GET() {
     if (error) {
       console.error('Failed to fetch supplier data:', error)
       return NextResponse.json(
-        { error: 'Kunde inte hämta leverantörsdata' },
+        { error: 'Could not fetch supplier data' },
         { status: 500 }
       )
     }
@@ -79,7 +79,7 @@ export async function GET() {
   } catch (error) {
     console.error('Supplier mapping API error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }

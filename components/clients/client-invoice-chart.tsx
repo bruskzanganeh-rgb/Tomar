@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -32,12 +33,11 @@ type Props = {
   clientName: string
 }
 
-const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'
-]
-
 export function ClientInvoiceChart({ invoices, clientName }: Props) {
+  const t = useTranslations('client')
+  const tc = useTranslations('common')
+  const td = useTranslations('dashboard')
+
   // Get available years from invoices
   const availableYears = useMemo(() => {
     const years = [...new Set(invoices.map(inv =>
@@ -73,10 +73,10 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
 
     return Object.entries(monthlyData).map(([month, total]) => ({
       month: (parseInt(month) + 1).toString().padStart(2, '0'),
-      monthName: MONTH_NAMES[parseInt(month)],
+      monthName: td('monthNames.' + month),
       total,
     }))
-  }, [invoices, selectedYear])
+  }, [invoices, selectedYear, td])
 
   const yearTotal = chartData.reduce((sum, d) => sum + d.total, 0)
 
@@ -88,14 +88,14 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Fakturering per månad</CardTitle>
+          <CardTitle>{t('invoicingPerMonth')}</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Totalt {selectedYear}: <span className="font-semibold">{yearTotal.toLocaleString('sv-SE')} kr</span>
+            {t('totalYear', { year: selectedYear })}: <span className="font-semibold">{yearTotal.toLocaleString('sv-SE')} {tc('kr')}</span>
           </p>
         </div>
         <Select value={selectedYear} onValueChange={setSelectedYear}>
           <SelectTrigger className="w-[100px]">
-            <SelectValue placeholder="År" />
+            <SelectValue placeholder={t('yearLabel')} />
           </SelectTrigger>
           <SelectContent>
             {availableYears.map(year => (
@@ -127,7 +127,7 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
               tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip
-              formatter={(value: number) => [`${value.toLocaleString('sv-SE')} kr`, 'Fakturerat']}
+              formatter={(value: number) => [`${value.toLocaleString('sv-SE')} ${tc('kr')}`, t('invoicedLabel')]}
               labelFormatter={(label) => `${label} ${selectedYear}`}
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',

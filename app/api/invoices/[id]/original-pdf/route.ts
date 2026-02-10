@@ -38,14 +38,14 @@ export async function GET(
 
     if (fetchError || !invoice) {
       return NextResponse.json(
-        { error: 'Faktura hittades inte' },
+        { error: 'Invoice not found' },
         { status: 404 }
       )
     }
 
     if (!invoice.original_pdf_url) {
       return NextResponse.json(
-        { error: 'Ingen original-PDF finns' },
+        { error: 'No original PDF exists' },
         { status: 404 }
       )
     }
@@ -53,7 +53,7 @@ export async function GET(
     const filePath = extractFilePath(invoice.original_pdf_url)
     if (!filePath) {
       return NextResponse.json(
-        { error: 'Kunde inte läsa filsökväg' },
+        { error: 'Could not read file path' },
         { status: 400 }
       )
     }
@@ -66,7 +66,7 @@ export async function GET(
     if (signError || !signedData) {
       console.error('Signed URL error:', signError)
       return NextResponse.json(
-        { error: 'Kunde inte skapa signerad URL' },
+        { error: 'Could not create signed URL' },
         { status: 500 }
       )
     }
@@ -78,7 +78,7 @@ export async function GET(
   } catch (error) {
     console.error('Original PDF GET error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }

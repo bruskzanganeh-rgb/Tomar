@@ -1,5 +1,5 @@
 -- Lägg till kategori för gig-bilagor
--- gig_info = Gig-information (noter, schema, repertoar)
+-- gig_info = Gig-information (noter, schema)
 -- invoice_doc = Fakturaunderlag (kontrakt, PO, avtal)
 
 ALTER TABLE gig_attachments

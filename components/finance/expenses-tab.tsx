@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,7 +32,8 @@ import { EditExpenseDialog } from '@/components/expenses/edit-expense-dialog'
 import { ExportDialog } from '@/components/expenses/export-dialog'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { format } from 'date-fns'
-import { sv } from 'date-fns/locale'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { toast } from 'sonner'
 
@@ -41,7 +43,7 @@ type Expense = {
   supplier: string
   amount: number
   currency: string | null
-  amount_sek: number | null
+  amount_base: number | null
   category: string | null
   notes: string | null
   attachment_url: string | null
@@ -64,6 +66,13 @@ type Gig = {
 }
 
 export default function ExpensesTab() {
+  const t = useTranslations('expense')
+  const tc = useTranslations('common')
+  const tt = useTranslations('toast')
+  const tg = useTranslations('gig')
+  const dateLocale = useDateLocale()
+  const formatLocale = useFormatLocale()
+
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [yearFilter, setYearFilter] = useState<string>('all')
@@ -122,12 +131,12 @@ export default function ExpensesTab() {
         const data = await response.json()
         setPreviewUrl(data.url)
       } else {
-        toast.error('Kunde inte ladda kvittobild')
+        toast.error(tt('couldNotLoadReceiptImage'))
         setPreviewOpen(false)
       }
     } catch (error) {
       console.error('Preview error:', error)
-      toast.error('Ett fel uppstod')
+      toast.error(tt('genericError'))
       setPreviewOpen(false)
     } finally {
       setPreviewLoading(false)
@@ -147,11 +156,11 @@ export default function ExpensesTab() {
     return true
   })
 
-  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount_sek || e.amount), 0)
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
 
   const yearlyData = years.map(year => {
     const yearExpenses = expenses.filter(e => new Date(e.date).getFullYear() === year)
-    const total = yearExpenses.reduce((sum, e) => sum + (e.amount_sek || e.amount), 0)
+    const total = yearExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
     return {
       year: year.toString(),
       total: Math.round(total),
@@ -164,11 +173,11 @@ export default function ExpensesTab() {
       <div className="flex items-center justify-end gap-2">
         <Button variant="outline" onClick={() => setShowExportDialog(true)}>
           <Download className="mr-2 h-4 w-4" />
-          Exportera
+          {tc('export')}
         </Button>
         <Button onClick={() => setShowUploadDialog(true)}>
           <Upload className="mr-2 h-4 w-4" />
-          Ladda upp kvitto
+          {t('uploadReceipt')}
         </Button>
       </div>
 
@@ -177,10 +186,10 @@ export default function ExpensesTab() {
         <div className="w-32">
           <Select value={yearFilter} onValueChange={setYearFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Alla år" />
+              <SelectValue placeholder={t('allYears')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alla år</SelectItem>
+              <SelectItem value="all">{t('allYears')}</SelectItem>
               {years.map((year) => (
                 <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
               ))}
@@ -190,10 +199,10 @@ export default function ExpensesTab() {
         <div className="w-48">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Alla kategorier" />
+              <SelectValue placeholder={t('allCategories')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alla kategorier</SelectItem>
+              <SelectItem value="all">{t('allCategories')}</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
@@ -203,10 +212,10 @@ export default function ExpensesTab() {
         <div className="w-56">
           <Select value={supplierFilter} onValueChange={setSupplierFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Alla leverantörer" />
+              <SelectValue placeholder={t('allSuppliers')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alla leverantörer</SelectItem>
+              <SelectItem value="all">{t('allSuppliers')}</SelectItem>
               {suppliers.map((sup) => (
                 <SelectItem key={sup} value={sup}>{sup}</SelectItem>
               ))}
@@ -216,12 +225,12 @@ export default function ExpensesTab() {
         <div className="w-44">
           <Select value={gigFilter} onValueChange={setGigFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Alla uppdrag" />
+              <SelectValue placeholder={t('allGigs')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alla uppdrag</SelectItem>
-              <SelectItem value="linked">Med uppdrag</SelectItem>
-              <SelectItem value="unlinked">Utan uppdrag</SelectItem>
+              <SelectItem value="all">{t('allGigs')}</SelectItem>
+              <SelectItem value="linked">{t('withGig')}</SelectItem>
+              <SelectItem value="unlinked">{t('withoutGig')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -232,13 +241,13 @@ export default function ExpensesTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
-                ? `Filtrerade utgifter ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} av ${expenses.length})`
-                : 'Totala utgifter'}
+                ? `${t('filteredExpenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
+                : t('totalExpenses')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalExpenses.toLocaleString('sv-SE')} kr
+              {totalExpenses.toLocaleString(formatLocale)} {tc('kr')}
             </div>
           </CardContent>
         </Card>
@@ -248,7 +257,7 @@ export default function ExpensesTab() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
-                Utgifter per år
+                {t('expensesPerYear')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -269,8 +278,8 @@ export default function ExpensesTab() {
                       width={40}
                     />
                     <Tooltip
-                      formatter={(value: number) => [`${value.toLocaleString('sv-SE')} kr`, 'Total']}
-                      labelFormatter={(label) => `År ${label}`}
+                      formatter={(value: number) => [`${value.toLocaleString(formatLocale)} ${tc('kr')}`, tc('total')]}
+                      labelFormatter={(label) => `${t('year')} ${label}`}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
@@ -298,8 +307,8 @@ export default function ExpensesTab() {
           <CardTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
-              ? `Utgifter ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} av ${expenses.length})`
-              : `Alla utgifter (${expenses.length})`}
+              ? `${t('expenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
+              : `${t('allExpenses')} (${expenses.length})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -310,25 +319,25 @@ export default function ExpensesTab() {
               <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
               {expenses.length === 0 ? (
                 <>
-                  <p>Inga utgifter än</p>
+                  <p>{t('noExpensesYet')}</p>
                   <p className="text-sm">
-                    Ladda upp kvitton eller importera från filer
+                    {t('uploadOrImportHint')}
                   </p>
                 </>
               ) : (
-                <p>Inga utgifter matchar filtret</p>
+                <p>{t('noExpensesMatchFilter')}</p>
               )}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Datum</TableHead>
-                  <TableHead>Leverantör</TableHead>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Uppdrag</TableHead>
-                  <TableHead>Belopp</TableHead>
-                  <TableHead>Anteckningar</TableHead>
+                  <TableHead>{t('date')}</TableHead>
+                  <TableHead>{t('supplier')}</TableHead>
+                  <TableHead>{t('category')}</TableHead>
+                  <TableHead>{t('gig')}</TableHead>
+                  <TableHead>{t('amount')}</TableHead>
+                  <TableHead>{t('notes')}</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -340,7 +349,7 @@ export default function ExpensesTab() {
                     onClick={() => setSelectedExpense(expense)}
                   >
                     <TableCell>
-                      {format(new Date(expense.date), 'PPP', { locale: sv })}
+                      {format(new Date(expense.date), 'PPP', { locale: dateLocale })}
                     </TableCell>
                     <TableCell className="font-medium">
                       {expense.supplier}
@@ -355,7 +364,7 @@ export default function ExpensesTab() {
                     <TableCell>
                       {expense.gig ? (
                         <Badge variant="secondary" className="text-xs">
-                          {expense.gig.client?.name || expense.gig.project_name || format(new Date(expense.gig.date), 'd MMM', { locale: sv })}
+                          {expense.gig.client?.name || expense.gig.project_name || format(new Date(expense.gig.date), 'd MMM', { locale: dateLocale })}
                         </Badge>
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
@@ -364,13 +373,13 @@ export default function ExpensesTab() {
                     <TableCell className="font-medium">
                       {expense.currency && expense.currency !== 'SEK' ? (
                         <div>
-                          <span>{expense.amount.toLocaleString('sv-SE')} {expense.currency === 'EUR' ? '€' : '$'}</span>
+                          <span>{expense.amount.toLocaleString(formatLocale)} {expense.currency === 'EUR' ? '\u20AC' : '$'}</span>
                           <span className="text-xs text-muted-foreground ml-1">
-                            ({expense.amount_sek?.toLocaleString('sv-SE')} kr)
+                            ({expense.amount_base?.toLocaleString(formatLocale)} {tc('kr')})
                           </span>
                         </div>
                       ) : (
-                        <span>{expense.amount.toLocaleString('sv-SE')} kr</span>
+                        <span>{expense.amount.toLocaleString(formatLocale)} {tc('kr')}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -383,7 +392,7 @@ export default function ExpensesTab() {
                         <button
                           onClick={() => openPreview(expense.id)}
                           className="p-1 hover:bg-blue-50 rounded transition-colors"
-                          title="Visa kvittobild"
+                          title={t('showReceiptImage')}
                         >
                           <Image className="h-4 w-4 text-blue-500" />
                         </button>
@@ -418,7 +427,7 @@ export default function ExpensesTab() {
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="sm:max-w-[600px] p-0">
-          <DialogTitle className="sr-only">Kvittoförhandsgranskning</DialogTitle>
+          <DialogTitle className="sr-only">{t('receiptPreview')}</DialogTitle>
           <div className="relative">
             <button
               onClick={() => setPreviewOpen(false)}
@@ -433,12 +442,12 @@ export default function ExpensesTab() {
             ) : previewUrl ? (
               <img
                 src={previewUrl}
-                alt="Kvitto"
+                alt={t('receipt')}
                 className="w-full max-h-[80vh] object-contain"
               />
             ) : (
               <div className="flex items-center justify-center h-96 text-gray-500">
-                Kunde inte ladda bild
+                {t('couldNotLoadImage')}
               </div>
             )}
           </div>

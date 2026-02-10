@@ -20,6 +20,7 @@ import { CreateClientDialog } from '@/components/clients/create-client-dialog'
 import { EditClientDialog } from '@/components/clients/edit-client-dialog'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 type Client = {
   id: string
@@ -29,7 +30,9 @@ type Client = {
   email: string | null
   address: string | null
   payment_terms: number
+  reference_person: string | null
   notes: string | null
+  invoice_language: string | null
   created_at: string
   invoices: { total: number }[]
 }
@@ -42,6 +45,8 @@ export default function ClientsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
   const supabase = createClient()
+  const t = useTranslations('client')
+  const tc = useTranslations('common')
 
   useEffect(() => {
     loadClients()
@@ -78,7 +83,7 @@ export default function ClientsPage() {
 
     if (error) {
       console.error('Error deleting client:', error)
-      toast.error('Kunde inte ta bort uppdragsgivare')
+      toast.error(t('couldNotDeleteClient'))
     } else {
       loadClients()
     }
@@ -88,14 +93,14 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Uppdragsgivare</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('clients')}</h1>
           <p className="text-muted-foreground">
-            Hantera dina orkestrar och kunder
+            {t('manageClients')}
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Ny uppdragsgivare
+          {t('newClient')}
         </Button>
       </div>
 
@@ -103,7 +108,7 @@ export default function ClientsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Alla uppdragsgivare ({clients.length})
+            {t('allClients', { count: clients.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -112,19 +117,19 @@ export default function ClientsPage() {
           ) : clients.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Inga uppdragsgivare än</p>
-              <p className="text-sm">Klicka på "Ny uppdragsgivare" för att komma igång</p>
+              <p>{t('noClientsYet')}</p>
+              <p className="text-sm">{t('noClientsHint')}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Namn</TableHead>
-                  <TableHead className="text-right">Fakturor</TableHead>
-                  <TableHead className="text-right">Fakturerat</TableHead>
-                  <TableHead>Org.nr</TableHead>
-                  <TableHead>Betalningsvillkor</TableHead>
-                  <TableHead className="text-right">Åtgärder</TableHead>
+                  <TableHead>{t('name')}</TableHead>
+                  <TableHead className="text-right">{t('invoicesColumn')}</TableHead>
+                  <TableHead className="text-right">{t('invoicedColumn')}</TableHead>
+                  <TableHead>{t('orgNumber')}</TableHead>
+                  <TableHead>{t('paymentTerms')}</TableHead>
+                  <TableHead className="text-right">{t('actionsColumn')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,7 +154,7 @@ export default function ClientsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="text-sm font-medium">
-                          {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} kr` : '-'}
+                          {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} ${tc('kr')}` : '-'}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -159,7 +164,7 @@ export default function ClientsPage() {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
-                          {client.payment_terms} dagar
+                          {client.payment_terms} {tc('days')}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -208,9 +213,9 @@ export default function ClientsPage() {
           setDeleteConfirmOpen(open)
           if (!open) setClientToDelete(null)
         }}
-        title="Ta bort uppdragsgivare"
-        description="Är du säker på att du vill ta bort denna uppdragsgivare? Detta går inte att ångra."
-        confirmLabel="Ta bort"
+        title={t('deleteClient')}
+        description={t('deleteConfirm')}
+        confirmLabel={tc('delete')}
         variant="destructive"
         onConfirm={() => {
           if (clientToDelete) {

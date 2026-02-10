@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: 'Ingen fil uppladdad' },
+        { error: 'No file uploaded' },
         { status: 400 }
       )
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (!validImageTypes.includes(file.type) && !isPdf) {
       return NextResponse.json(
-        { error: 'Ogiltig filtyp. Endast JPEG, PNG, GIF, WebP och PDF stöds.' },
+        { error: 'Invalid file type. Only JPEG, PNG, GIF, WebP, and PDF are supported.' },
         { status: 400 }
       )
     }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Validera filstorlek (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'Filen är för stor. Max 10MB.' },
+        { error: 'File is too large. Max 10MB.' },
         { status: 400 }
       )
     }
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
         } catch (imageError) {
           console.error('PDF image conversion also failed:', imageError)
           return NextResponse.json(
-            { error: 'Kunde inte läsa PDF-filen. Försök med en bild istället.' },
+            { error: 'Could not read the PDF file. Try an image instead.' },
             { status: 400 }
           )
         }
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Receipt scan error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kunde inte läsa kvitto' },
+      { error: error instanceof Error ? error.message : 'Could not read receipt' },
       { status: 500 }
     )
   }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import nodemailer from 'nodemailer'
+import { logActivity } from '@/lib/activity'
 
 // Supabase client med service role för server-side
 const supabase = createClient(
@@ -15,7 +17,7 @@ export async function POST(request: NextRequest) {
     // Validera input
     if (!invoiceId || !to || !subject) {
       return NextResponse.json(
-        { error: 'invoiceId, to och subject krävs' },
+        { error: 'invoiceId, to and subject required' },
         { status: 400 }
       )
     }
@@ -29,26 +31,99 @@ export async function POST(request: NextRequest) {
 
     if (fetchError || !invoice) {
       return NextResponse.json(
-        { error: 'Faktura hittades inte' },
+        { error: 'Invoice not found' },
         { status: 404 }
       )
     }
 
-    // Generera PDF URL
-    const pdfUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('.supabase.co', '')}/api/invoices/${invoiceId}/pdf`
+    // Hämta SMTP-inställningar
+    const { data: company, error: companyError } = await supabase
+      .from('company_settings')
+      .select('smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name')
+      .single()
 
-    // TODO: Integrera med e-posttjänst (Resend, SendGrid, etc.)
-    // För nu, logga och simulera lyckad sändning
-    console.log('=== SKICKAR FAKTURA VIA E-POST ===')
-    console.log('Till:', to)
-    console.log('Ämne:', subject)
-    console.log('Meddelande:', message)
-    console.log('Faktura PDF:', pdfUrl)
-    console.log('Antal kvittobilagor:', attachmentUrls?.length || 0)
-    if (attachmentUrls?.length > 0) {
-      console.log('Kvitton:', attachmentUrls)
+    if (companyError || !company) {
+      return NextResponse.json(
+        { error: 'Could not fetch company settings' },
+        { status: 500 }
+      )
     }
-    console.log('================================')
+
+    // Kontrollera om SMTP är konfigurerat
+    if (!company.smtp_host || !company.smtp_from_email) {
+      return NextResponse.json(
+        { error: 'SMTP is not configured. Go to Settings and fill in email details.' },
+        { status: 400 }
+      )
+    }
+
+    // Hämta PDF
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const pdfResponse = await fetch(`${baseUrl}/api/invoices/${invoiceId}/pdf`)
+
+    if (!pdfResponse.ok) {
+      return NextResponse.json(
+        { error: 'Could not generate PDF for the invoice' },
+        { status: 500 }
+      )
+    }
+
+    const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer())
+
+    // Skapa nodemailer transporter
+    const transporter = nodemailer.createTransport({
+      host: company.smtp_host,
+      port: company.smtp_port || 587,
+      secure: company.smtp_port === 465,
+      auth: company.smtp_user ? {
+        user: company.smtp_user,
+        pass: company.smtp_password || '',
+      } : undefined,
+    })
+
+    // Bygg bilagor
+    const attachments: nodemailer.SendMailOptions['attachments'] = [
+      {
+        filename: `Faktura-${invoice.invoice_number}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ]
+
+    // Lägg till kvittobilagor om det finns
+    if (attachmentUrls && attachmentUrls.length > 0) {
+      for (let i = 0; i < attachmentUrls.length; i++) {
+        try {
+          const attachmentResponse = await fetch(attachmentUrls[i])
+          if (attachmentResponse.ok) {
+            const attachmentBuffer = Buffer.from(await attachmentResponse.arrayBuffer())
+            const contentType = attachmentResponse.headers.get('content-type') || 'application/octet-stream'
+            const extension = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg'
+            attachments.push({
+              filename: `Kvitto-${i + 1}.${extension}`,
+              content: attachmentBuffer,
+              contentType,
+            })
+          }
+        } catch (e) {
+          console.warn(`Kunde inte hämta bilaga ${i + 1}:`, e)
+        }
+      }
+    }
+
+    // Skicka e-post
+    const fromAddress = company.smtp_from_name
+      ? `"${company.smtp_from_name}" <${company.smtp_from_email}>`
+      : company.smtp_from_email
+
+    await transporter.sendMail({
+      from: fromAddress,
+      to,
+      subject,
+      text: message || '',
+      html: message ? `<p>${message.replace(/\n/g, '<br>')}</p>` : undefined,
+      attachments,
+    })
 
     // Uppdatera fakturastatus till 'sent' om den var 'draft'
     if (invoice.status === 'draft') {
@@ -58,49 +133,25 @@ export async function POST(request: NextRequest) {
         .eq('id', invoiceId)
     }
 
-    // För nu: visa meddelande om att e-post inte är konfigurerat
-    // I produktion skulle detta skicka ett riktigt e-postmeddelande
-    const emailConfigured = !!process.env.RESEND_API_KEY || !!process.env.SENDGRID_API_KEY
-
-    if (!emailConfigured) {
-      // Simulera lyckad sändning för demo
-      return NextResponse.json({
-        success: true,
-        demo: true,
-        message: 'E-postfunktionen är inte konfigurerad än. Fakturan har markerats som skickad.',
-        details: {
-          to,
-          subject,
-          attachments: [
-            `Faktura #${invoice.invoice_number}.pdf`,
-            ...(attachmentUrls || []).map((_: string, i: number) => `Kvitto ${i + 1}`),
-          ],
-        },
+    // Log activity
+    if (invoice.user_id) {
+      await logActivity({
+        userId: invoice.user_id,
+        eventType: 'invoice_sent',
+        entityType: 'invoice',
+        entityId: invoiceId,
+        metadata: { to, invoice_number: invoice.invoice_number },
       })
     }
 
-    // Här skulle faktisk e-postsändning ske med Resend/SendGrid
-    // Exempel med Resend:
-    // const resend = new Resend(process.env.RESEND_API_KEY)
-    // await resend.emails.send({
-    //   from: 'Babalisk AB <faktura@babalisk.se>',
-    //   to,
-    //   subject,
-    //   text: message,
-    //   attachments: [
-    //     { path: pdfUrl, filename: `Faktura-${invoice.invoice_number}.pdf` },
-    //     ...attachmentUrls.map((url, i) => ({ path: url, filename: `Kvitto-${i+1}.jpg` }))
-    //   ],
-    // })
-
     return NextResponse.json({
       success: true,
-      message: 'Fakturan har skickats!',
+      message: 'Invoice sent!',
     })
   } catch (error) {
     console.error('Send email error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kunde inte skicka e-post' },
+      { error: error instanceof Error ? error.message : 'Could not send email' },
       { status: 500 }
     )
   }

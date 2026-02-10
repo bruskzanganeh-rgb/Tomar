@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,8 +24,11 @@ import {
 } from '@/components/ui/form'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Loader2 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Loader2, Globe } from 'lucide-react'
 import { toast } from 'sonner'
+import { useLocale } from 'next-intl'
 
 type CreateClientDialogProps = {
   open: boolean
@@ -39,6 +43,10 @@ export function CreateClientDialog({
 }: CreateClientDialogProps) {
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
+  const t = useTranslations('client')
+  const tc = useTranslations('common')
+  const tt = useTranslations('toast')
+  const locale = useLocale()
 
   const form = useForm<CreateClientFormData>({
     resolver: zodResolver(createClientSchema),
@@ -49,7 +57,9 @@ export function CreateClientDialog({
       email: '',
       address: '',
       payment_terms: '30',
+      reference_person: '',
       notes: '',
+      invoice_language: locale,
     },
   })
 
@@ -64,7 +74,9 @@ export function CreateClientDialog({
         email: data.email || null,
         address: data.address || null,
         payment_terms: parseInt(data.payment_terms),
+        reference_person: data.reference_person || null,
         notes: data.notes || null,
+        invoice_language: data.invoice_language || locale,
       },
     ])
 
@@ -72,7 +84,7 @@ export function CreateClientDialog({
 
     if (error) {
       console.error('Error creating client:', error)
-      toast.error('Kunde inte skapa uppdragsgivare: ' + error.message)
+      toast.error(tt('createClientError', { error: error.message }))
     } else {
       form.reset()
       onSuccess()
@@ -86,9 +98,9 @@ export function CreateClientDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>Ny uppdragsgivare</DialogTitle>
+              <DialogTitle>{t('newClient')}</DialogTitle>
               <DialogDescription>
-                Lägg till en ny orkester eller kund
+                {t('newClientDescription')}
               </DialogDescription>
             </DialogHeader>
 
@@ -99,10 +111,10 @@ export function CreateClientDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Namn <span className="text-destructive">*</span>
+                      {t('name')} <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="T.ex. Göteborgs Symfoniker" {...field} />
+                      <Input placeholder={t('namePlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -115,12 +127,12 @@ export function CreateClientDialog({
                   name="client_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Kund-ID</FormLabel>
+                      <FormLabel>{t('clientCode')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="T.ex. LKH 1121" {...field} />
+                        <Input placeholder={t('clientCodePlaceholder')} {...field} />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
-                        Valfritt ID för intern referens
+                        {t('clientCodeHint')}
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -132,7 +144,7 @@ export function CreateClientDialog({
                   name="org_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Org.nr</FormLabel>
+                      <FormLabel>{t('orgNumber')}</FormLabel>
                       <FormControl>
                         <Input placeholder="123456-7890" {...field} />
                       </FormControl>
@@ -147,12 +159,12 @@ export function CreateClientDialog({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>E-post</FormLabel>
+                    <FormLabel>{t('email')}</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="faktura@orkester.se" {...field} />
+                      <Input type="email" placeholder={t('emailPlaceholder')} {...field} />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      För att skicka fakturor via e-post
+                      {t('emailHint')}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -164,9 +176,14 @@ export function CreateClientDialog({
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Adress</FormLabel>
+                    <FormLabel>{t('address')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Gatan 1, 123 45 Stad" {...field} />
+                      <Textarea
+                        placeholder={t('addressPlaceholder')}
+                        rows={3}
+                        className="resize-none"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -178,7 +195,7 @@ export function CreateClientDialog({
                 name="payment_terms"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Betalningsvillkor (dagar)</FormLabel>
+                    <FormLabel>{t('paymentTerms')}</FormLabel>
                     <FormControl>
                       <Input type="number" min="1" {...field} />
                     </FormControl>
@@ -189,13 +206,62 @@ export function CreateClientDialog({
 
               <FormField
                 control={form.control}
+                name="reference_person"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('referencePerson')}</FormLabel>
+                    <FormControl>
+                      <Input placeholder={t('referencePersonPlaceholder')} {...field} />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {t('referencePersonHint')}
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Anteckningar</FormLabel>
+                    <FormLabel>{t('notes')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="T.ex. Föredrar email-fakturor" {...field} />
+                      <Input placeholder={t('notesPlaceholder')} {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="invoice_language"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5" />
+                      {t('invoiceLanguage')}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || locale}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {locale !== 'en' && (
+                          <SelectItem value={locale}>
+                            {locale === 'sv' ? 'Svenska' : locale === 'no' ? 'Norsk' : locale === 'da' ? 'Dansk' : locale.toUpperCase()}
+                          </SelectItem>
+                        )}
+                        <SelectItem value="en">English</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {t('invoiceLanguageHint')}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -209,11 +275,11 @@ export function CreateClientDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={loading}
               >
-                Avbryt
+                {tc('cancel')}
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Skapa
+                {tc('create')}
               </Button>
             </DialogFooter>
           </form>

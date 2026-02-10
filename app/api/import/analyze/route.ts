@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: 'Ingen fil bifogad' },
+        { error: 'No file attached' },
         { status: 400 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Validera filstorlek (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'Filen är för stor. Max 10MB.' },
+        { error: 'File is too large. Max 10MB.' },
         { status: 400 }
       )
     }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     ]
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: `Filtypen ${file.type} stöds inte. Använd PDF eller bild.` },
+        { error: `File type ${file.type} not supported. Use PDF or image.` },
         { status: 400 }
       )
     }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Analyze error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kunde inte analysera fil' },
+      { error: error instanceof Error ? error.message : 'Could not analyze file' },
       { status: 500 }
     )
   }

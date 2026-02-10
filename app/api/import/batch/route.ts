@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     if (!metadataJson) {
       return NextResponse.json(
-        { error: 'Metadata krävs' },
+        { error: 'Metadata required' },
         { status: 400 }
       )
     }
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     if (!metadata || metadata.length === 0) {
       return NextResponse.json(
-        { error: 'Inga filer att importera' },
+        { error: 'No files to import' },
         { status: 400 }
       )
     }
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
           success: false,
           type: fileMeta.type,
           filename: fileMeta.suggestedFilename,
-          error: 'Fil saknas',
+          error: 'File missing',
         })
         continue
       }
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
               vat_amount: expenseData.vatAmount,
               amount: expenseData.total, // amount = total inkl moms
               currency: expenseData.currency || 'SEK',
-              amount_sek: expenseData.total, // TODO: Valutakonvertering
+              amount_base: expenseData.total, // TODO: Valutakonvertering
               category: expenseData.category || 'Övrigt',
               notes: expenseData.notes || null,
               attachment_url: attachmentUrl,
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
           success: false,
           type: fileMeta.type,
           filename: fileMeta.suggestedFilename,
-          error: (error as { message?: string })?.message || 'Okänt fel',
+          error: (error as { message?: string })?.message || 'Unknown error',
         })
       }
     }
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Batch import error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Import misslyckades' },
+      { error: error instanceof Error ? error.message : 'Import failed' },
       { status: 500 }
     )
   }

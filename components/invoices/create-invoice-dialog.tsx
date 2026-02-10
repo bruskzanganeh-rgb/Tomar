@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -21,8 +21,23 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, Plus, Trash2 } from 'lucide-react'
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, Plus, Trash2, Receipt, Crown } from 'lucide-react'
 import { toast } from 'sonner'
+import { InvoicePreview } from './invoice-preview'
+import { useSubscription } from '@/lib/hooks/use-subscription'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import Link from 'next/link'
+
+type GigExpense = {
+  id: string
+  supplier: string
+  amount: number
+  amount_base: number
+  category: string | null
+  notes: string | null
+}
 
 type InitialGig = {
   id: string
@@ -35,9 +50,13 @@ type InitialGig = {
   project_name: string | null
   client_id: string
   client_name: string
+  gig_type_id: string
   gig_type_name: string
+  gig_type_name_en: string | null
   gig_type_vat_rate: number
   client_payment_terms: number
+  invoice_notes?: string | null
+  expenses?: GigExpense[]
 }
 
 type CreateInvoiceDialogProps = {
@@ -45,16 +64,36 @@ type CreateInvoiceDialogProps = {
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
   initialGig?: InitialGig
+  initialGigs?: InitialGig[]
 }
 
-type Client = { id: string; name: string; payment_terms: number }
+type Client = { id: string; name: string; org_number: string | null; address: string | null; payment_terms: number; reference_person: string | null; invoice_language: string | null }
 type Gig = { id: string; date: string; fee: number | null; travel_expense: number | null; client: { name: string }; gig_type: { vat_rate: number } }
-type GigType = { id: string; name: string; vat_rate: number }
+type GigType = { id: string; name: string; name_en: string | null; vat_rate: number }
+type CompanySettings = {
+  company_name: string
+  org_number: string
+  address: string
+  email: string
+  phone: string
+  bank_account: string
+  logo_url: string | null
+  vat_registration_number: string | null
+  late_payment_interest_text: string | null
+}
 
 type InvoiceLine = {
   description: string
   amount: string
-  is_vat_exempt: boolean
+  gig_type_id: string
+  expenseId?: string // Track which expense this line came from
+}
+
+function findGigType(types: GigType[], ...names: string[]) {
+  return types.find(t => names.some(n =>
+    t.name.toLowerCase() === n.toLowerCase() ||
+    t.name_en?.toLowerCase() === n.toLowerCase()
+  ))
 }
 
 export function CreateInvoiceDialog({
@@ -62,24 +101,67 @@ export function CreateInvoiceDialog({
   onOpenChange,
   onSuccess,
   initialGig,
+  initialGigs,
 }: CreateInvoiceDialogProps) {
+  const t = useTranslations('invoice')
+  const tc = useTranslations('common')
+  const tg = useTranslations('gig')
+  const te = useTranslations('expense')
+  const { canCreateInvoice, isPro, usage, limits } = useSubscription()
+  const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [completedGigs, setCompletedGigs] = useState<Gig[]>([])
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
-  const [selectedVatRate, setSelectedVatRate] = useState<number>(25)
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState<number>(46)
   const [formData, setFormData] = useState({
     client_id: '',
-    gig_id: '',
     invoice_date: new Date().toISOString().split('T')[0],
     payment_terms: '30',
+    reference_person: '',
+    notes: '',
   })
   const [lines, setLines] = useState<InvoiceLine[]>([
-    { description: '', amount: '', is_vat_exempt: false },
+    { description: '', amount: '', gig_type_id: '' },
   ])
+  const [selectedGigIds, setSelectedGigIds] = useState<Set<string>>(new Set())
+  const [clientGigs, setClientGigs] = useState<InitialGig[]>([])
 
   const supabase = createClient()
+
+  // Calculate due date
+  const dueDate = useMemo(() => {
+    const date = new Date(formData.invoice_date)
+    date.setDate(date.getDate() + parseInt(formData.payment_terms || '30'))
+    return date.toISOString().split('T')[0]
+  }, [formData.invoice_date, formData.payment_terms])
+
+  // Calculate totals for preview
+  const { previewLines, subtotal, vatAmount, total, primaryVatRate } = useMemo(() => {
+    const linesWithVat = lines.map(line => {
+      const amount = parseFloat(line.amount) || 0
+      const gigType = gigTypes.find(t => t.id === line.gig_type_id)
+      const vatRate = gigType?.vat_rate || 0
+      return {
+        description: line.description,
+        amount,
+        vat_rate: vatRate,
+      }
+    })
+
+    const subtotal = linesWithVat.reduce((sum, l) => sum + l.amount, 0)
+    const vatAmount = linesWithVat.reduce((sum, l) => sum + (l.amount * l.vat_rate / 100), 0)
+    const total = subtotal + vatAmount
+    const primaryVatRate = linesWithVat.find(l => l.vat_rate > 0)?.vat_rate || 25
+
+    return { previewLines: linesWithVat, subtotal, vatAmount, total, primaryVatRate }
+  }, [lines, gigTypes])
+
+  // Get selected client for preview
+  const selectedClient = useMemo(() => {
+    return clients.find(c => c.id === formData.client_id) || null
+  }, [clients, formData.client_id])
 
   useEffect(() => {
     if (open) {
@@ -87,60 +169,38 @@ export function CreateInvoiceDialog({
       loadCompletedGigs()
       loadGigTypes()
       loadNextInvoiceNumber()
+      loadCompanySettings()
     }
   }, [open])
 
-  // Auto-populate form when initialGig is provided
+  // Auto-populate form when initialGig or initialGigs are provided
   useEffect(() => {
-    if (open && initialGig) {
-      // Set form data
-      setFormData({
-        client_id: initialGig.client_id,
-        gig_id: initialGig.id,
-        invoice_date: new Date().toISOString().split('T')[0],
-        payment_terms: initialGig.client_payment_terms.toString(),
-      })
-      // Set VAT rate from gig type
-      setSelectedVatRate(initialGig.gig_type_vat_rate)
+    if (!open || gigTypes.length === 0) return
 
-      // Format date for description based on single vs multi-day
-      let dateDescription: string
-      if (initialGig.total_days && initialGig.total_days > 1 && initialGig.start_date && initialGig.end_date) {
-        const startFormatted = new Date(initialGig.start_date).toLocaleDateString('sv-SE')
-        const endFormatted = new Date(initialGig.end_date).toLocaleDateString('sv-SE')
-        dateDescription = `${startFormatted} - ${endFormatted} (${initialGig.total_days} dagar)`
-      } else {
-        dateDescription = new Date(initialGig.date).toLocaleDateString('sv-SE')
-      }
+    const gigs = initialGigs || (initialGig ? [initialGig] : null)
+    if (!gigs || gigs.length === 0) return
 
-      // Create invoice lines
-      const newLines: InvoiceLine[] = [
-        {
-          description: initialGig.project_name
-            ? `${initialGig.gig_type_name} - ${initialGig.project_name} - ${dateDescription}`
-            : `${initialGig.gig_type_name} - ${dateDescription}`,
-          amount: initialGig.fee.toString(),
-          is_vat_exempt: false,
-        },
-      ]
+    const firstGig = gigs[0]
+    const client = clients.find(c => c.id === firstGig.client_id)
+    const combinedNotes = gigs.map(g => g.invoice_notes).filter(Boolean).join('\n')
 
-      // Add travel expense if present
-      if (initialGig.travel_expense && initialGig.travel_expense > 0) {
-        newLines.push({
-          description: 'Reseersättning',
-          amount: initialGig.travel_expense.toString(),
-          is_vat_exempt: true,
-        })
-      }
+    setFormData({
+      client_id: firstGig.client_id,
+      invoice_date: new Date().toISOString().split('T')[0],
+      payment_terms: firstGig.client_payment_terms.toString(),
+      reference_person: client?.reference_person || '',
+      notes: combinedNotes,
+    })
 
-      setLines(newLines)
-    }
-  }, [open, initialGig])
+    setSelectedGigIds(new Set(gigs.map(g => g.id)))
+    setClientGigs(gigs)
+    setLines(buildLinesFromGigs(gigs))
+  }, [open, initialGig, initialGigs, gigTypes, clients])
 
   async function loadClients() {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, payment_terms')
+      .select('id, name, org_number, address, payment_terms, reference_person, invoice_language')
       .order('name')
     setClients(data || [])
   }
@@ -164,57 +224,138 @@ export function CreateInvoiceDialog({
   async function loadGigTypes() {
     const { data } = await supabase
       .from('gig_types')
-      .select('id, name, vat_rate')
+      .select('id, name, name_en, vat_rate')
       .order('name')
     setGigTypes(data || [])
   }
 
+  async function loadCompanySettings() {
+    const { data } = await supabase
+      .from('company_settings')
+      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice')
+      .single()
+    setCompanySettings(data)
+  }
+
   async function loadNextInvoiceNumber() {
-    // Get all existing invoice numbers to find gaps
-    const { data: invoices } = await supabase
+    const { data } = await supabase
       .from('invoices')
       .select('invoice_number')
-      .order('invoice_number', { ascending: true })
-
-    // Get the starting number from company settings
-    const { data: settings } = await supabase
-      .from('company_settings')
-      .select('next_invoice_number')
+      .order('invoice_number', { ascending: false })
+      .limit(1)
       .single()
 
-    const startingNumber = settings?.next_invoice_number || 1
-    const existingNumbers = new Set((invoices || []).map(i => i.invoice_number))
+    const maxExisting = data?.invoice_number || 0
+    setNextInvoiceNumber(maxExisting + 1)
+  }
 
-    // Find the lowest available number (either a gap or the next in sequence)
-    let nextNumber = startingNumber
+  function buildLinesFromGigs(gigs: InitialGig[]): InvoiceLine[] {
+    const client = clients.find(c => c.id === formData.client_id)
+    const useEnglish = client?.invoice_language === 'en'
+    const newLines: InvoiceLine[] = []
+    for (const gig of gigs) {
+      let dateDescription: string
+      if (gig.total_days > 1 && gig.start_date && gig.end_date) {
+        const startFormatted = new Date(gig.start_date).toLocaleDateString(formatLocale)
+        const endFormatted = new Date(gig.end_date).toLocaleDateString(formatLocale)
+        dateDescription = `${startFormatted} - ${endFormatted} (${gig.total_days} ${tc('days')})`
+      } else {
+        dateDescription = new Date(gig.date).toLocaleDateString(formatLocale)
+      }
 
-    // Check if there are any gaps below the current "next" number
-    for (let i = 1; i < startingNumber; i++) {
-      if (!existingNumbers.has(i)) {
-        nextNumber = i
-        break
+      const typeName = useEnglish && gig.gig_type_name_en ? gig.gig_type_name_en : gig.gig_type_name
+      newLines.push({
+        description: gig.project_name
+          ? `${typeName} - ${gig.project_name} - ${dateDescription}`
+          : `${typeName} - ${dateDescription}`,
+        amount: gig.fee.toString(),
+        gig_type_id: gig.gig_type_id,
+      })
+
+      if (gig.travel_expense && gig.travel_expense > 0) {
+        const konsertType = findGigType(gigTypes, 'Konsert', 'Concert')
+        newLines.push({
+          description: `${tg('travelExpense')} - ${dateDescription}`,
+          amount: gig.travel_expense.toString(),
+          gig_type_id: konsertType?.id || gig.gig_type_id,
+        })
       }
     }
+    return newLines.length > 0 ? newLines : [{ description: '', amount: '', gig_type_id: '' }]
+  }
 
-    // If no gap found, find the first available number from startingNumber onwards
-    if (nextNumber === startingNumber) {
-      while (existingNumbers.has(nextNumber)) {
-        nextNumber++
-      }
+  async function loadClientGigs(clientId: string) {
+    const { data: linkedGigs } = await supabase
+      .from('invoice_gigs')
+      .select('gig_id')
+    const linkedGigIds = new Set((linkedGigs || []).map((g: any) => g.gig_id))
+
+    const { data } = await supabase
+      .from('gigs')
+      .select(`
+        id, fee, travel_expense, date, start_date, end_date, total_days,
+        project_name, invoice_notes, client_id,
+        client:clients(name, payment_terms),
+        gig_type:gig_types(id, name, name_en, vat_rate)
+      `)
+      .eq('client_id', clientId)
+      .eq('status', 'completed')
+      .not('fee', 'is', null)
+      .order('date', { ascending: false })
+
+    const gigs: InitialGig[] = (data || [])
+      .filter((g: any) => !linkedGigIds.has(g.id))
+      .map((g: any) => ({
+        id: g.id,
+        fee: g.fee!,
+        travel_expense: g.travel_expense,
+        date: g.date,
+        start_date: g.start_date,
+        end_date: g.end_date,
+        total_days: g.total_days || 1,
+        project_name: g.project_name,
+        invoice_notes: g.invoice_notes || null,
+        client_id: g.client_id!,
+        client_name: (g.client as any)?.name || '',
+        gig_type_id: (g.gig_type as any)?.id || '',
+        gig_type_name: (g.gig_type as any)?.name || '',
+        gig_type_name_en: (g.gig_type as any)?.name_en || null,
+        gig_type_vat_rate: (g.gig_type as any)?.vat_rate || 25,
+        client_payment_terms: (g.client as any)?.payment_terms || 30,
+      }))
+
+    setClientGigs(gigs)
+  }
+
+  function toggleGig(gig: InitialGig) {
+    const newIds = new Set(selectedGigIds)
+    if (newIds.has(gig.id)) {
+      newIds.delete(gig.id)
+    } else {
+      newIds.add(gig.id)
     }
+    setSelectedGigIds(newIds)
 
-    setNextInvoiceNumber(nextNumber)
+    const selectedGigs = clientGigs.filter(g => newIds.has(g.id))
+    setLines(buildLinesFromGigs(selectedGigs))
+
+    const combinedNotes = selectedGigs
+      .map(g => g.invoice_notes)
+      .filter(Boolean)
+      .join('\n')
+    setFormData(prev => ({ ...prev, notes: combinedNotes }))
   }
 
   function addLine() {
-    setLines([...lines, { description: '', amount: '', is_vat_exempt: false }])
+    const defaultType = findGigType(gigTypes, 'Undervisning', 'Teaching')
+    setLines([...lines, { description: '', amount: '', gig_type_id: defaultType?.id || '' }])
   }
 
   function removeLine(index: number) {
     setLines(lines.filter((_, i) => i !== index))
   }
 
-  function updateLine(index: number, field: keyof InvoiceLine, value: string | boolean) {
+  function updateLine(index: number, field: keyof InvoiceLine, value: string) {
     const newLines = [...lines]
     newLines[index] = { ...newLines[index], [field]: value }
     setLines(newLines)
@@ -222,40 +363,37 @@ export function CreateInvoiceDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!canCreateInvoice) {
+      toast.error(t('invoiceLimitReached', { limit: limits.invoices }))
+      return
+    }
     setLoading(true)
 
-    // Calculate totals - only VAT-able lines
-    const vatableSubtotal = lines
-      .filter(line => !line.is_vat_exempt)
-      .reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
-    const subtotal = lines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
+    // Save reference_person_override if different from client default
+    const client = clients.find(c => c.id === formData.client_id)
+    const referencePersonOverride = formData.reference_person !== (client?.reference_person || '')
+      ? formData.reference_person || null
+      : null
 
-    // Use selected VAT rate
-    const vatRate = selectedVatRate
-
-    // VAT only applies to non-exempt lines
-    const vatAmount = vatableSubtotal * (vatRate / 100)
-    const total = subtotal + vatAmount
-
-    // Calculate due date
-    const dueDate = new Date(formData.invoice_date)
-    dueDate.setDate(dueDate.getDate() + parseInt(formData.payment_terms))
-
-    // Create invoice
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .insert([
         {
           client_id: formData.client_id,
-          gig_id: formData.gig_id || null,
+          gig_id: null,
           invoice_number: nextInvoiceNumber,
           invoice_date: formData.invoice_date,
-          due_date: dueDate.toISOString().split('T')[0],
+          due_date: dueDate,
           subtotal,
-          vat_rate: vatRate,
+          vat_rate: primaryVatRate,
           vat_amount: vatAmount,
           total,
+          total_base: total,
+          currency: 'SEK',
+          exchange_rate: 1.0,
           status: 'draft',
+          reference_person_override: referencePersonOverride,
+          notes: formData.notes || null,
         },
       ])
       .select()
@@ -263,17 +401,16 @@ export function CreateInvoiceDialog({
 
     if (invoiceError) {
       console.error('Error creating invoice:', invoiceError)
-      toast.error('Kunde inte skapa faktura: ' + invoiceError.message)
+      toast.error(t('couldNotCreateInvoice') + ': ' + invoiceError.message)
       setLoading(false)
       return
     }
 
-    // Create invoice lines
-    const linesData = lines.map((line, index) => ({
+    const linesData = previewLines.map((line, index) => ({
       invoice_id: invoice.id,
       description: line.description,
-      amount: parseFloat(line.amount),
-      is_vat_exempt: line.is_vat_exempt,
+      amount: line.amount,
+      vat_rate: line.vat_rate,
       sort_order: index,
     }))
 
@@ -283,229 +420,390 @@ export function CreateInvoiceDialog({
 
     if (linesError) {
       console.error('Error creating invoice lines:', linesError)
-      toast.error('Kunde inte skapa fakturarader: ' + linesError.message)
+      toast.error(t('couldNotCreateLines') + ': ' + linesError.message)
       setLoading(false)
       return
     }
 
-    // Update next invoice number only if we used the highest number
-    const { data: settings } = await supabase
-      .from('company_settings')
-      .select('id, next_invoice_number')
-      .single()
+    // Link gigs via junction table and update their status
+    const gigIdsArray = Array.from(selectedGigIds)
+    if (gigIdsArray.length > 0) {
+      const { error: linkError } = await supabase
+        .from('invoice_gigs')
+        .insert(gigIdsArray.map(gigId => ({
+          invoice_id: invoice.id,
+          gig_id: gigId,
+        })))
 
-    if (settings && nextInvoiceNumber >= settings.next_invoice_number) {
-      await supabase
-        .from('company_settings')
-        .update({ next_invoice_number: nextInvoiceNumber + 1 })
-        .eq('id', settings.id)
-    }
+      if (linkError) {
+        console.error('Error linking gigs:', linkError)
+      }
 
-    // Update gig status if gig was selected
-    if (formData.gig_id) {
       await supabase
         .from('gigs')
         .update({ status: 'invoiced' })
-        .eq('id', formData.gig_id)
+        .in('id', gigIdsArray)
     }
+
+    // Track usage
+    fetch('/api/usage/increment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'invoice' }),
+    }).catch(() => {}) // Non-blocking
 
     setLoading(false)
     setFormData({
       client_id: '',
-      gig_id: '',
       invoice_date: new Date().toISOString().split('T')[0],
       payment_terms: '30',
+      reference_person: '',
+      notes: '',
     })
-    setSelectedVatRate(25)
-    setLines([{ description: '', amount: '', is_vat_exempt: false }])
+    setLines([{ description: '', amount: '', gig_type_id: '' }])
+    setSelectedGigIds(new Set())
+    setClientGigs([])
     onSuccess()
     onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Ny faktura</DialogTitle>
-            <DialogDescription>
-              Fakturanummer: #{nextInvoiceNumber}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="client_id">
-                Kund <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.client_id}
-                onValueChange={(value) => {
-                  const client = clients.find(c => c.id === value)
-                  setFormData({
-                    ...formData,
-                    client_id: value,
-                    payment_terms: client?.payment_terms.toString() || '30',
-                  })
-                }}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Välj kund" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="gig_id">Koppla till uppdrag (valfritt)</Label>
-              <Select
-                value={formData.gig_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, gig_id: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Välj uppdrag" />
-                </SelectTrigger>
-                <SelectContent>
-                  {completedGigs.map((gig) => (
-                    <SelectItem key={gig.id} value={gig.id}>
-                      {gig.client.name} - {new Date(gig.date).toLocaleDateString('sv-SE')} ({gig.fee !== null ? `${gig.fee.toLocaleString('sv-SE')} kr` : 'Ej angivet'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="invoice_date">Fakturadatum</Label>
-                <Input
-                  id="invoice_date"
-                  type="date"
-                  value={formData.invoice_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, invoice_date: e.target.value })
-                  }
-                  required
+      <DialogContent
+        className="sm:max-w-[1300px] max-h-[90vh] p-0 gap-0 overflow-hidden"
+        aria-describedby={undefined}
+      >
+        <VisuallyHidden.Root asChild>
+          <DialogTitle>{t('newInvoice')}</DialogTitle>
+        </VisuallyHidden.Root>
+        <form onSubmit={handleSubmit} className="flex h-full">
+          {/* Preview Section - Left */}
+          <div className="w-[450px] bg-muted/30 p-6 border-r flex flex-col">
+            <div className="text-sm font-medium text-muted-foreground mb-3">{t('preview')}</div>
+            <div className="flex-1 flex items-start justify-center">
+              <div className="w-full">
+                <InvoicePreview
+                  company={companySettings}
+                  client={selectedClient ? {
+                    name: selectedClient.name,
+                    org_number: selectedClient.org_number,
+                    address: selectedClient.address,
+                    payment_terms: selectedClient.payment_terms,
+                  } : null}
+                  invoiceNumber={nextInvoiceNumber}
+                  invoiceDate={formData.invoice_date}
+                  dueDate={dueDate}
+                  lines={previewLines}
+                  subtotal={subtotal}
+                  vatAmount={vatAmount}
+                  total={total}
+                  primaryVatRate={primaryVatRate}
+                  referencePerson={formData.reference_person}
+                  notes={formData.notes}
                 />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="payment_terms">Betalningsvillkor (dagar)</Label>
-                <Input
-                  id="payment_terms"
-                  type="number"
-                  min="1"
-                  value={formData.payment_terms}
-                  onChange={(e) =>
-                    setFormData({ ...formData, payment_terms: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Uppdragstyp (moms)</Label>
-              <Select
-                value={selectedVatRate.toString()}
-                onValueChange={(value) => setSelectedVatRate(parseFloat(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Välj momssats" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gigTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.vat_rate.toString()}>
-                      {type.name} ({type.vat_rate}% moms)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <Label>Fakturarader</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addLine}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Lägg till rad
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                {lines.map((line, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Beskrivning"
-                        value={line.description}
-                        onChange={(e) =>
-                          updateLine(index, 'description', e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="w-28">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Belopp"
-                        value={line.amount}
-                        onChange={(e) =>
-                          updateLine(index, 'amount', e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="flex items-center gap-1.5 min-w-[80px]">
-                      <Checkbox
-                        id={`vat-exempt-${index}`}
-                        checked={line.is_vat_exempt}
-                        onCheckedChange={(checked) => updateLine(index, 'is_vat_exempt', !!checked)}
-                      />
-                      <label htmlFor={`vat-exempt-${index}`} className="text-xs text-muted-foreground cursor-pointer">
-                        Momsfri
-                      </label>
-                    </div>
-                    {lines.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeLine(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              Avbryt
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Skapa faktura
-            </Button>
-          </DialogFooter>
+          {/* Form Section - Right */}
+          <div className="flex-1 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold">{t('newInvoice')}</h2>
+              <p className="text-sm text-muted-foreground">{t('invoiceNumber')} #{nextInvoiceNumber}</p>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-5">
+                {/* Kund */}
+                <div className="space-y-2">
+                  <Label>{t('customer')} <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={formData.client_id}
+                    onValueChange={(value) => {
+                      const client = clients.find(c => c.id === value)
+                      setFormData({
+                        ...formData,
+                        client_id: value,
+                        payment_terms: client?.payment_terms.toString() || '30',
+                        reference_person: client?.reference_person || '',
+                      })
+                      if (!initialGig && !initialGigs) {
+                        setSelectedGigIds(new Set())
+                        setLines([{ description: '', amount: '', gig_type_id: '' }])
+                        loadClientGigs(value)
+                      }
+                    }}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('selectClient')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Uppdrag att fakturera */}
+                {clientGigs.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>{t('gigsToInvoice')}</Label>
+                    <div className="space-y-1.5 border rounded-lg p-3 bg-muted/30">
+                      {clientGigs.map(gig => {
+                        const isSelected = selectedGigIds.has(gig.id)
+                        const dateStr = gig.total_days > 1 && gig.start_date && gig.end_date
+                          ? `${new Date(gig.start_date).toLocaleDateString(formatLocale)} - ${new Date(gig.end_date).toLocaleDateString(formatLocale)}`
+                          : new Date(gig.date).toLocaleDateString(formatLocale)
+                        return (
+                          <div
+                            key={gig.id}
+                            className={`flex items-center gap-2 p-2 rounded text-sm cursor-pointer transition-colors ${
+                              isSelected ? 'bg-primary/10 border border-primary/20' : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => toggleGig(gig)}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleGig(gig)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium">
+                                {gig.gig_type_name}
+                                {gig.project_name && ` - ${gig.project_name}`}
+                              </span>
+                              <span className="text-muted-foreground ml-2">{dateStr}</span>
+                            </div>
+                            <span className="font-medium shrink-0">
+                              {gig.fee.toLocaleString(formatLocale)} {tc('kr')}
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {selectedGigIds.size > 0 && (
+                        <div className="pt-2 border-t mt-1 text-sm text-muted-foreground flex justify-between">
+                          <span>{t('gigsSelected', { count: selectedGigIds.size })}</span>
+                          <span className="font-medium">
+                            {clientGigs
+                              .filter(g => selectedGigIds.has(g.id))
+                              .reduce((sum, g) => sum + g.fee + (g.travel_expense || 0), 0)
+                              .toLocaleString(formatLocale)} {tc('kr')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Datum */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>{t('invoiceDate')}</Label>
+                    <Input
+                      type="date"
+                      value={formData.invoice_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, invoice_date: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('paymentTermsDays')}</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={formData.payment_terms}
+                      onChange={(e) =>
+                        setFormData({ ...formData, payment_terms: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Er referens */}
+                <div className="space-y-2">
+                  <Label>{t('yourReference')}</Label>
+                  <Input
+                    placeholder={t('contactPersonPlaceholder')}
+                    value={formData.reference_person}
+                    onChange={(e) =>
+                      setFormData({ ...formData, reference_person: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('referencePrefilledHint')}
+                  </p>
+                </div>
+
+                {/* Fakturarader */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>{t('invoiceLines')}</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      {t('row')}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {lines.map((line, index) => (
+                      <div key={index} className="flex gap-2 items-center">
+                        <Input
+                          className="flex-1"
+                          placeholder={t('description')}
+                          value={line.description}
+                          onChange={(e) => updateLine(index, 'description', e.target.value)}
+                          required
+                        />
+                        <Input
+                          className="w-24"
+                          type="number"
+                          step="0.01"
+                          placeholder={t('amount')}
+                          value={line.amount}
+                          onChange={(e) => updateLine(index, 'amount', e.target.value)}
+                          required
+                        />
+                        <Select
+                          value={line.gig_type_id}
+                          onValueChange={(value) => updateLine(index, 'gig_type_id', value)}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder={t('type')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gigTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.id}>
+                                {type.name} ({type.vat_rate}%)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {lines.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            onClick={() => removeLine(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Meddelande / Anteckningar */}
+                <div className="space-y-2">
+                  <Label>{t('invoiceMessage')}</Label>
+                  <Textarea
+                    placeholder={t('optionalMessagePlaceholder')}
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('prefilledFromNotes')}
+                  </p>
+                </div>
+
+                {/* Kopplade kvitton */}
+                {(() => {
+                  const allGigs = initialGigs || (initialGig ? [initialGig] : [])
+                  const allExpenses = allGigs
+                    .filter(g => selectedGigIds.has(g.id))
+                    .flatMap(g => g.expenses || [])
+                  if (allExpenses.length === 0) return null
+                  return (
+                    <div className="space-y-3 pt-3 border-t">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          <Receipt className="h-4 w-4" />
+                          {t('addReceiptsAsLines')}
+                        </Label>
+                        <span className="text-sm text-muted-foreground">
+                          {allExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0).toLocaleString(formatLocale)} {tc('kr')}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {allExpenses.map(expense => {
+                          const isAdded = lines.some(line => line.expenseId === expense.id)
+                          return (
+                            <div
+                              key={expense.id}
+                              className={`flex items-center gap-2 p-2 rounded text-sm ${isAdded ? 'bg-primary/10 border border-primary/20' : 'bg-muted/50'}`}
+                            >
+                              <Checkbox
+                                id={`expense-${expense.id}`}
+                                checked={isAdded}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    const expenseType = findGigType(gigTypes, 'Utgifter', 'Expenses')
+                                    const category = expense.category || te('expense')
+                                    const details = expense.notes
+                                      ? `${expense.supplier} - ${expense.notes}`
+                                      : expense.supplier
+                                    const newLine: InvoiceLine = {
+                                      description: `${category}: ${details}`,
+                                      amount: (expense.amount_base || expense.amount).toString(),
+                                      gig_type_id: expenseType?.id || '',
+                                      expenseId: expense.id,
+                                    }
+                                    setLines([...lines, newLine])
+                                  } else {
+                                    setLines(lines.filter(line => line.expenseId !== expense.id))
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`expense-${expense.id}`} className="flex-1 cursor-pointer truncate">
+                                {expense.supplier}
+                                {expense.notes && <span className="text-muted-foreground"> - {expense.notes}</span>}
+                              </label>
+                              {expense.category && (
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  {expense.category}
+                                </Badge>
+                              )}
+                              <span className="font-medium shrink-0">
+                                {(expense.amount_base || expense.amount).toLocaleString(formatLocale)} {tc('kr')}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <DialogFooter className="px-6 py-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={loading}
+              >
+                {tc('cancel')}
+              </Button>
+              <Button type="submit" disabled={loading || !formData.client_id}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {t('createInvoice')}
+              </Button>
+            </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

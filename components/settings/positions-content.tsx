@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +28,11 @@ type Position = {
 }
 
 export default function PositionsPage() {
+  const t = useTranslations('config')
+  const tc = useTranslations('common')
+  const tToast = useTranslations('toast')
+  const tPositions = useTranslations('positions')
+
   const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -71,7 +77,7 @@ export default function PositionsPage() {
 
     if (error) {
       console.error('Error creating position:', error)
-      toast.error('Kunde inte skapa position')
+      toast.error(tPositions('createError'))
     } else {
       setNewPositionName('')
       setShowCreateDialog(false)
@@ -93,7 +99,7 @@ export default function PositionsPage() {
 
     if (error) {
       console.error('Error deleting position:', error)
-      toast.error('Kunde inte ta bort position')
+      toast.error(tPositions('deleteError'))
     } else {
       loadPositions()
     }
@@ -115,7 +121,7 @@ export default function PositionsPage() {
 
     if (error) {
       console.error('Error updating position:', error)
-      toast.error('Kunde inte uppdatera position')
+      toast.error(tPositions('updateError'))
     } else {
       setEditingPosition(null)
       setEditName('')
@@ -152,14 +158,14 @@ export default function PositionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Positioner</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('positions')}</h1>
           <p className="text-muted-foreground">
-            Hantera roller/positioner för intern statistik
+            {tPositions('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Ny position
+          {tPositions('newPosition')}
         </Button>
       </div>
 
@@ -167,25 +173,25 @@ export default function PositionsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Music className="h-5 w-5" />
-            Alla positioner ({positions.length})
+            {tPositions('allPositions', { count: positions.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Laddar...
+              {tc('loading')}
             </div>
           ) : positions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Inga positioner ännu. Skapa din första position!
+              {tPositions('noPositions')}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">Ordning</TableHead>
-                  <TableHead>Namn</TableHead>
-                  <TableHead className="text-right">Åtgärder</TableHead>
+                  <TableHead className="w-12">{tPositions('order')}</TableHead>
+                  <TableHead>{tPositions('name')}</TableHead>
+                  <TableHead className="text-right">{tPositions('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -242,26 +248,26 @@ export default function PositionsPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ny position</DialogTitle>
+            <DialogTitle>{tPositions('newPosition')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Namn</Label>
+              <Label htmlFor="name">{tPositions('name')}</Label>
               <Input
                 id="name"
                 value={newPositionName}
                 onChange={(e) => setNewPositionName(e.target.value)}
-                placeholder="t.ex. 1:a konsertmästare"
+                placeholder={tPositions('namePlaceholder')}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Avbryt
+              {tc('cancel')}
             </Button>
             <Button onClick={handleCreate} disabled={saving || !newPositionName.trim()}>
-              {saving ? 'Sparar...' : 'Skapa'}
+              {saving ? tPositions('saving') : tc('create')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -270,26 +276,26 @@ export default function PositionsPage() {
       <Dialog open={!!editingPosition} onOpenChange={(open) => !open && setEditingPosition(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Redigera position</DialogTitle>
+            <DialogTitle>{tPositions('editPosition')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-name">Namn</Label>
+              <Label htmlFor="edit-name">{tPositions('name')}</Label>
               <Input
                 id="edit-name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="t.ex. 1:a konsertmästare"
+                placeholder={tPositions('namePlaceholder')}
                 onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingPosition(null)}>
-              Avbryt
+              {tc('cancel')}
             </Button>
             <Button onClick={handleEdit} disabled={saving || !editName.trim()}>
-              {saving ? 'Sparar...' : 'Spara'}
+              {saving ? tPositions('saving') : tc('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -301,9 +307,9 @@ export default function PositionsPage() {
           setDeleteConfirmOpen(open)
           if (!open) setPositionToDelete(null)
         }}
-        title="Ta bort position"
-        description="Är du säker på att du vill ta bort denna position?"
-        confirmLabel="Ta bort"
+        title={tPositions('deleteTitle')}
+        description={tPositions('deleteDescription')}
+        confirmLabel={tc('delete')}
         variant="destructive"
         onConfirm={() => {
           if (positionToDelete) {

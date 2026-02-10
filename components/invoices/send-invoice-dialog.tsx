@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -18,7 +19,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Mail, Receipt, FileText, ExternalLink, FileCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { sv } from 'date-fns/locale'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { getSignedUrl, type GigAttachment } from '@/lib/supabase/storage'
 
 type Expense = {
@@ -27,7 +29,7 @@ type Expense = {
   supplier: string
   amount: number
   currency: string | null
-  amount_sek: number | null
+  amount_base: number | null
   category: string | null
   attachment_url: string | null
 }
@@ -57,6 +59,10 @@ export function SendInvoiceDialog({
   onOpenChange,
   onSuccess,
 }: SendInvoiceDialogProps) {
+  const t = useTranslations('invoice')
+  const tc = useTranslations('common')
+  const dateLocale = useDateLocale()
+  const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [receipts, setReceipts] = useState<Expense[]>([])
@@ -72,22 +78,20 @@ export function SendInvoiceDialog({
     if (open && invoice) {
       loadAttachments()
       setEmail(invoice.client.email || '')
-      setSubject(`Faktura #${invoice.invoice_number} - Babalisk AB`)
-      setMessage(`Hej,
-
-Bifogat finner du faktura #${invoice.invoice_number} på ${invoice.total.toLocaleString('sv-SE')} kr.
-
-Förfallodatum: ${format(new Date(invoice.due_date), 'PPP', { locale: sv })}
-
-Med vänliga hälsningar,
-Babalisk AB`)
+      setSubject(t('emailDefaultSubject', { number: invoice.invoice_number, company: 'Babalisk AB' }))
+      setMessage(t('emailDefaultBody', {
+        number: invoice.invoice_number,
+        total: invoice.total.toLocaleString(formatLocale),
+        dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
+        company: 'Babalisk AB',
+      }))
       setSelectedReceipts([]) // Reset selection
       setSelectedDocs([])
     }
   }, [open, invoice])
 
   async function loadAttachments() {
-    if (!invoice?.gig_id) {
+    if (!invoice) {
       setReceipts([])
       setInvoiceDocs([])
       return
@@ -95,11 +99,30 @@ Babalisk AB`)
 
     setLoading(true)
 
-    // Load receipts (expenses with attachments)
+    // Get all linked gig IDs from junction table
+    const { data: linkedGigs } = await supabase
+      .from('invoice_gigs')
+      .select('gig_id')
+      .eq('invoice_id', invoice.id)
+    const gigIds = (linkedGigs || []).map((g: any) => g.gig_id)
+
+    // Also check legacy gig_id
+    if (invoice.gig_id && !gigIds.includes(invoice.gig_id)) {
+      gigIds.push(invoice.gig_id)
+    }
+
+    if (gigIds.length === 0) {
+      setReceipts([])
+      setInvoiceDocs([])
+      setLoading(false)
+      return
+    }
+
+    // Load receipts (expenses with attachments) from all linked gigs
     const { data: receiptsData, error: receiptsError } = await supabase
       .from('expenses')
-      .select('id, date, supplier, amount, currency, amount_sek, category, attachment_url')
-      .eq('gig_id', invoice.gig_id)
+      .select('id, date, supplier, amount, currency, amount_base, category, attachment_url')
+      .in('gig_id', gigIds)
       .not('attachment_url', 'is', null)
       .order('date', { ascending: false })
 
@@ -109,11 +132,11 @@ Babalisk AB`)
       setReceipts(receiptsData || [])
     }
 
-    // Load invoice documents (gig_attachments with category='invoice_doc')
+    // Load invoice documents from all linked gigs
     const { data: docsData, error: docsError } = await supabase
       .from('gig_attachments')
       .select('*')
-      .eq('gig_id', invoice.gig_id)
+      .in('gig_id', gigIds)
       .eq('category', 'invoice_doc')
       .order('uploaded_at', { ascending: false })
 
@@ -160,19 +183,19 @@ Babalisk AB`)
 
   async function handleSend() {
     if (!invoice || !email) {
-      toast.warning('Ange en e-postadress')
+      toast.warning(t('enterEmail'))
       return
     }
 
     setSending(true)
     try {
-      // Hämta valda kvitto-URLs
+      // Get selected receipt URLs
       const receiptUrls = receipts
         .filter(r => selectedReceipts.includes(r.id))
         .map(r => r.attachment_url)
         .filter(Boolean) as string[]
 
-      // Hämta signerade URLs för valda fakturaunderlag
+      // Get signed URLs for selected invoice documents
       const docUrls: string[] = []
       for (const doc of invoiceDocs.filter(d => selectedDocs.includes(d.id))) {
         const signedUrl = await getSignedUrl(doc.file_path)
@@ -198,14 +221,14 @@ Babalisk AB`)
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Kunde inte skicka e-post')
+        throw new Error(result.error || t('couldNotSendEmail'))
       }
 
-      toast.success('Fakturan har skickats!')
+      toast.success(t('invoiceSent'))
       onSuccess()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ett fel uppstod')
+      toast.error(err instanceof Error ? err.message : t('errorOccurred'))
     } finally {
       setSending(false)
     }
@@ -213,7 +236,7 @@ Babalisk AB`)
 
   const selectedTotal = receipts
     .filter(r => selectedReceipts.includes(r.id))
-    .reduce((sum, r) => sum + (r.amount_sek || r.amount), 0)
+    .reduce((sum, r) => sum + (r.amount_base || r.amount), 0)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,29 +244,29 @@ Babalisk AB`)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Skicka faktura #{invoice?.invoice_number}
+            {t('sendInvoiceTitle', { number: invoice?.invoice_number ?? '' })}
           </DialogTitle>
           <DialogDescription>
-            Skicka fakturan via e-post till kunden
+            {t('sendViaEmailDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Email address */}
           <div className="space-y-2">
-            <Label htmlFor="email">Till</Label>
+            <Label htmlFor="email">{t('to')}</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="kund@exempel.se"
+              placeholder={t('emailPlaceholder')}
             />
           </div>
 
           {/* Subject */}
           <div className="space-y-2">
-            <Label htmlFor="subject">Ämne</Label>
+            <Label htmlFor="subject">{t('subject')}</Label>
             <Input
               id="subject"
               value={subject}
@@ -253,7 +276,7 @@ Babalisk AB`)
 
           {/* Message */}
           <div className="space-y-2">
-            <Label htmlFor="message">Meddelande</Label>
+            <Label htmlFor="message">{t('message')}</Label>
             <Textarea
               id="message"
               value={message}
@@ -266,18 +289,18 @@ Babalisk AB`)
           <div className="p-3 rounded-lg border bg-gray-50">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Faktura #{invoice?.invoice_number}.pdf</span>
-              <span className="text-xs text-muted-foreground">(bifogas automatiskt)</span>
+              <span className="text-sm font-medium">{t('invoice')} #{invoice?.invoice_number}.pdf</span>
+              <span className="text-xs text-muted-foreground">{t('attachedAutomatically')}</span>
             </div>
           </div>
 
           {/* Invoice documents selection */}
-          {invoice?.gig_id && invoiceDocs.length > 0 && (
+          {invoiceDocs.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FileCheck className="h-4 w-4 text-muted-foreground" />
-                  <Label>Bifoga fakturaunderlag</Label>
+                  <Label>{t('attachInvoiceDocs')}</Label>
                 </div>
                 <Button
                   type="button"
@@ -286,7 +309,7 @@ Babalisk AB`)
                   onClick={selectAllDocs}
                   className="text-xs"
                 >
-                  {selectedDocs.length === invoiceDocs.length ? 'Avmarkera alla' : 'Välj alla'}
+                  {selectedDocs.length === invoiceDocs.length ? t('deselectAll') : t('selectAll')}
                 </Button>
               </div>
 
@@ -306,14 +329,14 @@ Babalisk AB`)
                         {doc.file_name}
                       </span>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(doc.uploaded_at).toLocaleDateString('sv-SE')}
+                        {new Date(doc.uploaded_at).toLocaleDateString(formatLocale)}
                       </p>
                     </div>
                   </div>
                 ))}
                 {selectedDocs.length > 0 && (
                   <div className="pt-2 border-t mt-2 text-sm text-muted-foreground">
-                    {selectedDocs.length} dokument valda
+                    {t('docsSelected', { count: selectedDocs.length })}
                   </div>
                 )}
               </div>
@@ -321,12 +344,12 @@ Babalisk AB`)
           )}
 
           {/* Receipt selection */}
-          {invoice?.gig_id && (
+          {(
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-muted-foreground" />
-                  <Label>Bifoga kvitton</Label>
+                  <Label>{t('attachReceipts')}</Label>
                 </div>
                 {receipts.length > 0 && (
                   <Button
@@ -336,7 +359,7 @@ Babalisk AB`)
                     onClick={selectAllReceipts}
                     className="text-xs"
                   >
-                    {selectedReceipts.length === receipts.length ? 'Avmarkera alla' : 'Välj alla'}
+                    {selectedReceipts.length === receipts.length ? t('deselectAll') : t('selectAll')}
                   </Button>
                 )}
               </div>
@@ -347,7 +370,7 @@ Babalisk AB`)
                 </div>
               ) : receipts.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-2">
-                  Inga kvitton kopplade till detta uppdrag
+                  {t('noReceiptsLinked')}
                 </p>
               ) : (
                 <div className="space-y-2 border rounded-lg p-3 bg-white">
@@ -373,8 +396,8 @@ Babalisk AB`)
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(receipt.date), 'd MMM yyyy', { locale: sv })} •{' '}
-                          {(receipt.amount_sek || receipt.amount).toLocaleString('sv-SE')} kr
+                          {format(new Date(receipt.date), 'd MMM yyyy', { locale: dateLocale })} •{' '}
+                          {(receipt.amount_base || receipt.amount).toLocaleString(formatLocale)} {tc('kr')}
                         </p>
                       </div>
                       {receipt.attachment_url && (
@@ -392,9 +415,9 @@ Babalisk AB`)
                   ))}
                   {selectedReceipts.length > 0 && (
                     <div className="pt-2 border-t mt-2 text-sm text-muted-foreground">
-                      {selectedReceipts.length} kvitto{selectedReceipts.length > 1 ? 'n' : ''} valda
+                      {t('receiptsSelected', { count: selectedReceipts.length })}
                       <span className="ml-1">
-                        ({selectedTotal.toLocaleString('sv-SE')} kr)
+                        ({selectedTotal.toLocaleString(formatLocale)} {tc('kr')})
                       </span>
                     </div>
                   )}
@@ -406,18 +429,18 @@ Babalisk AB`)
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
-            Avbryt
+            {tc('cancel')}
           </Button>
           <Button onClick={handleSend} disabled={sending || !email}>
             {sending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Skickar...
+                {t('sending')}
               </>
             ) : (
               <>
                 <Mail className="mr-2 h-4 w-4" />
-                Skicka faktura
+                {t('sendInvoice')}
               </>
             )}
           </Button>

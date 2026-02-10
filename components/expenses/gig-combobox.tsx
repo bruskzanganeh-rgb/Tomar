@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import { Check, ChevronsUpDown, Calendar, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -44,6 +45,9 @@ export function GigCombobox({
   onValueChange,
   disabled = false,
 }: GigComboboxProps) {
+  const t = useTranslations('expense')
+  const tg = useTranslations('gig')
+  const tc = useTranslations('common')
   const [open, setOpen] = useState(false)
   const [kommandeLimitExtra, setKommandeLimitExtra] = useState(0)
   const [historiskaLimitExtra, setHistoriskaLimitExtra] = useState(0)
@@ -80,16 +84,16 @@ export function GigCombobox({
   // Format: "2025-12-25 Projektnamn - Klient"
   const formatGigLabel = (gig: Gig): string => {
     const date = format(new Date(gig.date), 'yyyy-MM-dd')
-    const name = gig.project_name || gig.venue || 'Okänt uppdrag'
+    const name = gig.project_name || gig.venue || t('unknownGig')
     const client = gig.client?.name
     return client ? `${date} ${name} - ${client}` : `${date} ${name}`
   }
 
   // Hitta valt uppdrag
   const selectedGig = gigs.find(g => g.id === value)
-  const displayValue = selectedGig ? formatGigLabel(selectedGig) : 'Välj uppdrag...'
+  const displayValue = selectedGig ? formatGigLabel(selectedGig) : t('selectGig')
 
-  // Reset limits när popover stängs
+  // Reset limits when popover closes
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
     if (!newOpen) {
@@ -109,16 +113,16 @@ export function GigCombobox({
           className="w-full justify-between font-normal"
         >
           <span className="truncate">
-            {value === 'none' ? 'Inget uppdrag' : displayValue}
+            {value === 'none' ? t('noGig') : displayValue}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Sök uppdrag..." />
+          <CommandInput placeholder={t('searchGig')} />
           <CommandList className="max-h-[400px]">
-            <CommandEmpty>Inga uppdrag hittades.</CommandEmpty>
+            <CommandEmpty>{t('noGigsFound')}</CommandEmpty>
 
             {/* Inget uppdrag */}
             <CommandGroup>
@@ -135,13 +139,13 @@ export function GigCombobox({
                     value === 'none' ? "opacity-100" : "opacity-0"
                   )}
                 />
-                Inget uppdrag
+                {t('noGig')}
               </CommandItem>
             </CommandGroup>
 
             {/* Kommande uppdrag */}
             {kommande.length > 0 && (
-              <CommandGroup heading={`Kommande (${kommande.length})`}>
+              <CommandGroup heading={`${tg('upcoming')} (${kommande.length})`}>
                 {visibleKommande.map((gig) => (
                   <CommandItem
                     key={gig.id}
@@ -167,7 +171,7 @@ export function GigCombobox({
                     className="justify-center text-blue-600"
                   >
                     <ChevronDown className="mr-1 h-4 w-4" />
-                    Visa {Math.min(LOAD_MORE_COUNT, kommande.length - visibleKommande.length)} fler...
+                    {t('showMore', { count: Math.min(LOAD_MORE_COUNT, kommande.length - visibleKommande.length) })}
                   </CommandItem>
                 )}
               </CommandGroup>
@@ -175,7 +179,7 @@ export function GigCombobox({
 
             {/* Historiska uppdrag */}
             {historiska.length > 0 && (
-              <CommandGroup heading={`Historiska (${historiska.length})`}>
+              <CommandGroup heading={`${tg('history')} (${historiska.length})`}>
                 {visibleHistoriska.map((gig) => (
                   <CommandItem
                     key={gig.id}
@@ -201,7 +205,7 @@ export function GigCombobox({
                     className="justify-center text-blue-600"
                   >
                     <ChevronDown className="mr-1 h-4 w-4" />
-                    Visa {Math.min(LOAD_MORE_COUNT, historiska.length - visibleHistoriska.length)} fler...
+                    {t('showMore', { count: Math.min(LOAD_MORE_COUNT, historiska.length - visibleHistoriska.length) })}
                   </CommandItem>
                 )}
               </CommandGroup>

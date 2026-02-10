@@ -6,9 +6,10 @@ import {
   View,
   StyleSheet,
   Image,
-  Font,
   renderToBuffer,
 } from '@react-pdf/renderer'
+
+// Using built-in fonts: Helvetica (sans-serif), Times-Roman (serif)
 
 // Types
 type CompanySettings = {
@@ -19,12 +20,18 @@ type CompanySettings = {
   phone: string
   bank_account: string
   logo_url: string | null
+  vat_registration_number?: string | null
+  late_payment_interest_text?: string | null
+  show_logo_on_invoice?: boolean
+  our_reference?: string | null
 }
 
 type Client = {
   name: string
   org_number: string | null
   address: string | null
+  payment_terms?: number
+  reference_person?: string | null
 }
 
 type InvoiceData = {
@@ -35,12 +42,20 @@ type InvoiceData = {
   vat_rate: number
   vat_amount: number
   total: number
+  reference_person_override?: string | null
+  notes?: string | null
 }
 
 type InvoiceLine = {
   description: string
   amount: number
-  is_vat_exempt: boolean
+  vat_rate: number
+}
+
+type SponsorData = {
+  name: string
+  logo_url: string | null
+  tagline: string | null
 }
 
 type GeneratePdfParams = {
@@ -48,146 +63,405 @@ type GeneratePdfParams = {
   client: Client
   company: CompanySettings
   lines?: InvoiceLine[]
+  currency?: string
+  showBranding?: boolean
+  sponsor?: SponsorData | null
+  locale?: string
+  brandingName?: string
 }
 
-// Styles
+// Localized labels for PDF generation
+const PDF_LABELS: Record<string, Record<string, string>> = {
+  sv: {
+    invoice: 'Faktura',
+    orgNr: 'Org.nr',
+    billedTo: 'Faktureras till',
+    invoiceDate: 'Fakturadatum',
+    dueDate: 'Förfallodatum',
+    ourReference: 'Vår referens',
+    yourReference: 'Er referens',
+    paymentTerms: 'Betalningsvillkor',
+    daysNet: 'dagar netto',
+    bankAccount: 'Bankgiro',
+    description: 'Beskrivning',
+    amount: 'Belopp',
+    subtotal: 'Summa',
+    vat: 'Moms',
+    basis: 'underlag',
+    totalDue: 'Att betala',
+    paymentRef: 'Vänligen ange fakturanummer #{n} som referens vid betalning!',
+    phone: 'Telefon',
+    email: 'E-post',
+    vatRegNumber: 'Momsreg.nr',
+    message: 'Meddelande',
+    createdWith: 'Skapad med',
+    poweredBy: 'Sponsrad av',
+    invoicedAmount: 'Fakturerat belopp',
+  },
+  en: {
+    invoice: 'Invoice',
+    orgNr: 'Org. no.',
+    billedTo: 'Billed to',
+    invoiceDate: 'Invoice date',
+    dueDate: 'Due date',
+    ourReference: 'Our reference',
+    yourReference: 'Your reference',
+    paymentTerms: 'Payment terms',
+    daysNet: 'days net',
+    bankAccount: 'Bank account',
+    description: 'Description',
+    amount: 'Amount',
+    subtotal: 'Subtotal',
+    vat: 'VAT',
+    basis: 'basis',
+    totalDue: 'Total due',
+    paymentRef: 'Please quote invoice #{n} as reference when paying!',
+    phone: 'Phone',
+    email: 'Email',
+    vatRegNumber: 'VAT reg. no.',
+    message: 'Message',
+    createdWith: 'Created with',
+    poweredBy: 'Powered by',
+    invoicedAmount: 'Invoiced amount',
+  },
+}
+
+function getLabels(locale: string) {
+  return PDF_LABELS[locale] || PDF_LABELS.sv
+}
+
+// Premium color palette
+const colors = {
+  primary: '#111827',
+  secondary: '#6b7280',
+  accent: '#2563eb',
+  border: '#e5e7eb',
+  muted: '#9ca3af',
+}
+
+// Styles - Compact professional design (using built-in fonts)
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
-    fontSize: 10,
+    padding: 50,
+    fontSize: 9,
     fontFamily: 'Helvetica',
+    color: colors.primary,
+    backgroundColor: '#ffffff',
   },
+
+  // Header section - 2 column layout
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 30,
   },
-  logo: {
-    maxWidth: 150,
-    maxHeight: 60,
+  headerLeft: {
+    flex: 1,
   },
-  companyInfo: {
+  headerRight: {
     textAlign: 'right',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 5,
+  // Footer logo
+  footerLogo: {
+    maxWidth: 60,
+    maxHeight: 35,
   },
+
+  // Company name
   companyName: {
+    fontFamily: 'Helvetica-Bold',
     fontSize: 14,
-    fontWeight: 'bold',
+    marginBottom: 6,
+    color: colors.primary,
   },
-  smallText: {
+  companyDetail: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
+    marginBottom: 2,
+  },
+
+  // Invoice title section
+  invoiceLabel: {
+    fontFamily: 'Helvetica',
     fontSize: 9,
-    color: '#666',
+    color: colors.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  invoiceDetails: {
+  invoiceNumber: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 20,
+    color: colors.accent,
+    marginTop: 2,
+  },
+
+  // Meta section (client + dates)
+  metaSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
-    paddingBottom: 20,
-    borderBottom: '1px solid #eee',
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  // Invoice details section (VAT reg, reference, payment terms)
+  invoiceDetailsSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  invoiceDetailItem: {
+    minWidth: 160,
+    marginRight: 15,
+    marginBottom: 4,
+  },
+  invoiceDetailLabel: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
+  },
+  invoiceDetailValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8,
+    color: colors.primary,
   },
   clientSection: {
     flex: 1,
   },
-  invoiceSection: {
-    flex: 1,
+  datesSection: {
     textAlign: 'right',
   },
-  sectionTitle: {
-    fontSize: 9,
-    color: '#666',
-    marginBottom: 5,
+  label: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   clientName: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 11,
     marginBottom: 3,
+    color: colors.primary,
   },
+  clientDetail: {
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: colors.secondary,
+    marginBottom: 2,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  dateLabel: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
+    width: 75,
+    textAlign: 'right',
+    marginRight: 10,
+  },
+  dateValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 9,
+    width: 70,
+    textAlign: 'right',
+    color: colors.primary,
+  },
+
+  // Table - minimal
   table: {
     marginBottom: 20,
   },
   tableHeader: {
     flexDirection: 'row',
-    borderBottom: '1px solid #333',
     paddingBottom: 8,
-    marginBottom: 8,
+    marginBottom: 6,
+    borderBottom: `1px solid ${colors.border}`,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 5,
-    borderBottom: '1px solid #eee',
+    paddingVertical: 8,
   },
   descCol: {
-    flex: 3,
+    flex: 4,
   },
   amountCol: {
     flex: 1,
     textAlign: 'right',
   },
   headerText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#666',
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
     textTransform: 'uppercase',
   },
+  rowText: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.primary,
+  },
+  rowAmount: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8,
+    color: colors.primary,
+  },
+  vatUnderlag: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
+  },
+
+  // Notes section
+  notesSection: {
+    marginTop: 15,
+    paddingTop: 10,
+    borderTop: `1px solid ${colors.border}`,
+  },
+  notesLabel: {
+    fontFamily: 'Helvetica',
+    fontSize: 8,
+    color: colors.secondary,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  notesText: {
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: colors.primary,
+    lineHeight: 1.4,
+  },
+
+  // Bottom section - anchored to bottom of page
+  bottomSection: {
+    position: 'absolute',
+    bottom: 130,
+    left: 50,
+    right: 50,
+  },
+
+  // Totals section
   totalsSection: {
     marginLeft: 'auto',
-    width: 200,
-    marginBottom: 30,
+    width: 250,
+    marginBottom: 15,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 4,
   },
   totalLabel: {
-    color: '#666',
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: colors.secondary,
   },
-  grandTotal: {
+  totalValue: {
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: colors.primary,
+  },
+  grandTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderTop: '2px solid #333',
-    marginTop: 5,
+    alignItems: 'center',
+    paddingTop: 8,
+    marginTop: 6,
+    borderTop: `1.5px solid ${colors.primary}`,
   },
   grandTotalLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    color: colors.primary,
   },
-  grandTotalAmount: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  grandTotalValue: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 14,
+    color: colors.primary,
   },
-  paymentInfo: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    marginTop: 20,
+
+  // Payment reference text
+  paymentReferenceText: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 8,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: 6,
   },
-  paymentTitle: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginBottom: 8,
+  latePaymentText: {
+    fontFamily: 'Helvetica-Oblique',
+    fontSize: 7,
+    color: colors.muted,
+    textAlign: 'center',
+    marginBottom: 10,
   },
+
+  // Footer - multi-column layout
   footer: {
     position: 'absolute',
     bottom: 30,
-    left: 40,
-    right: 40,
-    textAlign: 'center',
-    fontSize: 9,
-    color: '#666',
-    borderTop: '1px solid #eee',
+    left: 50,
+    right: 50,
+    borderTop: `1px solid ${colors.border}`,
     paddingTop: 10,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  footerColumn: {
+    flex: 1,
+  },
+  footerColumnRight: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  footerLabel: {
+    fontFamily: 'Helvetica',
+    fontSize: 7,
+    color: colors.secondary,
+    marginBottom: 1,
+  },
+  footerValue: {
+    fontFamily: 'Helvetica',
+    fontSize: 7,
+    color: colors.primary,
+    marginBottom: 3,
+  },
+  footerValueBold: {
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 7,
+    color: colors.primary,
+    marginBottom: 3,
   },
 })
 
-// Format currency
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString('sv-SE') + ' kr'
+// Currency symbols for PDF
+const PDF_CURRENCY_SUFFIX: Record<string, string> = {
+  SEK: 'kr',
+  NOK: 'NOK',
+  DKK: 'DKK',
+  EUR: 'EUR',
+  USD: 'USD',
+}
+
+// Format currency for PDF — uses the invoice currency
+function formatCurrencyPdf(amount: number, currency = 'SEK'): string {
+  const formatted = amount.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const symbol = PDF_CURRENCY_SUFFIX[currency] || currency
+  if (currency === 'EUR' || currency === 'USD') {
+    return `${currency === 'EUR' ? '€' : '$'}${formatted}`
+  }
+  return `${formatted} ${symbol}`
 }
 
 // Format date
@@ -197,110 +471,231 @@ function formatDate(dateStr: string): string {
 }
 
 // PDF Document Component
-function InvoicePDF({ invoice, client, company, lines }: GeneratePdfParams) {
-  // If no lines provided, create a single line with the invoice subtotal
+function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBranding = false, sponsor, locale = 'sv', brandingName = 'Babalisk Manager' }: GeneratePdfParams) {
+  const fmt = (amount: number) => formatCurrencyPdf(amount, currency)
+  const l = getLabels(locale)
   const invoiceLines = lines && lines.length > 0
     ? lines
-    : [{ description: 'Fakturerat belopp', amount: invoice.subtotal, is_vat_exempt: false }]
+    : [{ description: l.invoicedAmount, amount: invoice.subtotal, vat_rate: invoice.vat_rate }]
+
+  // Group lines by VAT rate and calculate underlag (base amount) for each
+  const vatGroups = invoiceLines.reduce((acc, line) => {
+    const rate = line.vat_rate
+    if (!acc[rate]) {
+      acc[rate] = { underlag: 0, vat: 0 }
+    }
+    acc[rate].underlag += line.amount
+    acc[rate].vat += line.amount * rate / 100
+    return acc
+  }, {} as Record<number, { underlag: number; vat: number }>)
+
+  // Sort VAT rates (0% first, then ascending)
+  const sortedVatRates = Object.keys(vatGroups)
+    .map(Number)
+    .sort((a, b) => a - b)
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
+        {/* Header - 2 column layout */}
         <View style={styles.header}>
-          <View>
-            {company.logo_url ? (
-              <Image src={company.logo_url} style={styles.logo} />
-            ) : (
-              <Text style={styles.companyName}>{company.company_name}</Text>
-            )}
+          <View style={styles.headerLeft}>
+            <Text style={styles.companyName}>{company.company_name}</Text>
+            <Text style={styles.companyDetail}>{l.orgNr} {company.org_number}</Text>
           </View>
-          <View style={styles.companyInfo}>
-            <Text style={styles.title}>FAKTURA</Text>
-            {company.logo_url && (
-              <Text style={styles.companyName}>{company.company_name}</Text>
-            )}
-            <Text style={styles.smallText}>Org.nr: {company.org_number}</Text>
-            <Text style={styles.smallText}>{company.address}</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.invoiceLabel}>{l.invoice}</Text>
+            <Text style={styles.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
         </View>
 
-        {/* Invoice Details */}
-        <View style={styles.invoiceDetails}>
+        {/* Client & Dates Section */}
+        <View style={styles.metaSection}>
           <View style={styles.clientSection}>
-            <Text style={styles.sectionTitle}>Faktureras till</Text>
+            <Text style={styles.label}>{l.billedTo}</Text>
             <Text style={styles.clientName}>{client.name}</Text>
             {client.org_number && (
-              <Text style={styles.smallText}>Org.nr: {client.org_number}</Text>
+              <Text style={styles.clientDetail}>{l.orgNr} {client.org_number}</Text>
             )}
             {client.address && (
-              <Text>{client.address}</Text>
+              <Text style={styles.clientDetail}>{client.address}</Text>
             )}
           </View>
-          <View style={styles.invoiceSection}>
-            <View style={{ marginBottom: 10 }}>
-              <Text style={styles.sectionTitle}>Fakturanummer</Text>
-              <Text style={{ fontSize: 14, fontWeight: 'bold' }}>{invoice.invoice_number}</Text>
+          <View style={styles.datesSection}>
+            <View style={styles.dateRow}>
+              <Text style={styles.dateLabel}>{l.invoiceDate}</Text>
+              <Text style={styles.dateValue}>{formatDate(invoice.invoice_date)}</Text>
             </View>
-            <View style={{ marginBottom: 5 }}>
-              <Text style={styles.sectionTitle}>Fakturadatum</Text>
-              <Text>{formatDate(invoice.invoice_date)}</Text>
-            </View>
-            <View>
-              <Text style={styles.sectionTitle}>Förfallodatum</Text>
-              <Text>{formatDate(invoice.due_date)}</Text>
+            <View style={styles.dateRow}>
+              <Text style={styles.dateLabel}>{l.dueDate}</Text>
+              <Text style={styles.dateValue}>{formatDate(invoice.due_date)}</Text>
             </View>
           </View>
         </View>
+
+        {/* Invoice Details Section - our reference, client reference, payment terms, bankgiro */}
+        {(company.our_reference || invoice.reference_person_override || client.reference_person || client.payment_terms) && (
+          <View style={styles.invoiceDetailsSection}>
+            {company.our_reference && (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.ourReference} </Text>
+                  <Text style={styles.invoiceDetailValue}>{company.our_reference}</Text>
+                </Text>
+              </View>
+            )}
+            {(invoice.reference_person_override || client.reference_person) && (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.yourReference} </Text>
+                  <Text style={styles.invoiceDetailValue}>{invoice.reference_person_override || client.reference_person}</Text>
+                </Text>
+              </View>
+            )}
+            {client.payment_terms && (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.paymentTerms} </Text>
+                  <Text style={styles.invoiceDetailValue}>{client.payment_terms} {l.daysNet}</Text>
+                </Text>
+              </View>
+            )}
+            <View style={styles.invoiceDetailItem}>
+              <Text>
+                <Text style={styles.invoiceDetailLabel}>{l.bankAccount} </Text>
+                <Text style={styles.invoiceDetailValue}>{company.bank_account}</Text>
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Line Items Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.headerText, styles.descCol]}>Beskrivning</Text>
-            <Text style={[styles.headerText, styles.amountCol]}>Belopp</Text>
+            <Text style={[styles.headerText, styles.descCol]}>{l.description}</Text>
+            <Text style={[styles.headerText, styles.amountCol]}>{l.amount}</Text>
           </View>
           {invoiceLines.map((line, index) => (
             <View key={index} style={styles.tableRow}>
-              <Text style={styles.descCol}>
-                {line.description}
-                {line.is_vat_exempt && ' (momsfri)'}
+              <Text style={[styles.rowText, styles.descCol]}>{line.description}</Text>
+              <Text style={[styles.rowAmount, styles.amountCol]}>
+                {fmt(line.amount)}
               </Text>
-              <Text style={styles.amountCol}>{formatCurrency(line.amount)}</Text>
             </View>
           ))}
         </View>
 
-        {/* Totals */}
-        <View style={styles.totalsSection}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Summa</Text>
-            <Text>{formatCurrency(invoice.subtotal)}</Text>
+        {/* Notes Section */}
+        {invoice.notes && (
+          <View style={styles.notesSection}>
+            <Text style={styles.notesLabel}>{l.message}</Text>
+            <Text style={styles.notesText}>{invoice.notes}</Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Moms ({invoice.vat_rate}%)</Text>
-            <Text>{formatCurrency(invoice.vat_amount)}</Text>
-          </View>
-          <View style={styles.grandTotal}>
-            <Text style={styles.grandTotalLabel}>ATT BETALA</Text>
-            <Text style={styles.grandTotalAmount}>{formatCurrency(invoice.total)}</Text>
+        )}
+
+        {/* Bottom Section - anchored to bottom */}
+        <View style={styles.bottomSection}>
+          {/* Totals */}
+          <View style={styles.totalsSection}>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>{l.subtotal}</Text>
+              <Text style={styles.totalValue}>{fmt(invoice.subtotal)}</Text>
+            </View>
+            {sortedVatRates.map((rate) => (
+              <View key={rate} style={styles.totalRow}>
+                <Text style={styles.vatUnderlag}>
+                  {l.vat} {rate}% ({l.basis} {vatGroups[rate].underlag.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                </Text>
+                <Text style={styles.totalValue}>{fmt(vatGroups[rate].vat)}</Text>
+              </View>
+            ))}
+            <View style={styles.grandTotalRow}>
+              <Text style={styles.grandTotalLabel}>{l.totalDue}</Text>
+              <Text style={styles.grandTotalValue}>{fmt(invoice.total)}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Payment Info */}
-        <View style={styles.paymentInfo}>
-          <Text style={styles.paymentTitle}>Betalningsinformation</Text>
-          <Text>Bankgiro: {company.bank_account}</Text>
-          <Text style={{ marginTop: 5 }}>
-            Vänligen ange fakturanummer {invoice.invoice_number} vid betalning.
-          </Text>
-        </View>
-
-        {/* Footer */}
+        {/* Footer - 4 column layout */}
         <View style={styles.footer}>
-          <Text>
-            {company.email} | {company.phone}
+          {/* Payment reference text */}
+          <Text style={styles.paymentReferenceText}>
+            {l.paymentRef.replace('#{n}', `#${invoice.invoice_number}`)}
           </Text>
+
+          {/* Late payment interest text */}
+          {company.late_payment_interest_text && (
+            <Text style={styles.latePaymentText}>{company.late_payment_interest_text}</Text>
+          )}
+
+          <View style={styles.footerRow}>
+            {/* Column 1: Logo (only if show_logo_on_invoice is true and logo exists) */}
+            {company.show_logo_on_invoice !== false && company.logo_url && (
+              <View style={styles.footerColumn}>
+                <Image src={company.logo_url} style={styles.footerLogo} />
+              </View>
+            )}
+
+            {/* Column 2: Company name and address */}
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerValueBold}>{company.company_name}</Text>
+              {company.address?.split('\n').map((line, i) => (
+                <Text key={i} style={styles.footerValue}>{line}</Text>
+              ))}
+            </View>
+
+            {/* Column 3: Contact info */}
+            <View style={styles.footerColumn}>
+              <Text style={styles.footerLabel}>{l.phone}</Text>
+              <Text style={styles.footerValue}>{company.phone}</Text>
+              <Text style={styles.footerLabel}>{l.email}</Text>
+              <Text style={styles.footerValue}>{company.email}</Text>
+            </View>
+
+            {/* Column 4: Payment info */}
+            <View style={styles.footerColumnRight}>
+              <Text style={styles.footerLabel}>{l.bankAccount}</Text>
+              <Text style={styles.footerValueBold}>{company.bank_account}</Text>
+              {company.vat_registration_number && (
+                <>
+                  <Text style={styles.footerLabel}>{l.vatRegNumber}</Text>
+                  <Text style={styles.footerValue}>{company.vat_registration_number}</Text>
+                </>
+              )}
+            </View>
+          </View>
         </View>
+
+        {/* Branding footer for free users */}
+        {showBranding && (
+          <View style={{
+            position: 'absolute',
+            bottom: 15,
+            left: 0,
+            right: 0,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 4,
+          }}>
+            <Text style={{ fontSize: 7, color: colors.muted }}>
+              {l.createdWith} {brandingName}
+            </Text>
+            {sponsor && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Text style={{ fontSize: 7, color: colors.muted }}>
+                  {' | '}{l.poweredBy}
+                </Text>
+                {sponsor.logo_url && (
+                  <Image src={sponsor.logo_url} style={{ height: 10 }} />
+                )}
+                <Text style={{ fontSize: 7, color: colors.muted }}>
+                  {sponsor.name}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </Page>
     </Document>
   )

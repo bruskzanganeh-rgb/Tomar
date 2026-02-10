@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 type GigType = {
   id: string
   name: string
+  name_en: string | null
   vat_rate: number
   color: string | null
   default_description: string | null
@@ -21,6 +23,10 @@ type GigType = {
 }
 
 export default function GigTypesPage() {
+  const t = useTranslations('config')
+  const tc = useTranslations('common')
+  const tGigTypes = useTranslations('gigTypes')
+
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -60,7 +66,7 @@ export default function GigTypesPage() {
 
     if (error) {
       console.error('Error deleting gig type:', error)
-      toast.error('Kunde inte ta bort uppdragstyp')
+      toast.error(tGigTypes('deleteError'))
     } else {
       loadGigTypes()
     }
@@ -70,14 +76,14 @@ export default function GigTypesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Uppdragstyper</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('gigTypes')}</h1>
           <p className="text-muted-foreground">
-            Hantera typer av uppdrag med olika momssatser
+            {tGigTypes('subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Ny uppdragstyp
+          {tGigTypes('newGigType')}
         </Button>
       </div>
 
@@ -85,23 +91,24 @@ export default function GigTypesPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tag className="h-5 w-5" />
-            Alla uppdragstyper ({gigTypes.length})
+            {tGigTypes('allGigTypes', { count: gigTypes.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Laddar...
+              {tc('loading')}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Namn</TableHead>
-                  <TableHead>Momssats</TableHead>
-                  <TableHead>Färg</TableHead>
-                  <TableHead>Standard</TableHead>
-                  <TableHead className="text-right">Åtgärder</TableHead>
+                  <TableHead>{tGigTypes('name')}</TableHead>
+                  <TableHead>{tGigTypes('nameEn')}</TableHead>
+                  <TableHead>{tGigTypes('vatRate')}</TableHead>
+                  <TableHead>{tGigTypes('color')}</TableHead>
+                  <TableHead>{tGigTypes('default')}</TableHead>
+                  <TableHead className="text-right">{tGigTypes('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -109,6 +116,11 @@ export default function GigTypesPage() {
                   <TableRow key={type.id}>
                     <TableCell className="font-medium">
                       {type.name}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {type.name_en || '-'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{type.vat_rate}%</Badge>
@@ -126,7 +138,7 @@ export default function GigTypesPage() {
                     </TableCell>
                     <TableCell>
                       {type.is_default && (
-                        <Badge variant="secondary">Standard</Badge>
+                        <Badge variant="secondary">{tGigTypes('default')}</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -161,9 +173,9 @@ export default function GigTypesPage() {
           setDeleteConfirmOpen(open)
           if (!open) setGigTypeToDelete(null)
         }}
-        title="Ta bort uppdragstyp"
-        description="Är du säker på att du vill ta bort denna uppdragstyp?"
-        confirmLabel="Ta bort"
+        title={tGigTypes('deleteTitle')}
+        description={tGigTypes('deleteDescription')}
+        confirmLabel={tc('delete')}
         variant="destructive"
         onConfirm={() => {
           if (gigTypeToDelete) {

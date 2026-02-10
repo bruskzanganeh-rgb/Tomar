@@ -1,0 +1,245 @@
+'use client'
+
+import { useState } from 'react'
+import { useSubscription } from '@/lib/hooks/use-subscription'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Check, Crown, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+
+export function SubscriptionSettings() {
+  const t = useTranslations('subscription')
+  const tc = useTranslations('common')
+  const tToast = useTranslations('toast')
+
+  const { subscription, usage, isPro, limits, loading, refresh } = useSubscription()
+  const [upgrading, setUpgrading] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+
+  async function handleUpgrade(priceId: string) {
+    setUpgrading(true)
+    try {
+      const res = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId }),
+      })
+
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error(data.error || tToast('checkoutError'))
+      }
+    } catch (err: any) {
+      toast.error(err.message)
+      setUpgrading(false)
+    }
+  }
+
+  async function handleCancel() {
+    setCancelling(true)
+    try {
+      const res = await fetch('/api/stripe/cancel', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success(t('cancelSuccess'))
+      refresh()
+    } catch (err: any) {
+      toast.error(t('cancelError'))
+    } finally {
+      setCancelling(false)
+      setShowCancelConfirm(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Current plan */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">{t('yourPlan')}</CardTitle>
+            <Badge variant={isPro ? 'default' : 'secondary'} className="text-xs">
+              {isPro ? (
+                <>
+                  <Crown className="h-3 w-3 mr-1" />
+                  {t('pro')}
+                </>
+              ) : (
+                t('free')
+              )}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isPro ? (
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                {t('unlimitedAccess')}
+              </p>
+              {subscription?.current_period_end && (
+                <p className="text-xs text-muted-foreground">
+                  {t('renewsAt', { date: new Date(subscription.current_period_end).toLocaleDateString('sv-SE') })}
+                </p>
+              )}
+              {subscription?.cancel_at_period_end && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  {t('cancelledActiveUntil')}
+                </p>
+              )}
+              {!subscription?.cancel_at_period_end && (
+                <div className="mt-4 pt-4 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => setShowCancelConfirm(true)}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                    {t('cancelSubscription')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                {t('usageThisMonth')}
+              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{t('invoicesUsage')}</span>
+                  <span className={usage && usage.invoice_count >= limits.invoices ? 'text-red-500 font-medium' : ''}>
+                    {usage?.invoice_count || 0} / {limits.invoices}
+                  </span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-1.5">
+                  <div
+                    className="bg-primary rounded-full h-1.5 transition-all"
+                    style={{ width: `${Math.min(((usage?.invoice_count || 0) / limits.invoices) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-sm mt-3">
+                  <span>{t('receiptScans')}</span>
+                  <span className={usage && usage.receipt_scan_count >= limits.receiptScans ? 'text-red-500 font-medium' : ''}>
+                    {usage?.receipt_scan_count || 0} / {limits.receiptScans}
+                  </span>
+                </div>
+                <div className="w-full bg-secondary rounded-full h-1.5">
+                  <div
+                    className="bg-primary rounded-full h-1.5 transition-all"
+                    style={{ width: `${Math.min(((usage?.receipt_scan_count || 0) / limits.receiptScans) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upgrade options */}
+      <ConfirmDialog
+        open={showCancelConfirm}
+        onOpenChange={setShowCancelConfirm}
+        title={t('cancelConfirmTitle')}
+        description={t('cancelConfirmDesc')}
+        confirmLabel={t('cancelSubscription')}
+        cancelLabel={tc('cancel')}
+        variant="destructive"
+        onConfirm={handleCancel}
+      />
+
+      {!isPro && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{t('proMonthly')}</CardTitle>
+              <CardDescription>
+                <span className="text-2xl font-bold text-foreground">49 kr</span>
+                <span className="text-muted-foreground"> {t('perMonth')}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  {t('unlimitedInvoices')}
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  {t('unlimitedScans')}
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  {t('noBranding')}
+                </li>
+              </ul>
+              <Button
+                onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '')}
+                disabled={upgrading}
+                className="w-full"
+                variant="outline"
+              >
+                {upgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {t('upgrade')}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">{t('proYearly')}</CardTitle>
+                <Badge className="text-[10px]">{t('save15')}</Badge>
+              </div>
+              <CardDescription>
+                <span className="text-2xl font-bold text-foreground">499 kr</span>
+                <span className="text-muted-foreground"> {t('perYear')}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  {t('unlimitedInvoices')}
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  {t('unlimitedScans')}
+                </li>
+                <li className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                  {t('noBranding')}
+                </li>
+              </ul>
+              <Button
+                onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '')}
+                disabled={upgrading}
+                className="w-full"
+              >
+                {upgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {t('upgrade')}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}

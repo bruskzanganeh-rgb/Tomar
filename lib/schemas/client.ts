@@ -7,7 +7,9 @@ export const createClientSchema = z.object({
   email: z.string().email('Ogiltig e-postadress').optional().or(z.literal('')),
   address: z.string().optional(),
   payment_terms: z.string().min(1, 'Betalningsvillkor krävs'),
+  reference_person: z.string().optional(),
   notes: z.string().optional(),
+  invoice_language: z.string().optional(),
 })
 
 export type CreateClientFormData = z.infer<typeof createClientSchema>

@@ -43,10 +43,8 @@ export async function GET() {
         venue,
         fee,
         status,
-        conductor,
         client:clients(name),
-        gig_type:gig_types(name),
-        gig_works(work:works(title, composer))
+        gig_type:gig_types(name)
       `)
       .not('status', 'in', '(declined,cancelled)')
       .order('date', { ascending: true })
@@ -74,18 +72,6 @@ export async function GET() {
       descParts.push(`Typ: ${gig.gig_type?.name || '-'}`)
       if (gig.fee) descParts.push(`Arvode: ${gig.fee.toLocaleString('sv-SE')} kr`)
       descParts.push(`Status: ${getStatusLabel(gig.status)}`)
-      if (gig.conductor) descParts.push(`Dirigent: ${gig.conductor}`)
-
-      // Add works
-      if (gig.gig_works && gig.gig_works.length > 0) {
-        descParts.push('')
-        descParts.push('Program:')
-        gig.gig_works.forEach((gw: any) => {
-          if (gw.work) {
-            descParts.push(`- ${gw.work.composer}: ${gw.work.title}`)
-          }
-        })
-      }
 
       const description = escapeICSText(descParts.join('\n'))
       const location = gig.venue ? escapeICSText(gig.venue) : ''

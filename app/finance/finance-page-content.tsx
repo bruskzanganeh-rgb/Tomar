@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useRouter, usePathname } from 'next/navigation'
@@ -28,6 +29,7 @@ function TabSkeleton() {
 }
 
 export function FinancePageContent() {
+  const t = useTranslations('finance')
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -43,9 +45,9 @@ export function FinancePageContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Ekonomi</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          Hantera fakturor, utgifter och import
+          {t('subtitle')}
         </p>
       </div>
 
@@ -53,15 +55,15 @@ export function FinancePageContent() {
         <TabsList>
           <TabsTrigger value="invoices" className="gap-2">
             <FileText className="h-4 w-4" />
-            Fakturor
+            {t('invoices')}
           </TabsTrigger>
           <TabsTrigger value="expenses" className="gap-2">
             <Receipt className="h-4 w-4" />
-            Utgifter
+            {t('expenses')}
           </TabsTrigger>
           <TabsTrigger value="import" className="gap-2">
             <Download className="h-4 w-4" />
-            Import
+            {t('import')}
           </TabsTrigger>
         </TabsList>
 

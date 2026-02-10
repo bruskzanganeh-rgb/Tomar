@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const supplier = formData.get('supplier') as string
     const amount = parseFloat(formData.get('amount') as string)
     const currency = formData.get('currency') as string || 'SEK'
-    const amountSek = parseFloat(formData.get('amount_sek') as string) || amount
+    const amountSek = parseFloat(formData.get('amount_base') as string) || amount
     const category = formData.get('category') as string || 'Övrigt'
     const notes = formData.get('notes') as string || null
     const gigId = formData.get('gig_id') as string || null
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Validera obligatoriska fält
     if (!date || !supplier || isNaN(amount)) {
       return NextResponse.json(
-        { error: 'Datum, leverantör och belopp krävs' },
+        { error: 'Date, supplier, and amount are required' },
         { status: 400 }
       )
     }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
             isDuplicate: true,
             existingExpense: existing,
             matchType: duplicateResult.matchType,
-            message: `En liknande utgift finns redan: ${existing.supplier} - ${existing.amount} kr (${existing.date})`,
+            message: `A similar expense already exists: ${existing.supplier} - ${existing.amount} kr (${existing.date})`,
           })
         }
       }
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
         supplier,
         amount,
         currency,
-        amount_sek: amountSek,
+        amount_base: amountSek,
         category,
         notes,
         attachment_url: attachmentUrl,
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error('Insert error:', insertError)
       return NextResponse.json(
-        { error: 'Kunde inte spara utgift: ' + insertError.message },
+        { error: 'Could not save expense: ' + insertError.message },
         { status: 500 }
       )
     }
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create expense error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kunde inte skapa utgift' },
+      { error: error instanceof Error ? error.message : 'Could not create expense' },
       { status: 500 }
     )
   }

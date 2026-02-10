@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,8 +26,9 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { format } from 'date-fns'
-import { sv } from 'date-fns/locale'
+import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { ClientInvoiceChart } from '@/components/clients/client-invoice-chart'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
 type Client = {
   id: string
@@ -52,6 +54,12 @@ type Invoice = {
 export default function ClientDetailPage() {
   const params = useParams()
   const clientId = params.id as string
+  const t = useTranslations('client')
+  const tc = useTranslations('common')
+  const ti = useTranslations('invoice')
+  const tis = useTranslations('invoice.status')
+  const dateLocale = useDateLocale()
+  const formatLocale = useFormatLocale()
 
   const [client, setClient] = useState<Client | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -103,10 +111,10 @@ export default function ClientDetailPage() {
 
   function getStatusBadge(status: Invoice['status']) {
     const variants: Record<Invoice['status'], { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      draft: { variant: 'secondary', label: 'Utkast' },
-      sent: { variant: 'default', label: 'Skickad' },
-      paid: { variant: 'outline', label: 'Betald' },
-      overdue: { variant: 'destructive', label: 'Förfallen' },
+      draft: { variant: 'secondary', label: tis('draft') },
+      sent: { variant: 'default', label: tis('sent') },
+      paid: { variant: 'outline', label: tis('paid') },
+      overdue: { variant: 'destructive', label: tis('overdue') },
     }
     const { variant, label } = variants[status]
     return <Badge variant={variant}>{label}</Badge>
@@ -115,7 +123,7 @@ export default function ClientDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Laddar...</div>
+        <div className="text-muted-foreground">{tc('loading')}</div>
       </div>
     )
   }
@@ -126,12 +134,12 @@ export default function ClientDetailPage() {
         <Link href="/clients">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Tillbaka till uppdragsgivare
+            {t('backToClients')}
           </Button>
         </Link>
         <div className="text-center py-12">
           <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Uppdragsgivare hittades inte</h2>
+          <h2 className="text-xl font-semibold">{t('notFound')}</h2>
         </div>
       </div>
     )
@@ -143,7 +151,7 @@ export default function ClientDetailPage() {
       <Link href="/clients">
         <Button variant="ghost" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Tillbaka till uppdragsgivare
+          {t('backToClients')}
         </Button>
       </Link>
 
@@ -155,9 +163,9 @@ export default function ClientDetailPage() {
         </h1>
         <div className="flex items-center gap-4 mt-2 text-muted-foreground">
           {client.org_number && (
-            <span>Org.nr: {client.org_number}</span>
+            <span>{t('orgNumber')}: {client.org_number}</span>
           )}
-          <span>Betalningsvillkor: {client.payment_terms} dagar</span>
+          <span>{t('paymentTerms')}: {client.payment_terms} {tc('days')}</span>
           {client.address && (
             <span className="text-sm">{client.address}</span>
           )}
@@ -168,62 +176,62 @@ export default function ClientDetailPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total omsättning</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalRevenue.toLocaleString('sv-SE')} kr
+              {totalRevenue.toLocaleString(formatLocale)} {tc('kr')}
             </div>
             <p className="text-xs text-muted-foreground">
-              Alla betalda & skickade fakturor
+              {t('allPaidSentInvoices')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Obetalda fakturor</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('unpaidInvoices')}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {unpaidAmount.toLocaleString('sv-SE')} kr
+              {unpaidAmount.toLocaleString(formatLocale)} {tc('kr')}
             </div>
             <p className="text-xs text-muted-foreground">
-              Väntar på betalning
+              {t('awaitingPayment')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Antal fakturor</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('invoiceCount')}</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{invoiceCount}</div>
             <p className="text-xs text-muted-foreground">
-              Totalt antal
+              {t('totalCount')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Senaste faktura</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('latestInvoice')}</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {lastInvoiceDate
-                ? format(new Date(lastInvoiceDate), 'MMM yyyy', { locale: sv })
+                ? format(new Date(lastInvoiceDate), 'MMM yyyy', { locale: dateLocale })
                 : '-'}
             </div>
             <p className="text-xs text-muted-foreground">
               {lastInvoiceDate
-                ? format(new Date(lastInvoiceDate), 'PPP', { locale: sv })
-                : 'Inga fakturor'}
+                ? format(new Date(lastInvoiceDate), 'PPP', { locale: dateLocale })
+                : t('noInvoices')}
             </p>
           </CardContent>
         </Card>
@@ -239,24 +247,24 @@ export default function ClientDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Fakturor ({invoices.length})
+            {ti('invoices')} ({invoices.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {invoices.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Inga fakturor för denna uppdragsgivare</p>
+              <p>{t('noInvoicesForClient')}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fakturanr</TableHead>
-                  <TableHead>Fakturadatum</TableHead>
-                  <TableHead>Förfallodatum</TableHead>
-                  <TableHead>Belopp</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{ti('invoiceNumberShort')}</TableHead>
+                  <TableHead>{ti('invoiceDate')}</TableHead>
+                  <TableHead>{ti('dueDate')}</TableHead>
+                  <TableHead>{ti('amount')}</TableHead>
+                  <TableHead>{t('statusHeader')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -266,13 +274,13 @@ export default function ClientDetailPage() {
                       #{invoice.invoice_number}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(invoice.invoice_date), 'PPP', { locale: sv })}
+                      {format(new Date(invoice.invoice_date), 'PPP', { locale: dateLocale })}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(invoice.due_date), 'PPP', { locale: sv })}
+                      {format(new Date(invoice.due_date), 'PPP', { locale: dateLocale })}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {invoice.total.toLocaleString('sv-SE')} kr
+                      {invoice.total.toLocaleString(formatLocale)} {tc('kr')}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(invoice.status)}

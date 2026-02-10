@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -20,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
 type MonthlyRevenue = {
   month: string
@@ -28,14 +31,13 @@ type MonthlyRevenue = {
   cumulative: number
 }
 
-const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'
-]
-
 type ViewMode = 'invoice' | 'workday'
 
 export function RevenueChart() {
+  const t = useTranslations('dashboard')
+  const tc = useTranslations('common')
+  const monthNames = t.raw('monthNames') as string[]
+  const formatLocale = useFormatLocale()
   const [data, setData] = useState<MonthlyRevenue[]>([])
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [availableYears, setAvailableYears] = useState<string[]>([])
@@ -58,13 +60,11 @@ export function RevenueChart() {
   }, [selectedYear, viewMode])
 
   async function loadAvailableYears() {
-    // Hämta år från fakturor
     const { data: invoices } = await supabase
       .from('invoices')
       .select('invoice_date')
       .order('invoice_date', { ascending: true })
 
-    // Hämta år från gig_dates (för kommande gigs)
     const { data: gigDates } = await supabase
       .from('gig_dates')
       .select('date')
@@ -78,7 +78,6 @@ export function RevenueChart() {
       new Date(gd.date).getFullYear().toString()
     ) || []
 
-    // Kombinera och sortera unika år
     const years = [...new Set([...invoiceYears, ...gigYears])].sort()
 
     setAvailableYears(years)
@@ -95,20 +94,19 @@ export function RevenueChart() {
 
     const { data: invoices } = await supabase
       .from('invoices')
-      .select('invoice_date, total')
+      .select('invoice_date, total, total_base')
       .gte('invoice_date', startDate)
       .lte('invoice_date', endDate)
       .in('status', ['sent', 'paid'])
 
-    // Group by month
     const monthlyData: { [key: number]: number } = {}
     for (let i = 0; i < 12; i++) {
       monthlyData[i] = 0
     }
 
-    invoices?.forEach(inv => {
+    invoices?.forEach((inv: any) => {
       const month = new Date(inv.invoice_date).getMonth()
-      monthlyData[month] += inv.total
+      monthlyData[month] += (inv.total_base || inv.total)
     })
 
     let cumulative = 0
@@ -116,7 +114,7 @@ export function RevenueChart() {
       cumulative += revenue
       return {
         month: (parseInt(month) + 1).toString().padStart(2, '0'),
-        monthName: MONTH_NAMES[parseInt(month)],
+        monthName: monthNames[parseInt(month)],
         revenue,
         cumulative,
       }
@@ -129,22 +127,21 @@ export function RevenueChart() {
   async function loadWorkdayData(year: number) {
     setLoading(true)
 
-    // Hämta gigs med fee, total_days och gig_dates
     const { data: gigs } = await supabase
       .from('gigs')
-      .select('fee, total_days, gig_dates(date)')
+      .select('fee, fee_base, total_days, gig_dates(date)')
       .in('status', ['completed', 'invoiced', 'paid'])
 
-    // Gruppera per månad baserat på gig_dates
     const monthlyData: { [key: number]: number } = {}
     for (let i = 0; i < 12; i++) {
       monthlyData[i] = 0
     }
 
     gigs?.forEach((gig: any) => {
-      if (!gig.fee || !gig.total_days || gig.total_days === 0) return
+      const fee = gig.fee_base || gig.fee
+      if (!fee || !gig.total_days || gig.total_days === 0) return
 
-      const dayRate = gig.fee / gig.total_days
+      const dayRate = fee / gig.total_days
 
       gig.gig_dates?.forEach((gd: { date: string }) => {
         const date = new Date(gd.date)
@@ -160,7 +157,7 @@ export function RevenueChart() {
       cumulative += revenue
       return {
         month: (parseInt(month) + 1).toString().padStart(2, '0'),
-        monthName: MONTH_NAMES[parseInt(month)],
+        monthName: monthNames[parseInt(month)],
         revenue: Math.round(revenue),
         cumulative: Math.round(cumulative),
       }
@@ -173,40 +170,40 @@ export function RevenueChart() {
   const totalYearRevenue = data.reduce((sum, d) => sum + d.revenue, 0)
 
   return (
-    <Card variant="glass" className="col-span-full border-blue-500/20">
+    <Card className="col-span-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4">
         <div className="flex items-center gap-3">
-          <CardTitle className="text-sm font-medium text-blue-400">
-            {viewMode === 'invoice' ? 'Fakturerat' : 'Arbetat'} {selectedYear}
+          <CardTitle className="text-sm font-medium">
+            {viewMode === 'invoice' ? t('invoiced') : t('worked')} {selectedYear}
           </CardTitle>
-          <span className="text-sm font-semibold text-white">{totalYearRevenue.toLocaleString('sv-SE')} kr</span>
+          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{totalYearRevenue.toLocaleString(formatLocale)} {tc('kr')}</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-white/20 overflow-hidden">
+          <div className="flex rounded-lg border overflow-hidden">
             <button
               onClick={() => setViewMode('invoice')}
               className={`px-3 py-1.5 text-xs transition-colors ${
                 viewMode === 'invoice'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white/5 text-blue-300 hover:bg-white/10'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
               }`}
             >
-              Fakturerat
+              {t('invoiced')}
             </button>
             <button
               onClick={() => setViewMode('workday')}
               className={`px-3 py-1.5 text-xs transition-colors ${
                 viewMode === 'workday'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white/5 text-blue-300 hover:bg-white/10'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
               }`}
             >
-              Arbetat
+              {t('worked')}
             </button>
           </div>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-[70px] h-7 text-xs border-white/20 bg-white/5">
-              <SelectValue placeholder="År" />
+            <SelectTrigger className="w-[70px] h-7 text-xs">
+              <SelectValue placeholder={t('year')} />
             </SelectTrigger>
             <SelectContent>
               {availableYears.map(year => (
@@ -218,22 +215,30 @@ export function RevenueChart() {
       </CardHeader>
       <CardContent className="pb-4">
         {loading ? (
-          <div className="h-[160px] flex items-center justify-center text-muted-foreground">
-            Laddar...
+          <div className="h-[160px] flex items-end gap-2 px-8 pb-4">
+            {[40, 65, 85, 50, 70, 45, 55, 75, 60, 90, 72, 95].map((height, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <Skeleton
+                  className="w-full rounded-t"
+                  style={{ height: `${height}px` }}
+                />
+                <Skeleton className="h-2 w-6" />
+              </div>
+            ))}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={160}>
             <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="monthName"
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
+                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 yAxisId="left"
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
+                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
@@ -242,7 +247,7 @@ export function RevenueChart() {
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
+                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
@@ -250,35 +255,38 @@ export function RevenueChart() {
               />
               <Tooltip
                 formatter={(value: number, name: string) => [
-                  `${value.toLocaleString('sv-SE')} kr`,
+                  `${value.toLocaleString(formatLocale)} ${tc('kr')}`,
                   name === 'revenue'
-                    ? (viewMode === 'invoice' ? 'Fakturerat' : 'Arbetat')
-                    : 'Totalt'
+                    ? (viewMode === 'invoice' ? t('invoiced') : t('worked'))
+                    : t('total')
                 ]}
                 labelFormatter={(label) => `${label} ${selectedYear}`}
                 contentStyle={{
-                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: 'var(--popover)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
                   fontSize: '12px',
-                  color: '#fff',
+                  color: 'var(--foreground)',
                 }}
-                labelStyle={{ color: 'rgba(255,255,255,0.7)' }}
               />
               <Bar
                 yAxisId="left"
                 dataKey="revenue"
-                fill="#60a5fa"
+                fill="#3b82f6"
                 radius={[3, 3, 0, 0]}
                 maxBarSize={30}
+                animationDuration={800}
+                animationEasing="ease-out"
               />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="cumulative"
-                stroke="#34d399"
+                stroke="#10b981"
                 strokeWidth={2}
                 dot={false}
+                animationDuration={1200}
+                animationEasing="ease-out"
               />
             </ComposedChart>
           </ResponsiveContainer>

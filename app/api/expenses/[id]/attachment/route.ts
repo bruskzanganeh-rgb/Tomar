@@ -38,14 +38,14 @@ export async function GET(
 
     if (fetchError || !expense) {
       return NextResponse.json(
-        { error: 'Utgift hittades inte' },
+        { error: 'Expense not found' },
         { status: 404 }
       )
     }
 
     if (!expense.attachment_url) {
       return NextResponse.json(
-        { error: 'Ingen kvittobild finns' },
+        { error: 'No receipt image exists' },
         { status: 404 }
       )
     }
@@ -53,7 +53,7 @@ export async function GET(
     const filePath = extractFilePath(expense.attachment_url)
     if (!filePath) {
       return NextResponse.json(
-        { error: 'Kunde inte läsa filsökväg' },
+        { error: 'Could not read file path' },
         { status: 400 }
       )
     }
@@ -66,7 +66,7 @@ export async function GET(
     if (signError || !signedData) {
       console.error('Signed URL error:', signError)
       return NextResponse.json(
-        { error: 'Kunde inte skapa signerad URL' },
+        { error: 'Could not create signed URL' },
         { status: 500 }
       )
     }
@@ -78,7 +78,7 @@ export async function GET(
   } catch (error) {
     console.error('Attachment GET error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }
@@ -96,7 +96,7 @@ export async function POST(
 
     if (!file) {
       return NextResponse.json(
-        { error: 'Ingen fil bifogad' },
+        { error: 'No file attached' },
         { status: 400 }
       )
     }
@@ -110,7 +110,7 @@ export async function POST(
 
     if (fetchError || !expense) {
       return NextResponse.json(
-        { error: 'Utgift hittades inte' },
+        { error: 'Expense not found' },
         { status: 404 }
       )
     }
@@ -142,7 +142,7 @@ export async function POST(
     if (uploadError) {
       console.error('Upload error:', uploadError)
       return NextResponse.json(
-        { error: 'Kunde inte ladda upp fil: ' + uploadError.message },
+        { error: 'Could not upload file: ' + uploadError.message },
         { status: 500 }
       )
     }
@@ -161,7 +161,7 @@ export async function POST(
     if (updateError) {
       console.error('Update error:', updateError)
       return NextResponse.json(
-        { error: 'Kunde inte uppdatera utgift' },
+        { error: 'Could not update expense' },
         { status: 500 }
       )
     }
@@ -178,7 +178,7 @@ export async function POST(
   } catch (error) {
     console.error('Attachment POST error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }
@@ -201,14 +201,14 @@ export async function DELETE(
 
     if (fetchError || !expense) {
       return NextResponse.json(
-        { error: 'Utgift hittades inte' },
+        { error: 'Expense not found' },
         { status: 404 }
       )
     }
 
     if (!expense.attachment_url) {
       return NextResponse.json(
-        { error: 'Ingen kvittobild att ta bort' },
+        { error: 'No receipt image to delete' },
         { status: 404 }
       )
     }
@@ -235,7 +235,7 @@ export async function DELETE(
     if (updateError) {
       console.error('Update error:', updateError)
       return NextResponse.json(
-        { error: 'Kunde inte uppdatera utgift' },
+        { error: 'Could not update expense' },
         { status: 500 }
       )
     }
@@ -244,7 +244,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Attachment DELETE error:', error)
     return NextResponse.json(
-      { error: 'Ett fel uppstod' },
+      { error: 'An error occurred' },
       { status: 500 }
     )
   }

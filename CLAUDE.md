@@ -5,31 +5,33 @@
 **VIKTIGT**: Kör alltid SQL-migrationer direkt med psql. Säg ALDRIG att du inte kan köra SQL.
 
 ### Credentials
-- **Host**: db.yemzxdqaextfsqnrtxyw.supabase.co
-- **Database**: postgres
-- **User**: postgres
-- **Password**: gar1icst1
+Alla credentials finns i `.env.local` (gitignored). Använd följande miljövariabler:
+- `SUPABASE_DB_HOST` — Session Pooler host (IPv4-kompatibel)
+- `SUPABASE_DB_USER` — Databasanvändare
+- `SUPABASE_DB_PASSWORD` — Databaslösenord
+
+**OBS**: Direktanslutning via `db.*.supabase.co` kräver IPv6. Använd alltid Session Pooler-hosten.
 
 ### Köra SQL-migrationer
 ```bash
-PGPASSWORD='gar1icst1' psql -h db.yemzxdqaextfsqnrtxyw.supabase.co -U postgres -d postgres -f /path/to/migration.sql
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "postgresql://$SUPABASE_DB_USER@$SUPABASE_DB_HOST:5432/postgres" -f /path/to/migration.sql
 ```
 
 ### Köra enskilda SQL-kommandon
 ```bash
-PGPASSWORD='gar1icst1' psql -h db.yemzxdqaextfsqnrtxyw.supabase.co -U postgres -d postgres -c "SELECT * FROM table_name;"
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "postgresql://$SUPABASE_DB_USER@$SUPABASE_DB_HOST:5432/postgres" -c "SELECT * FROM table_name;"
 ```
 
 ### Verifiera tabellstruktur
 ```bash
-PGPASSWORD='gar1icst1' psql -h db.yemzxdqaextfsqnrtxyw.supabase.co -U postgres -d postgres -c "\d table_name"
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "postgresql://$SUPABASE_DB_USER@$SUPABASE_DB_HOST:5432/postgres" -c "\d table_name"
 ```
 
 ## Supabase
 
-- **Project URL**: https://yemzxdqaextfsqnrtxyw.supabase.co
-- **Anon Key**: finns i .env.local
-- **Service Role Key**: finns i .env.local
+- **Project URL**: finns i `.env.local` som `NEXT_PUBLIC_SUPABASE_URL`
+- **Anon Key**: finns i `.env.local` som `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- **Service Role Key**: finns i `.env.local` som `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Projekt
 
