@@ -122,7 +122,7 @@ export function GigCombobox({
         <Command>
           <CommandInput placeholder={t('searchGig')} />
           <CommandList
-            style={{ maxHeight: 250, overflowY: 'auto' }}
+            style={{ maxHeight: 250, height: 'auto', overflowY: 'auto' }}
             onTouchMove={(e) => e.stopPropagation()}
           >
             <CommandEmpty>{t('noGigsFound')}</CommandEmpty>
