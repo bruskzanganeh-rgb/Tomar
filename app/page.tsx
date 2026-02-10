@@ -85,10 +85,24 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [showGigDialog, setShowGigDialog] = useState(false)
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
+  const [gridHeight, setGridHeight] = useState<number | undefined>(undefined)
   const supabase = createClient()
 
   useEffect(() => {
     loadDashboardData()
+  }, [])
+
+  useEffect(() => {
+    function updateHeight() {
+      if (window.innerWidth < 768) return setGridHeight(undefined)
+      const zoom = 0.65
+      const header = 56
+      const padding = 64
+      setGridHeight(window.innerHeight / zoom - header - padding)
+    }
+    updateHeight()
+    window.addEventListener('resize', updateHeight)
+    return () => window.removeEventListener('resize', updateHeight)
   }, [])
 
   async function loadDashboardData() {
@@ -172,11 +186,19 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Main 2x2 Grid */}
-      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 items-stretch">
+      {/* 3-Column Layout: Upcoming | Needs+Unpaid | Availability (golden ratio) */}
+      <motion.div
+        variants={itemVariants}
+        className="grid gap-4"
+        style={{
+          ...(gridHeight ? { height: gridHeight, maxHeight: gridHeight, overflow: 'hidden' } : {}),
+          gridTemplateColumns: gridHeight ? '2.618fr 1.618fr 1fr' : undefined,
+          gridTemplateRows: gridHeight ? '1fr' : undefined,
+        }}
+      >
 
-        {/* Upcoming Gigs */}
-        <Card>
+        {/* Column 1: Upcoming Gigs */}
+        <Card className="md:h-full md:flex md:flex-col md:min-h-0">
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
@@ -191,7 +213,7 @@ export default function DashboardPage() {
               {upcomingRevenue.toLocaleString(formatLocale)} <span className="text-sm font-normal text-muted-foreground">{tc('kr')}</span>
             </div>
           </CardHeader>
-          <CardContent className="pb-4">
+          <CardContent className="pb-4 md:flex-1 md:overflow-y-auto">
             {loading ? (
               <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
                 {tc('loading')}
@@ -203,7 +225,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-1">
-                {upcomingGigs.slice(0, 6).map((gig) => (
+                {upcomingGigs.map((gig) => (
                   <Link
                     key={gig.id}
                     href="/gigs"
@@ -224,82 +246,75 @@ export default function DashboardPage() {
                     )}
                   </Link>
                 ))}
-                {upcomingGigs.length > 6 && (
-                  <Link
-                    href="/gigs"
-                    className="block text-center text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
-                  >
-                    +{upcomingGigs.length - 6} {tc('more')}
-                  </Link>
-                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Needs Response */}
-        <Card>
-          <CardHeader className="pb-2 pt-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {t('needsResponse')}
-              </CardTitle>
-              <span className="text-xs text-muted-foreground">{t('pendingCount', { count: pendingGigs.length })}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="pb-4">
-            {loading ? (
-              <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
-                {tc('loading')}
+        {/* Column 2: Needs Response + Unpaid Invoices */}
+        <div className="flex flex-col gap-4 md:h-full md:min-h-0">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {t('needsResponse')}
+                </CardTitle>
+                <span className="text-xs text-muted-foreground">{t('pendingCount', { count: pendingGigs.length })}</span>
               </div>
-            ) : pendingGigs.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <Clock className="h-6 w-6 mx-auto mb-1 opacity-50" />
-                <p className="text-xs">{t('noPendingRequests')}</p>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {pendingGigs.slice(0, 5).map((gig) => {
-                  const deadlineInfo = getDeadlineInfo(gig.response_deadline, dateLocale)
-                  return (
-                    <div
-                      key={gig.id}
-                      className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
-                        deadlineInfo?.urgent ? 'bg-red-500/10' : 'bg-secondary/50 hover:bg-secondary'
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium truncate block">
-                          {gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}
-                        </span>
-                        {deadlineInfo && (
-                          <span className={`text-[10px] ${deadlineInfo.urgent ? 'text-red-400' : 'text-muted-foreground'}`}>
-                            {tGig('response')}: {deadlineInfo.isKey ? t(deadlineInfo.label) : deadlineInfo.label}
+            </CardHeader>
+            <CardContent className="pb-4 flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
+                  {tc('loading')}
+                </div>
+              ) : pendingGigs.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Clock className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                  <p className="text-xs">{t('noPendingRequests')}</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {pendingGigs.slice(0, 5).map((gig) => {
+                    const deadlineInfo = getDeadlineInfo(gig.response_deadline, dateLocale)
+                    return (
+                      <div
+                        key={gig.id}
+                        className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
+                          deadlineInfo?.urgent ? 'bg-red-500/10' : 'bg-secondary/50 hover:bg-secondary'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium truncate block">
+                            {gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}
                           </span>
-                        )}
+                          {deadlineInfo && (
+                            <span className={`text-[10px] ${deadlineInfo.urgent ? 'text-red-400' : 'text-muted-foreground'}`}>
+                              {tGig('response')}: {deadlineInfo.isKey ? t(deadlineInfo.label) : deadlineInfo.label}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="font-semibold">{gig.fee?.toLocaleString(formatLocale) || '—'} {tc('kr')}</span>
+                          <Link
+                            href="/gigs"
+                            className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 transition-colors"
+                          >
+                            <ArrowUpRight className="w-3 h-3" />
+                          </Link>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="font-semibold">{gig.fee?.toLocaleString(formatLocale) || '—'} {tc('kr')}</span>
-                        <Link
-                          href="/gigs"
-                          className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 transition-colors"
-                        >
-                          <ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Unpaid Invoices */}
-        <UpcomingPayments />
+          <UpcomingPayments className="flex-1 flex flex-col min-h-0" />
+        </div>
 
-        {/* Availability */}
+        {/* Column 3: Availability */}
         <AvailableWeeks />
       </motion.div>
 

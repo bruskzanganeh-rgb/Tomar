@@ -127,7 +127,7 @@ export function AvailableWeeks() {
   const totalWeeks = weeks.length
 
   return (
-    <Card>
+    <Card className="h-full min-h-0 flex flex-col">
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-1.5">
@@ -157,7 +157,7 @@ export function AvailableWeeks() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="pb-4 flex-1 flex flex-col">
         {loading ? (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
@@ -199,7 +199,7 @@ export function AvailableWeeks() {
 
             <div
               ref={scrollContainerRef}
-              className="space-y-1 h-[168px] overflow-y-auto pr-1"
+              className="space-y-1 flex-1 overflow-y-auto pr-1"
             >
               {weeks.map((week, index) => {
                 const style = getStatusStyle(week.status)

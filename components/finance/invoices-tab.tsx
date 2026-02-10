@@ -101,6 +101,7 @@ export default function InvoicesTab() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [pendingGigs, setPendingGigs] = useState<PendingGig[]>([])
+  const [upcomingRevenue, setUpcomingRevenue] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showSendDialog, setShowSendDialog] = useState(false)
@@ -134,6 +135,7 @@ export default function InvoicesTab() {
     loadInvoices()
     loadClients()
     loadPendingGigs()
+    loadUpcomingRevenue()
   }, [])
 
   async function loadClients() {
@@ -142,6 +144,16 @@ export default function InvoicesTab() {
       .select('id, name')
       .order('name')
     setClients(data || [])
+  }
+
+  async function loadUpcomingRevenue() {
+    const today = new Date().toISOString().split('T')[0]
+    const { data: upcoming } = await supabase
+      .from('gigs')
+      .select('fee')
+      .gte('date', today)
+      .eq('status', 'accepted')
+    setUpcomingRevenue((upcoming || []).reduce((sum, g: any) => sum + (g.fee || 0), 0))
   }
 
   async function loadPendingGigs() {
@@ -344,69 +356,75 @@ export default function InvoicesTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('totalInvoiced')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {invoices
-                .filter((i) => i.status !== 'draft')
-                .reduce((sum, i) => sum + (i.total_base || i.total), 0)
-                .toLocaleString(formatLocale)}{' '}
-              {tc('kr')}
-            </div>
-          </CardContent>
-        </Card>
+      {(() => {
+        const currentYear = new Date().getFullYear()
+        const yearInvoices = invoices.filter(i =>
+          new Date(i.invoice_date).getFullYear() === currentYear && i.status !== 'draft'
+        )
+        const invoicedThisYear = yearInvoices.reduce((sum, i) => sum + (i.total_base || i.total), 0)
+        const paidThisYear = yearInvoices
+          .filter(i => i.status === 'paid')
+          .reduce((sum, i) => sum + (i.total_base || i.total), 0)
+        const unpaidTotal = invoices
+          .filter(i => i.status === 'sent' || i.status === 'overdue')
+          .reduce((sum, i) => sum + (i.total_base || i.total), 0)
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('unpaid')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {invoices
-                .filter((i) => i.status === 'sent' || i.status === 'overdue')
-                .reduce((sum, i) => sum + (i.total_base || i.total), 0)
-                .toLocaleString(formatLocale)}{' '}
-              {tc('kr')}
-            </div>
-          </CardContent>
-        </Card>
+        return (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('invoicedYear', { year: currentYear })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {invoicedThisYear.toLocaleString(formatLocale)} {tc('kr')}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('paidTotal')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {invoices
-                .filter((i) => i.status === 'paid')
-                .reduce((sum, i) => sum + (i.total_base || i.total), 0)
-                .toLocaleString(formatLocale)}{' '}
-              {tc('kr')}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('paidYear', { year: currentYear })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {paidThisYear.toLocaleString(formatLocale)} {tc('kr')}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {t('invoiceCount')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{invoices.length}</div>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('unpaid')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {unpaidTotal.toLocaleString(formatLocale)} {tc('kr')}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {t('upcomingRevenue')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {upcomingRevenue.toLocaleString(formatLocale)} {tc('kr')}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      })()}
 
       {/* To invoice - Completed gigs without invoice */}
       {pendingGigs.length > 0 && (() => {

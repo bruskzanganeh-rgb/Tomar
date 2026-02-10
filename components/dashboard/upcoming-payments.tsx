@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
 import { differenceInDays } from 'date-fns'
+import { cn } from '@/lib/utils'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
 
@@ -21,7 +22,7 @@ type Invoice = {
   client: { name: string }
 }
 
-export function UpcomingPayments() {
+export function UpcomingPayments({ className }: { className?: string }) {
   const t = useTranslations('dashboard')
   const tc = useTranslations('common')
   const formatLocale = useFormatLocale()
@@ -87,14 +88,14 @@ export function UpcomingPayments() {
   const totalUnpaid = invoices.reduce((sum, inv) => sum + inv.total, 0)
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{t('unpaidInvoices')}</CardTitle>
           <span className="text-sm font-semibold">{totalUnpaid.toLocaleString(formatLocale)} {tc('kr')}</span>
         </div>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="pb-4 flex-1 overflow-y-auto">
         {loading ? (
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
