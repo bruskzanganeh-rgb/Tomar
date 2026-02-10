@@ -51,6 +51,7 @@ export function GigCombobox({
   const [open, setOpen] = useState(false)
   const [kommandeLimitExtra, setKommandeLimitExtra] = useState(0)
   const [historiskaLimitExtra, setHistoriskaLimitExtra] = useState(0)
+  const [showScrollHint, setShowScrollHint] = useState(true)
 
   // Gruppera uppdrag i Kommande och Historiska
   const { kommande, historiska } = useMemo(() => {
@@ -93,12 +94,16 @@ export function GigCombobox({
   const selectedGig = gigs.find(g => g.id === value)
   const displayValue = selectedGig ? formatGigLabel(selectedGig) : t('selectGig')
 
+  // Kolla om listan har mer innehåll än vad som syns
+  const hasScrollableContent = (kommande.length + historiska.length + 1) > INITIAL_LIMIT
+
   // Reset limits when popover closes
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
     if (!newOpen) {
       setKommandeLimitExtra(0)
       setHistoriskaLimitExtra(0)
+      setShowScrollHint(true)
     }
   }
 
@@ -118,12 +123,19 @@ export function GigCombobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Command>
           <CommandInput placeholder={t('searchGig')} />
+          <div className="relative">
           <CommandList
             style={{ maxHeight: 250, height: 'auto', overflowY: 'auto' }}
             onTouchMove={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onScroll={() => setShowScrollHint(false)}
           >
             <CommandEmpty>{t('noGigsFound')}</CommandEmpty>
 
@@ -214,6 +226,12 @@ export function GigCombobox({
               </CommandGroup>
             )}
           </CommandList>
+          {showScrollHint && hasScrollableContent && (
+            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none bg-gradient-to-t from-popover to-transparent h-8">
+              <ChevronDown className="h-4 w-4 text-muted-foreground animate-bounce" />
+            </div>
+          )}
+          </div>
         </Command>
       </PopoverContent>
     </Popover>

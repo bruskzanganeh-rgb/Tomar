@@ -649,7 +649,9 @@
     "monthNames": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
     "newGig": "New gig",
     "uploadReceipt": "Receipt",
-    "viewCalendar": "Calendar"
+    "viewCalendar": "Calendar",
+    "timeline": "Timeline",
+    "compare": "Compare"
   },
   "auth": {
     "login": "Log in",
@@ -1109,6 +1111,7 @@
     "krPerDay": "kr/day",
     "statsByPosition": "Statistics by position",
     "gigCount": "Gig count",
-    "totalRevenue": "Total revenue"
+    "totalRevenue": "Total revenue",
+    "topClients": "Top 5 clients"
   }
 }

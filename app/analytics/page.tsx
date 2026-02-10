@@ -21,6 +21,10 @@ import {
 } from '@/components/ui/select'
 import { BarChart3, TrendingUp, XCircle, Calendar, Music, CalendarClock, Wallet, HelpCircle } from 'lucide-react'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { RevenueChart } from '@/components/dashboard/revenue-chart'
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts'
+
+const CLIENT_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b']
 
 type Gig = {
   id: string
@@ -35,6 +39,13 @@ type Gig = {
   position: { id: string; name: string } | null
 }
 
+type Invoice = {
+  invoice_date: string
+  total: number
+  total_base: number | null
+  client: { id: string; name: string } | null
+}
+
 type Client = { id: string; name: string }
 type Position = { id: string; name: string }
 
@@ -47,10 +58,11 @@ export default function AnalyticsPage() {
   const formatLocale = useFormatLocale()
 
   const [gigs, setGigs] = useState<Gig[]>([])
+  const [invoices, setInvoices] = useState<Invoice[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedYear, setSelectedYear] = useState<string>('all')
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedClient, setSelectedClient] = useState<string>('all')
   const [selectedPosition, setSelectedPosition] = useState<string>('all')
   const supabase = createClient()
@@ -62,7 +74,7 @@ export default function AnalyticsPage() {
   async function loadData() {
     setLoading(true)
 
-    const [gigsResult, clientsResult, positionsResult] = await Promise.all([
+    const [gigsResult, invoicesResult, clientsResult, positionsResult] = await Promise.all([
       supabase
         .from('gigs')
         .select(`
@@ -79,6 +91,11 @@ export default function AnalyticsPage() {
         `)
         .order('date', { ascending: false }),
       supabase
+        .from('invoices')
+        .select('invoice_date, total, total_base, client:clients(id, name)')
+        .in('status', ['sent', 'paid'])
+        .order('invoice_date', { ascending: false }),
+      supabase
         .from('clients')
         .select('id, name')
         .order('name'),
@@ -89,13 +106,16 @@ export default function AnalyticsPage() {
     ])
 
     if (gigsResult.data) setGigs(gigsResult.data as unknown as Gig[])
+    if (invoicesResult.data) setInvoices(invoicesResult.data as unknown as Invoice[])
     if (clientsResult.data) setClients(clientsResult.data)
     if (positionsResult.data) setPositions(positionsResult.data)
     setLoading(false)
   }
 
-  // Get unique years from gigs
-  const years = [...new Set(gigs.map(g => new Date(g.date).getFullYear()))].sort((a, b) => b - a)
+  // Get unique years from gigs and invoices
+  const gigYears = gigs.map(g => new Date(g.date).getFullYear())
+  const invoiceYears = invoices.map(inv => new Date(inv.invoice_date).getFullYear())
+  const years = [...new Set([...gigYears, ...invoiceYears])].sort((a, b) => b - a)
 
   // Filter gigs based on selected year, client and position
   const filteredGigs = gigs.filter(g => {
@@ -175,6 +195,24 @@ export default function AnalyticsPage() {
 
   const allPositionStats = noPositionGigs.length > 0 ? [...positionStats, noPositionStats] : positionStats
 
+  // Calculate top clients from invoice data (filtered by year and client)
+  const filteredInvoices = invoices.filter(inv => {
+    const yearMatch = selectedYear === 'all' || new Date(inv.invoice_date).getFullYear().toString() === selectedYear
+    const clientMatch = selectedClient === 'all' || inv.client?.id === selectedClient
+    return yearMatch && clientMatch
+  })
+  const clientRevenue: { [key: string]: { name: string; revenue: number } } = {}
+  filteredInvoices.forEach(inv => {
+    if (inv.client) {
+      const id = inv.client.id
+      if (!clientRevenue[id]) clientRevenue[id] = { name: inv.client.name, revenue: 0 }
+      clientRevenue[id].revenue += (inv.total_base || inv.total)
+    }
+  })
+  const topClients = Object.values(clientRevenue)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5)
+
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -228,6 +266,9 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      {/* Revenue Chart */}
+      <RevenueChart year={selectedYear} clientId={selectedClient} positionId={selectedPosition} />
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">{tc('loading')}</div>
@@ -387,6 +428,55 @@ export default function AnalyticsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Top 5 Clients (filtered) */}
+          {topClients.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-sm font-medium">{t('topClients')}</CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart
+                    data={topClients}
+                    layout="vertical"
+                    margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                  >
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={{ fontSize: 10, fill: 'var(--foreground)' }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={100}
+                      tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                    />
+                    <RechartsTooltip
+                      formatter={(value: number) => [`${value.toLocaleString(formatLocale)} ${tc('kr')}`, t('totalRevenue')]}
+                      contentStyle={{
+                        backgroundColor: 'var(--popover)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--foreground)',
+                      }}
+                    />
+                    <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
+                      {topClients.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CLIENT_COLORS[index % CLIENT_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Position statistics */}
           {allPositionStats.length > 0 && (

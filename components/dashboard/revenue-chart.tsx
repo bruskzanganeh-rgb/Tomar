@@ -6,12 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import {
   ComposedChart,
+  BarChart,
   Bar,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from 'recharts'
 import {
@@ -31,19 +33,50 @@ type MonthlyRevenue = {
   cumulative: number
 }
 
-type ViewMode = 'invoice' | 'workday'
+type CompareRow = {
+  monthName: string
+  [year: string]: string | number
+}
 
-export function RevenueChart() {
+type ViewMode = 'invoice' | 'workday'
+type ChartMode = 'timeline' | 'compare'
+
+const YEAR_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
+
+type RevenueChartProps = {
+  year?: string
+  clientId?: string
+  positionId?: string
+}
+
+export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueChartProps = {}) {
   const t = useTranslations('dashboard')
   const tc = useTranslations('common')
   const monthNames = t.raw('monthNames') as string[]
   const formatLocale = useFormatLocale()
   const [data, setData] = useState<MonthlyRevenue[]>([])
+  const [compareData, setCompareData] = useState<CompareRow[]>([])
+  const [compareYears, setCompareYears] = useState<string[]>([])
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
   const [availableYears, setAvailableYears] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('invoice')
+  const [chartMode, setChartMode] = useState<ChartMode>('timeline')
   const supabase = createClient()
+
+  // Sync with external year prop
+  useEffect(() => {
+    if (yearProp && yearProp !== selectedYear) {
+      setSelectedYear(yearProp)
+    }
+  }, [yearProp])
+
+  // Reset chartMode when switching away from 'all'
+  useEffect(() => {
+    if (selectedYear !== 'all') {
+      setChartMode('timeline')
+    }
+  }, [selectedYear])
 
   useEffect(() => {
     loadAvailableYears()
@@ -52,12 +85,12 @@ export function RevenueChart() {
   useEffect(() => {
     if (selectedYear) {
       if (viewMode === 'invoice') {
-        loadRevenueData(parseInt(selectedYear))
+        loadRevenueData(selectedYear)
       } else {
-        loadWorkdayData(parseInt(selectedYear))
+        loadWorkdayData(selectedYear)
       }
     }
-  }, [selectedYear, viewMode])
+  }, [selectedYear, viewMode, clientId, positionId])
 
   async function loadAvailableYears() {
     const { data: invoices } = await supabase
@@ -82,104 +115,293 @@ export function RevenueChart() {
     const years = [...new Set([...invoiceYears, ...gigYears, currentYearStr])].sort()
 
     setAvailableYears(years)
-    if (years.length > 0 && !years.includes(selectedYear)) {
+    if (selectedYear !== 'all' && years.length > 0 && !years.includes(selectedYear)) {
       setSelectedYear(years[years.length - 1])
     }
   }
 
-  async function loadRevenueData(year: number) {
-    setLoading(true)
+  function buildCompareData(yearMonthData: { [yearMonth: string]: number }) {
+    // yearMonthData keys are "YYYY-MM", values are amounts
+    const yearSet = new Set<string>()
+    const monthData: { [month: number]: { [year: string]: number } } = {}
 
-    const startDate = `${year}-01-01`
-    const endDate = `${year}-12-31`
+    for (let i = 0; i < 12; i++) monthData[i] = {}
 
-    const { data: invoices } = await supabase
-      .from('invoices')
-      .select('invoice_date, total, total_base')
-      .gte('invoice_date', startDate)
-      .lte('invoice_date', endDate)
-      .in('status', ['sent', 'paid'])
+    Object.entries(yearMonthData).forEach(([key, value]) => {
+      const [y, m] = key.split('-').map(Number)
+      yearSet.add(y.toString())
+      monthData[m - 1][y.toString()] = (monthData[m - 1][y.toString()] || 0) + value
+    })
 
-    const monthlyData: { [key: number]: number } = {}
+    const years = [...yearSet].sort()
+    setCompareYears(years)
+
+    const rows: CompareRow[] = []
     for (let i = 0; i < 12; i++) {
-      monthlyData[i] = 0
+      const row: CompareRow = { monthName: monthNames[i] }
+      years.forEach(y => {
+        row[y] = Math.round(monthData[i][y] || 0)
+      })
+      rows.push(row)
     }
 
-    invoices?.forEach((inv: any) => {
-      const month = new Date(inv.invoice_date).getMonth()
-      monthlyData[month] += (inv.total_base || inv.total)
-    })
+    setCompareData(rows)
+  }
 
-    let cumulative = 0
-    const chartData: MonthlyRevenue[] = Object.entries(monthlyData).map(([month, revenue]) => {
-      cumulative += revenue
-      return {
-        month: (parseInt(month) + 1).toString().padStart(2, '0'),
-        monthName: monthNames[parseInt(month)],
-        revenue,
-        cumulative,
+  async function loadRevenueData(yearStr: string) {
+    setLoading(true)
+
+    const isAll = yearStr === 'all'
+    const needsPositionFilter = positionId && positionId !== 'all'
+    let query = supabase
+      .from('invoices')
+      .select(needsPositionFilter
+        ? 'invoice_date, total, total_base, gig_id, gig:gigs(position_id)'
+        : 'invoice_date, total, total_base')
+      .in('status', ['sent', 'paid'])
+
+    if (!isAll) {
+      const year = parseInt(yearStr)
+      query = query.gte('invoice_date', `${year}-01-01`).lte('invoice_date', `${year}-12-31`)
+    }
+    if (clientId && clientId !== 'all') {
+      query = query.eq('client_id', clientId)
+    }
+
+    const { data: rawInvoices } = await query
+
+    // Filter by position client-side (invoices don't have position_id directly)
+    let invoices = rawInvoices
+    if (needsPositionFilter) {
+      invoices = (rawInvoices || []).filter((inv: any) => {
+        if (positionId === 'none') {
+          // No position = invoices without gig OR gig without position
+          return !inv.gig_id || !inv.gig?.position_id
+        }
+        return inv.gig?.position_id === positionId
+      })
+    }
+
+    if (isAll) {
+      // Build year-month map for both timeline and compare
+      const timelineData: { [key: string]: number } = {}
+      invoices?.forEach((inv: any) => {
+        const d = new Date(inv.invoice_date)
+        const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`
+        timelineData[key] = (timelineData[key] || 0) + (inv.total_base || inv.total)
+      })
+
+      // Build compare data
+      buildCompareData(timelineData)
+
+      // Fill gaps for timeline
+      const keys = Object.keys(timelineData).sort()
+      if (keys.length > 0) {
+        const [minY, minM] = keys[0].split('-').map(Number)
+        const [maxY, maxM] = keys[keys.length - 1].split('-').map(Number)
+        for (let y = minY; y <= maxY; y++) {
+          const startM = y === minY ? minM : 1
+          const endM = y === maxY ? maxM : 12
+          for (let m = startM; m <= endM; m++) {
+            const key = `${y}-${m.toString().padStart(2, '0')}`
+            if (!(key in timelineData)) timelineData[key] = 0
+          }
+        }
       }
-    })
 
-    setData(chartData)
+      let cumulative = 0
+      const chartData: MonthlyRevenue[] = Object.keys(timelineData).sort().map(key => {
+        const [y, m] = key.split('-').map(Number)
+        const revenue = timelineData[key]
+        cumulative += revenue
+        return {
+          month: key,
+          monthName: `${monthNames[m - 1]} ${y.toString().slice(-2)}`,
+          revenue,
+          cumulative,
+        }
+      })
+
+      setData(chartData)
+    } else {
+      // Single year: 12 months
+      const monthlyData: { [key: number]: number } = {}
+      for (let i = 0; i < 12; i++) monthlyData[i] = 0
+
+      invoices?.forEach((inv: any) => {
+        const month = new Date(inv.invoice_date).getMonth()
+        monthlyData[month] += (inv.total_base || inv.total)
+      })
+
+      let cumulative = 0
+      const chartData: MonthlyRevenue[] = Object.entries(monthlyData).map(([month, revenue]) => {
+        cumulative += revenue
+        return {
+          month: (parseInt(month) + 1).toString().padStart(2, '0'),
+          monthName: monthNames[parseInt(month)],
+          revenue,
+          cumulative,
+        }
+      })
+
+      setData(chartData)
+      setCompareData([])
+      setCompareYears([])
+    }
+
     setLoading(false)
   }
 
-  async function loadWorkdayData(year: number) {
+  async function loadWorkdayData(yearStr: string) {
     setLoading(true)
 
-    const { data: gigs } = await supabase
+    const isAll = yearStr === 'all'
+    const year = isAll ? 0 : parseInt(yearStr)
+
+    let gigQuery = supabase
       .from('gigs')
       .select('fee, fee_base, total_days, gig_dates(date)')
       .in('status', ['completed', 'invoiced', 'paid'])
 
-    const monthlyData: { [key: number]: number } = {}
-    for (let i = 0; i < 12; i++) {
-      monthlyData[i] = 0
+    if (clientId && clientId !== 'all') {
+      gigQuery = gigQuery.eq('client_id', clientId)
+    }
+    if (positionId && positionId !== 'all') {
+      if (positionId === 'none') {
+        gigQuery = gigQuery.is('position_id', null)
+      } else {
+        gigQuery = gigQuery.eq('position_id', positionId)
+      }
     }
 
-    gigs?.forEach((gig: any) => {
-      const fee = gig.fee_base || gig.fee
-      if (!fee || !gig.total_days || gig.total_days === 0) return
+    const { data: gigs } = await gigQuery
 
-      const dayRate = fee / gig.total_days
+    if (isAll) {
+      // Build year-month map
+      const timelineData: { [key: string]: number } = {}
 
-      gig.gig_dates?.forEach((gd: { date: string }) => {
-        const date = new Date(gd.date)
-        if (date.getFullYear() === year) {
-          const month = date.getMonth()
-          monthlyData[month] += dayRate
+      gigs?.forEach((gig: any) => {
+        const fee = gig.fee_base || gig.fee
+        if (!fee || !gig.total_days || gig.total_days === 0) return
+        const dayRate = fee / gig.total_days
+
+        gig.gig_dates?.forEach((gd: { date: string }) => {
+          const d = new Date(gd.date)
+          const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`
+          timelineData[key] = (timelineData[key] || 0) + dayRate
+        })
+      })
+
+      // Build compare data
+      buildCompareData(timelineData)
+
+      // Fill gaps for timeline
+      const keys = Object.keys(timelineData).sort()
+      if (keys.length > 0) {
+        const [minY, minM] = keys[0].split('-').map(Number)
+        const [maxY, maxM] = keys[keys.length - 1].split('-').map(Number)
+        for (let y = minY; y <= maxY; y++) {
+          const startM = y === minY ? minM : 1
+          const endM = y === maxY ? maxM : 12
+          for (let m = startM; m <= endM; m++) {
+            const key = `${y}-${m.toString().padStart(2, '0')}`
+            if (!(key in timelineData)) timelineData[key] = 0
+          }
+        }
+      }
+
+      let cumulative = 0
+      const chartData: MonthlyRevenue[] = Object.keys(timelineData).sort().map(key => {
+        const [y, m] = key.split('-').map(Number)
+        const revenue = Math.round(timelineData[key])
+        cumulative += revenue
+        return {
+          month: key,
+          monthName: `${monthNames[m - 1]} ${y.toString().slice(-2)}`,
+          revenue,
+          cumulative,
         }
       })
-    })
 
-    let cumulative = 0
-    const chartData: MonthlyRevenue[] = Object.entries(monthlyData).map(([month, revenue]) => {
-      cumulative += revenue
-      return {
-        month: (parseInt(month) + 1).toString().padStart(2, '0'),
-        monthName: monthNames[parseInt(month)],
-        revenue: Math.round(revenue),
-        cumulative: Math.round(cumulative),
-      }
-    })
+      setData(chartData)
+    } else {
+      // Single year: 12 months
+      const monthlyData: { [key: number]: number } = {}
+      for (let i = 0; i < 12; i++) monthlyData[i] = 0
 
-    setData(chartData)
+      gigs?.forEach((gig: any) => {
+        const fee = gig.fee_base || gig.fee
+        if (!fee || !gig.total_days || gig.total_days === 0) return
+        const dayRate = fee / gig.total_days
+
+        gig.gig_dates?.forEach((gd: { date: string }) => {
+          const date = new Date(gd.date)
+          if (date.getFullYear() === year) {
+            const month = date.getMonth()
+            monthlyData[month] += dayRate
+          }
+        })
+      })
+
+      let cumulative = 0
+      const chartData: MonthlyRevenue[] = Object.entries(monthlyData).map(([month, revenue]) => {
+        cumulative += revenue
+        return {
+          month: (parseInt(month) + 1).toString().padStart(2, '0'),
+          monthName: monthNames[parseInt(month)],
+          revenue: Math.round(revenue),
+          cumulative: Math.round(cumulative),
+        }
+      })
+
+      setData(chartData)
+      setCompareData([])
+      setCompareYears([])
+    }
+
     setLoading(false)
   }
 
   const totalYearRevenue = data.reduce((sum, d) => sum + d.revenue, 0)
+  const isAllYears = selectedYear === 'all'
+  const isTimeline = isAllYears && chartMode === 'timeline' && data.length > 12
+  const showCompare = isAllYears && chartMode === 'compare' && compareData.length > 0
+  const chartHeight = isTimeline ? 180 : 140
 
   return (
     <Card className="col-span-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-4">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3">
         <div className="flex items-center gap-3">
           <CardTitle className="text-sm font-medium">
-            {viewMode === 'invoice' ? t('invoiced') : t('worked')} {selectedYear}
+            {viewMode === 'invoice' ? t('invoiced') : t('worked')}{selectedYear !== 'all' ? ` ${selectedYear}` : ''}
           </CardTitle>
           <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{totalYearRevenue.toLocaleString(formatLocale)} {tc('kr')}</span>
         </div>
         <div className="flex items-center gap-2">
+          {isAllYears && (
+            <div className="flex rounded-lg border overflow-hidden">
+              <button
+                onClick={() => setChartMode('timeline')}
+                className={`px-3 py-1.5 text-xs transition-colors ${
+                  chartMode === 'timeline'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('timeline')}
+              </button>
+              <button
+                onClick={() => setChartMode('compare')}
+                className={`px-3 py-1.5 text-xs transition-colors ${
+                  chartMode === 'compare'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('compare')}
+              </button>
+            </div>
+          )}
           <div className="flex rounded-lg border overflow-hidden">
             <button
               onClick={() => setViewMode('invoice')}
@@ -202,19 +424,21 @@ export function RevenueChart() {
               {t('worked')}
             </button>
           </div>
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="h-7 text-xs" style={{ width: 115 }}>
-              <SelectValue placeholder={t('year')} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableYears.map(year => (
-                <SelectItem key={year} value={year}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!yearProp && (
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="h-7 text-xs" style={{ width: 115 }}>
+                <SelectValue placeholder={t('year')} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent className="pb-3">
         {loading ? (
           <div className="h-[160px] flex items-end gap-2 px-8 pb-4">
             {[40, 65, 85, 50, 70, 45, 55, 75, 60, 90, 72, 95].map((height, i) => (
@@ -227,15 +451,66 @@ export function RevenueChart() {
               </div>
             ))}
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={160}>
-            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        ) : showCompare ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={compareData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="monthName"
                 tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                 tickLine={false}
                 axisLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                width={35}
+              />
+              <Tooltip
+                formatter={(value: number, name: string) => [
+                  `${value.toLocaleString(formatLocale)} ${tc('kr')}`,
+                  name
+                ]}
+                contentStyle={{
+                  backgroundColor: 'var(--popover)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: 'var(--foreground)',
+                }}
+              />
+              <Legend
+                wrapperStyle={{ fontSize: '11px' }}
+                iconSize={10}
+              />
+              {compareYears.map((year, i) => (
+                <Bar
+                  key={year}
+                  dataKey={year}
+                  fill={YEAR_COLORS[i % YEAR_COLORS.length]}
+                  radius={[2, 2, 0, 0]}
+                  maxBarSize={20}
+                  animationDuration={800}
+                  animationEasing="ease-out"
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis
+                dataKey="monthName"
+                tick={{ fontSize: isTimeline ? 9 : 10, fill: 'var(--muted-foreground)' }}
+                tickLine={false}
+                axisLine={false}
+                interval={isTimeline ? 2 : 0}
+                angle={isTimeline ? -45 : 0}
+                textAnchor={isTimeline ? 'end' : 'middle'}
+                height={isTimeline ? 40 : 20}
               />
               <YAxis
                 yAxisId="left"
@@ -261,7 +536,7 @@ export function RevenueChart() {
                     ? (viewMode === 'invoice' ? t('invoiced') : t('worked'))
                     : t('total')
                 ]}
-                labelFormatter={(label) => `${label} ${selectedYear}`}
+                labelFormatter={(label) => selectedYear !== 'all' ? `${label} ${selectedYear}` : label}
                 contentStyle={{
                   backgroundColor: 'var(--popover)',
                   border: '1px solid var(--border)',

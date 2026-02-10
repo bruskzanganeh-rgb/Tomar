@@ -649,7 +649,9 @@
     "monthNames": ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"],
     "newGig": "Nytt uppdrag",
     "uploadReceipt": "Kvitto",
-    "viewCalendar": "Kalender"
+    "viewCalendar": "Kalender",
+    "timeline": "Tidslinje",
+    "compare": "Jämför"
   },
   "auth": {
     "login": "Logga in",
@@ -1109,6 +1111,7 @@
     "krPerDay": "kr/dag",
     "statsByPosition": "Statistik per roll",
     "gigCount": "Antal uppdrag",
-    "totalRevenue": "Total intäkt"
+    "totalRevenue": "Total intäkt",
+    "topClients": "Topp 5 uppdragsgivare"
   }
 }

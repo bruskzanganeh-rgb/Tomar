@@ -4,16 +4,13 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, FileText, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Plus, Receipt, CalendarDays } from 'lucide-react'
+import { Calendar, Clock, ArrowUpRight, AlertTriangle, Plus, Receipt, CalendarDays, Music } from 'lucide-react'
 import Link from 'next/link'
 import { GigDialog } from '@/components/gigs/gig-dialog'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { motion, type Variants } from 'framer-motion'
-import { RevenueChart } from '@/components/dashboard/revenue-chart'
-import { TopClients } from '@/components/dashboard/top-clients'
-import { YearComparison } from '@/components/dashboard/year-comparison'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { AvailableWeeks } from '@/components/dashboard/available-weeks'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -35,15 +32,16 @@ const itemVariants: Variants = {
   }
 }
 
-type Stats = {
-  upcomingRevenue: number
-  upcomingGigs: number
-  upcomingDays: number
-  totalClients: number
-  unpaidInvoices: number
+type UpcomingGig = {
+  id: string
+  date: string
+  project_name: string | null
+  fee: number | null
+  client: { name: string } | null
+  gig_type: { name: string } | null
 }
 
-type RecentGig = {
+type PendingGig = {
   id: string
   date: string
   client: { name: string } | null
@@ -79,14 +77,11 @@ export default function DashboardPage() {
   const tGig = useTranslations('gig')
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
-  const [stats, setStats] = useState<Stats>({
-    upcomingRevenue: 0,
-    upcomingGigs: 0,
-    upcomingDays: 0,
-    totalClients: 0,
-    unpaidInvoices: 0,
-  })
-  const [pendingGigs, setPendingGigs] = useState<RecentGig[]>([])
+
+  const [upcomingGigs, setUpcomingGigs] = useState<UpcomingGig[]>([])
+  const [upcomingRevenue, setUpcomingRevenue] = useState(0)
+  const [upcomingDays, setUpcomingDays] = useState(0)
+  const [pendingGigs, setPendingGigs] = useState<PendingGig[]>([])
   const [loading, setLoading] = useState(true)
   const [showGigDialog, setShowGigDialog] = useState(false)
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
@@ -101,42 +96,29 @@ export default function DashboardPage() {
 
     const today = new Date().toISOString().split('T')[0]
 
-    // Get upcoming gigs with fee
+    // Get upcoming accepted gigs with details
     const { data: upcoming } = await supabase
       .from('gigs')
-      .select('id, fee')
+      .select('id, date, fee, project_name, client:clients(name), gig_type:gig_types(name)')
       .gte('date', today)
       .eq('status', 'accepted')
+      .order('date', { ascending: true })
 
-    const upcomingRevenue = upcoming?.reduce((sum, gig) => sum + (gig.fee || 0), 0) || 0
-    const upcomingGigs = upcoming?.length || 0
+    const upcomingList = (upcoming || []) as unknown as UpcomingGig[]
+    setUpcomingGigs(upcomingList)
+    setUpcomingRevenue(upcomingList.reduce((sum, g) => sum + (g.fee || 0), 0))
 
-    // Get number of unique days from gig_dates for upcoming gigs
-    let upcomingDays = 0
-    if (upcoming && upcoming.length > 0) {
-      const gigIds = upcoming.map(g => g.id)
+    // Get unique upcoming work days
+    if (upcomingList.length > 0) {
+      const gigIds = upcomingList.map(g => g.id)
       const { data: gigDates } = await supabase
         .from('gig_dates')
         .select('date')
         .in('gig_id', gigIds)
         .gte('date', today)
 
-      const uniqueDates = new Set(gigDates?.map(d => d.date) || [])
-      upcomingDays = uniqueDates.size
+      setUpcomingDays(new Set(gigDates?.map(d => d.date) || []).size)
     }
-
-    // Get total clients
-    const { data: clients } = await supabase
-      .from('clients')
-      .select('id')
-
-    // Get unpaid invoices
-    const { data: unpaid } = await supabase
-      .from('invoices')
-      .select('total')
-      .in('status', ['sent', 'overdue'])
-
-    const unpaidTotal = unpaid?.reduce((sum, inv) => sum + inv.total, 0) || 0
 
     // Get pending and tentative gigs (need response)
     const { data: pending } = await supabase
@@ -146,15 +128,7 @@ export default function DashboardPage() {
       .order('response_deadline', { ascending: true, nullsFirst: false })
       .limit(5)
 
-    setStats({
-      upcomingRevenue,
-      upcomingGigs,
-      upcomingDays,
-      totalClients: clients?.length || 0,
-      unpaidInvoices: unpaidTotal,
-    })
-
-    setPendingGigs((pending || []) as unknown as RecentGig[])
+    setPendingGigs((pending || []) as unknown as PendingGig[])
     setLoading(false)
   }
 
@@ -198,72 +172,72 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Upcoming Revenue */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-5">
-            <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{t('upcomingRevenue')}</CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          </CardHeader>
-          <CardContent className="pb-4 px-5">
-            <div className="text-2xl font-bold">
-              {stats.upcomingRevenue.toLocaleString(formatLocale)} <span className="text-sm font-normal text-muted-foreground">{tc('kr')}</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Main 2x2 Grid */}
+      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 items-stretch">
 
         {/* Upcoming Gigs */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-5">
-            <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('upcoming')}</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent className="pb-4 px-5">
-            <div className="text-2xl font-bold">
-              {stats.upcomingGigs} <span className="text-sm font-normal text-muted-foreground">{t('gigs')}</span>
+          <CardHeader className="pb-2 pt-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                {t('upcoming')}
+              </CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {upcomingGigs.length} {t('gigs')} · {upcomingDays} {tc('days')}
+              </span>
             </div>
-            <p className="text-sm text-muted-foreground">{stats.upcomingDays} {tc('days')}</p>
-          </CardContent>
-        </Card>
-
-        {/* Total Clients */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-5">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t('clients')}</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="pb-4 px-5">
-            <div className="text-2xl font-bold">{stats.totalClients}</div>
-          </CardContent>
-        </Card>
-
-        {/* Unpaid Invoices */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-5">
-            <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400">{t('unpaid')}</CardTitle>
-            <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          </CardHeader>
-          <CardContent className="pb-4 px-5">
             <div className="text-2xl font-bold">
-              {stats.unpaidInvoices.toLocaleString(formatLocale)} <span className="text-sm font-normal text-muted-foreground">{tc('kr')}</span>
+              {upcomingRevenue.toLocaleString(formatLocale)} <span className="text-sm font-normal text-muted-foreground">{tc('kr')}</span>
             </div>
+          </CardHeader>
+          <CardContent className="pb-4">
+            {loading ? (
+              <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
+                {tc('loading')}
+              </div>
+            ) : upcomingGigs.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">{t('noUpcoming')}</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {upcomingGigs.slice(0, 6).map((gig) => (
+                  <Link
+                    key={gig.id}
+                    href="/gigs"
+                    className="flex items-center justify-between py-2 px-3 rounded-lg text-xs bg-secondary/50 hover:bg-secondary transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="font-mono text-muted-foreground shrink-0">
+                        {format(new Date(gig.date), 'd MMM', { locale: dateLocale })}
+                      </span>
+                      <span className="font-medium truncate">
+                        {gig.project_name || gig.client?.name || gig.gig_type?.name || '—'}
+                      </span>
+                    </div>
+                    {gig.fee && (
+                      <span className="text-muted-foreground shrink-0 ml-2">
+                        {gig.fee.toLocaleString(formatLocale)} {tc('kr')}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+                {upcomingGigs.length > 6 && (
+                  <Link
+                    href="/gigs"
+                    className="block text-center text-xs text-blue-600 dark:text-blue-400 py-1 hover:underline"
+                  >
+                    +{upcomingGigs.length - 6} {tc('more')}
+                  </Link>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
-      </motion.div>
 
-      {/* Revenue Chart */}
-      <motion.div variants={itemVariants}>
-        <RevenueChart />
-      </motion.div>
-
-      {/* Four Column Grid */}
-      <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-stretch">
-        <YearComparison />
-        <UpcomingPayments />
-        <AvailableWeeks />
-
-        {/* Pending Gigs */}
+        {/* Needs Response */}
         <Card>
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
@@ -276,11 +250,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="pb-4">
             {loading ? (
-              <div className="h-[100px] flex items-center justify-center text-muted-foreground text-sm">
+              <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
                 {tc('loading')}
               </div>
             ) : pendingGigs.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
+              <div className="text-center py-6 text-muted-foreground">
                 <Clock className="h-6 w-6 mx-auto mb-1 opacity-50" />
                 <p className="text-xs">{t('noPendingRequests')}</p>
               </div>
@@ -321,11 +295,12 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-      </motion.div>
 
-      {/* Top Clients */}
-      <motion.div variants={itemVariants}>
-        <TopClients />
+        {/* Unpaid Invoices */}
+        <UpcomingPayments />
+
+        {/* Availability */}
+        <AvailableWeeks />
       </motion.div>
 
       {/* Quick Action Dialogs */}
