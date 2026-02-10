@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
+// Service role client for storage signed URLs
+const serviceSupabase = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
@@ -9,7 +11,6 @@ const supabase = createClient(
 // Extrahera filsökväg från public URL
 function extractFilePath(attachmentUrl: string): string | null {
   try {
-    // URL format: https://{project}.supabase.co/storage/v1/object/public/expenses/invoices/2025/file.pdf
     const url = new URL(attachmentUrl)
     const pathParts = url.pathname.split('/storage/v1/object/public/expenses/')
     if (pathParts.length > 1) {
@@ -27,13 +28,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
 
-    // Hämta faktura för att få original_pdf_url
+    // Hämta faktura - verifiera ägarskap
     const { data: invoice, error: fetchError } = await supabase
       .from('invoices')
       .select('original_pdf_url')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !invoice) {
@@ -58,8 +66,8 @@ export async function GET(
       )
     }
 
-    // Skapa signerad URL (giltig i 1 timme)
-    const { data: signedData, error: signError } = await supabase.storage
+    // Skapa signerad URL (giltig i 1 timme) - needs service role for storage
+    const { data: signedData, error: signError } = await serviceSupabase.storage
       .from('expenses')
       .createSignedUrl(filePath, 3600)
 

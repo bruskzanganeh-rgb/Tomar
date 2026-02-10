@@ -541,13 +541,7 @@ export default function ImportPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8 max-w-5xl">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">{t('importDocuments')}</h1>
-        <p className="text-muted-foreground text-lg">
-          {t('importDocumentsDescription')}
-        </p>
-      </div>
+      {/* Progress stepper header */}
 
       {/* Progress stepper - modern */}
       <div className="flex items-center justify-center gap-4 py-4">

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 function getSupabaseClient() {
   return createClient(
@@ -26,11 +26,23 @@ function escapeICSText(text: string): string {
     .replace(/\n/g, '\\n')
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
 
-    // Fetch all gigs that are not declined or cancelled
+    // Require user parameter for data isolation
+    const userId = request.nextUrl.searchParams.get('user')
+    if (!userId) {
+      return NextResponse.json({ error: 'User parameter required' }, { status: 400 })
+    }
+
+    // Verify user exists
+    const { data: userExists } = await supabase.auth.admin.getUserById(userId)
+    if (!userExists?.user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Fetch gigs filtered by user
     const { data: gigs, error } = await supabase
       .from('gigs')
       .select(`
@@ -46,6 +58,7 @@ export async function GET() {
         client:clients(name),
         gig_type:gig_types(name)
       `)
+      .eq('user_id', userId)
       .not('status', 'in', '(declined,cancelled)')
       .order('date', { ascending: true })
 
@@ -57,16 +70,13 @@ export async function GET() {
     // Build ICS calendar
     const events = (gigs || []).map((gig: any) => {
       const startDate = new Date(gig.date)
-      // Default event duration: 3 hours
       const endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000)
 
-      // Build summary
       const clientName = gig.client?.name || 'Okänd kund'
       const summary = gig.project_name
         ? `${gig.project_name} (${clientName})`
         : `${gig.gig_type?.name || 'Gig'} (${clientName})`
 
-      // Build description
       const descParts: string[] = []
       descParts.push(`Kund: ${clientName}`)
       descParts.push(`Typ: ${gig.gig_type?.name || '-'}`)
@@ -77,7 +87,7 @@ export async function GET() {
       const location = gig.venue ? escapeICSText(gig.venue) : ''
 
       return `BEGIN:VEVENT
-UID:${gig.id}@babalisk.manager
+UID:${gig.id}@tomar.babalisk.com
 DTSTAMP:${formatDateForICS(new Date())}
 DTSTART:${formatDateForICS(startDate)}
 DTEND:${formatDateForICS(endDate)}
@@ -90,8 +100,8 @@ END:VEVENT`
 
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Babalisk Manager//SE
-X-WR-CALNAME:Babalisk Gigs
+PRODID:-//Tomar//SE
+X-WR-CALNAME:Tomar Gigs
 X-WR-TIMEZONE:Europe/Stockholm
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
@@ -101,7 +111,7 @@ END:VCALENDAR`
     return new NextResponse(icsContent, {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': 'inline; filename="babalisk-gigs.ics"',
+        'Content-Disposition': 'inline; filename="tomar-gigs.ics"',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     })

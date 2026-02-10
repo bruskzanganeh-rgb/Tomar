@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { verifyAdmin } from '@/lib/admin'
 import { getUsageTypeLabel } from '@/lib/ai/usage-logger'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 type UsageBreakdown = {
   [key: string]: {
@@ -33,6 +28,10 @@ type RecentCall = {
 
 export async function GET(request: NextRequest) {
   try {
+    // Admin only
+    const auth = await verifyAdmin()
+    if (auth instanceof NextResponse) return auth
+
     const searchParams = request.nextUrl.searchParams
     const period = searchParams.get('period') || '30d'
 
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
         break
       case 'all':
-        startDate = new Date('2020-01-01') // Långt tillbaka
+        startDate = new Date('2020-01-01')
         break
       default:
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -56,8 +55,8 @@ export async function GET(request: NextRequest) {
 
     const startDateStr = startDate.toISOString()
 
-    // Hämta alla loggar för perioden
-    const { data: logs, error } = await supabase
+    // Hämta ALLA loggar (admin ser allt)
+    const { data: logs, error } = await auth.supabase
       .from('ai_usage_logs')
       .select('*')
       .gte('created_at', startDateStr)
@@ -81,7 +80,6 @@ export async function GET(request: NextRequest) {
       totalCalls++
       totalCostUsd += parseFloat(log.estimated_cost_usd) || 0
 
-      // Uppdelning per typ
       const type = log.usage_type
       if (!breakdown[type]) {
         breakdown[type] = {
@@ -93,7 +91,6 @@ export async function GET(request: NextRequest) {
       breakdown[type].calls++
       breakdown[type].cost += parseFloat(log.estimated_cost_usd) || 0
 
-      // Daglig totalsumma
       const dateStr = new Date(log.created_at).toISOString().split('T')[0]
       const existing = dailyMap.get(dateStr) || { cost: 0, calls: 0 }
       dailyMap.set(dateStr, {
@@ -102,12 +99,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Konvertera daglig map till array och sortera
     const dailyTotals: DailyTotal[] = Array.from(dailyMap.entries())
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date))
 
-    // Senaste 10 anrop
     const recentCalls: RecentCall[] = (logs || [])
       .slice(0, 10)
       .map((log) => ({
@@ -123,7 +118,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       period,
       totalCalls,
-      totalCostUsd: Math.round(totalCostUsd * 1000000) / 1000000, // 6 decimaler
+      totalCostUsd: Math.round(totalCostUsd * 1000000) / 1000000,
       breakdown,
       dailyTotals,
       recentCalls,

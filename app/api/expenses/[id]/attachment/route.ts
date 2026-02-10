@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
+// Service role client for storage operations
+const serviceSupabase = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
@@ -9,7 +11,6 @@ const supabase = createClient(
 // Extrahera filsökväg från public URL
 function extractFilePath(attachmentUrl: string): string | null {
   try {
-    // URL format: https://{project}.supabase.co/storage/v1/object/public/expenses/receipts/2025/file.jpg
     const url = new URL(attachmentUrl)
     const pathParts = url.pathname.split('/storage/v1/object/public/expenses/')
     if (pathParts.length > 1) {
@@ -27,13 +28,20 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
 
-    // Hämta expense för att få attachment_url
+    // Hämta expense - verifiera ägarskap
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
       .select('attachment_url')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !expense) {
@@ -58,8 +66,8 @@ export async function GET(
       )
     }
 
-    // Skapa signerad URL (giltig i 1 timme)
-    const { data: signedData, error: signError } = await supabase.storage
+    // Skapa signerad URL - needs service role for storage
+    const { data: signedData, error: signError } = await serviceSupabase.storage
       .from('expenses')
       .createSignedUrl(filePath, 3600)
 
@@ -90,6 +98,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -101,11 +115,12 @@ export async function POST(
       )
     }
 
-    // Hämta befintlig expense
+    // Hämta befintlig expense - verifiera ägarskap
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
       .select('attachment_url, date')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !expense) {
@@ -119,7 +134,7 @@ export async function POST(
     if (expense.attachment_url) {
       const oldPath = extractFilePath(expense.attachment_url)
       if (oldPath) {
-        await supabase.storage.from('expenses').remove([oldPath])
+        await serviceSupabase.storage.from('expenses').remove([oldPath])
       }
     }
 
@@ -132,7 +147,7 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await serviceSupabase.storage
       .from('expenses')
       .upload(filePath, buffer, {
         contentType: file.type,
@@ -147,8 +162,8 @@ export async function POST(
       )
     }
 
-    // Hämta public URL (för att spara i DB - extraheras senare för signering)
-    const { data: urlData } = supabase.storage
+    // Hämta public URL
+    const { data: urlData } = serviceSupabase.storage
       .from('expenses')
       .getPublicUrl(filePath)
 
@@ -157,6 +172,7 @@ export async function POST(
       .from('expenses')
       .update({ attachment_url: urlData.publicUrl })
       .eq('id', id)
+      .eq('user_id', user.id)
 
     if (updateError) {
       console.error('Update error:', updateError)
@@ -167,7 +183,7 @@ export async function POST(
     }
 
     // Returnera signerad URL för visning
-    const { data: signedData } = await supabase.storage
+    const { data: signedData } = await serviceSupabase.storage
       .from('expenses')
       .createSignedUrl(filePath, 3600)
 
@@ -190,13 +206,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
 
-    // Hämta expense för att få attachment_url
+    // Hämta expense - verifiera ägarskap
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
       .select('attachment_url')
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !expense) {
@@ -216,13 +239,12 @@ export async function DELETE(
     // Ta bort fil från storage
     const filePath = extractFilePath(expense.attachment_url)
     if (filePath) {
-      const { error: removeError } = await supabase.storage
+      const { error: removeError } = await serviceSupabase.storage
         .from('expenses')
         .remove([filePath])
 
       if (removeError) {
         console.error('Remove error:', removeError)
-        // Fortsätt ändå - uppdatera DB
       }
     }
 
@@ -231,6 +253,7 @@ export async function DELETE(
       .from('expenses')
       .update({ attachment_url: null })
       .eq('id', id)
+      .eq('user_id', user.id)
 
     if (updateError) {
       console.error('Update error:', updateError)

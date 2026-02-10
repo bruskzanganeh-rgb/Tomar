@@ -1,4 +1,4 @@
-# Babalisk Manager - Claude Instructions
+# Tomar - Claude Instructions
 
 ## Database Connection
 
@@ -35,7 +35,7 @@ PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "postgresql://$SUPABASE_DB_USER@$SUPABAS
 
 ## Projekt
 
-Babalisk Manager är en app för att hantera gigs/uppdrag för frilansmusiker.
+Tomar är en app för att hantera gigs/uppdrag för frilansmusiker. Domän: tomar.babalisk.com
 
 ### Viktiga tabeller
 - `gigs` - uppdrag med datum, arvode, status

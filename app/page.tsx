@@ -50,7 +50,7 @@ type RecentGig = {
   response_deadline: string | null
 }
 
-function getDeadlineInfo(deadline: string | null, dateLocale: import('date-fns').Locale): { label: string; urgent: boolean } | null {
+function getDeadlineInfo(deadline: string | null, dateLocale: import('date-fns').Locale): { label: string; urgent: boolean; isKey: boolean } | null {
   if (!deadline) return null
 
   const today = new Date()
@@ -61,13 +61,13 @@ function getDeadlineInfo(deadline: string | null, dateLocale: import('date-fns')
   const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
   if (diffDays < 0) {
-    return { label: 'Försenad!', urgent: true }
+    return { label: 'overdue', urgent: true, isKey: true }
   } else if (diffDays === 0) {
-    return { label: 'Idag!', urgent: true }
+    return { label: 'today', urgent: true, isKey: true }
   } else if (diffDays <= 2) {
-    return { label: `${diffDays}d`, urgent: true }
+    return { label: `${diffDays}d`, urgent: true, isKey: false }
   } else {
-    return { label: format(deadlineDate, 'd/M', { locale: dateLocale }), urgent: false }
+    return { label: format(deadlineDate, 'd/M', { locale: dateLocale }), urgent: false, isKey: false }
   }
 }
 
@@ -161,12 +161,6 @@ export default function DashboardPage() {
       animate="visible"
       className="space-y-4"
     >
-      {/* Header */}
-      <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <p className="text-muted-foreground text-sm">{t('subtitle')}</p>
-      </motion.div>
-
       {/* Stats Grid */}
       <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Upcoming Revenue */}
@@ -240,7 +234,7 @@ export default function DashboardPage() {
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {t('needsResponse')}
               </CardTitle>
-              <span className="text-xs text-muted-foreground">{pendingGigs.length} {tc('items')}</span>
+              <span className="text-xs text-muted-foreground">{t('pendingCount', { count: pendingGigs.length })}</span>
             </div>
           </CardHeader>
           <CardContent className="pb-4">
@@ -270,7 +264,7 @@ export default function DashboardPage() {
                         </span>
                         {deadlineInfo && (
                           <span className={`text-[10px] ${deadlineInfo.urgent ? 'text-red-400' : 'text-muted-foreground'}`}>
-                            {tGig('response')}: {deadlineInfo.label}
+                            {tGig('response')}: {deadlineInfo.isKey ? t(deadlineInfo.label) : deadlineInfo.label}
                           </span>
                         )}
                       </div>

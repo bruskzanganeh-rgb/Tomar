@@ -45,12 +45,36 @@ export function ConfigTab({ configValues, setConfigValues, savingConfig, onSave 
         <div className="space-y-2 pt-4 border-t">
           <Label>{t('brandingName')}</Label>
           <Input
-            value={configValues['branding_name'] || 'Babalisk Manager'}
+            value={configValues['branding_name'] || 'Tomar'}
             onChange={e => setConfigValues(prev => ({ ...prev, branding_name: e.target.value }))}
-            placeholder="Babalisk Manager"
+            placeholder="Tomar"
           />
           <p className="text-xs text-muted-foreground">{t('brandingNameHint')}</p>
         </div>
+
+        {/* Resend E-post */}
+        <div className="space-y-4 pt-4 border-t">
+          <h3 className="text-sm font-semibold">{t('resendEmail')}</h3>
+          <div className="space-y-2">
+            <Label>{t('resendApiKey')}</Label>
+            <Input
+              type="password"
+              value={configValues['resend_api_key'] || ''}
+              onChange={e => setConfigValues(prev => ({ ...prev, resend_api_key: e.target.value }))}
+              placeholder="re_..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('resendFromEmail')}</Label>
+            <Input
+              type="email"
+              value={configValues['resend_from_email'] || ''}
+              onChange={e => setConfigValues(prev => ({ ...prev, resend_from_email: e.target.value }))}
+              placeholder="faktura@example.com"
+            />
+          </div>
+        </div>
+
         <Button onClick={onSave} disabled={savingConfig}>
           {savingConfig && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {tc('save')}

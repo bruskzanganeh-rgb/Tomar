@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Mail, Receipt, FileText, ExternalLink, FileCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSubscription } from '@/lib/hooks/use-subscription'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -61,6 +63,7 @@ export function SendInvoiceDialog({
 }: SendInvoiceDialogProps) {
   const t = useTranslations('invoice')
   const tc = useTranslations('common')
+  const { isPro } = useSubscription()
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
@@ -427,23 +430,33 @@ export function SendInvoiceDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
-            {tc('cancel')}
-          </Button>
-          <Button onClick={handleSend} disabled={sending || !email}>
-            {sending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('sending')}
-              </>
-            ) : (
-              <>
-                <Mail className="mr-2 h-4 w-4" />
-                {t('sendInvoice')}
-              </>
-            )}
-          </Button>
+        <DialogFooter className="flex-col items-stretch gap-2 sm:flex-col">
+          {!isPro && (
+            <div className="text-sm text-muted-foreground text-center space-y-1">
+              <p>{t('emailRequiresPro')}</p>
+              <Link href="/settings" className="text-xs text-blue-600 hover:underline">
+                Uppgradera till Pro
+              </Link>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
+              {tc('cancel')}
+            </Button>
+            <Button onClick={handleSend} disabled={sending || !email || !isPro}>
+              {sending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('sending')}
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  {t('sendInvoice')}
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

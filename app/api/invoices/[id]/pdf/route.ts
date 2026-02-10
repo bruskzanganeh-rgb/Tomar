@@ -11,7 +11,13 @@ export async function GET(
     const { id } = await params
     const supabase = await createClient()
 
-    // Fetch invoice with client
+    // Authenticate user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Fetch invoice with client - verify ownership
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .select(`
@@ -28,6 +34,7 @@ export async function GET(
         client:clients(name, org_number, address, payment_terms, reference_person, invoice_language)
       `)
       .eq('id', id)
+      .eq('user_id', user.id)
       .single()
 
     if (invoiceError || !invoice) {
@@ -37,10 +44,11 @@ export async function GET(
       )
     }
 
-    // Fetch company settings
+    // Fetch company settings - scoped to user
     const { data: company, error: companyError } = await supabase
       .from('company_settings')
       .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
+      .eq('user_id', user.id)
       .single()
 
     if (companyError || !company) {
@@ -68,50 +76,47 @@ export async function GET(
     }
 
     // Check subscription for branding
-    const { data: { user } } = await supabase.auth.getUser()
     let showBranding = true
     let sponsor = null
 
-    if (user) {
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('plan, status')
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('plan, status')
+      .eq('user_id', user.id)
+      .single()
+
+    const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+    showBranding = !isPro
+
+    // Find sponsor if free user
+    if (!isPro) {
+      const { data: userInstruments } = await supabase
+        .from('user_instruments')
+        .select('instrument_id, instrument:instruments(category_id)')
         .eq('user_id', user.id)
-        .single()
 
-      const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
-      showBranding = !isPro
+      const categoryIds = (userInstruments || [])
+        .map((ui: any) => ui.instrument?.category_id)
+        .filter(Boolean)
 
-      // Find sponsor if free user
-      if (!isPro) {
-        const { data: userInstruments } = await supabase
-          .from('user_instruments')
-          .select('instrument_id, instrument:instruments(category_id)')
-          .eq('user_id', user.id)
+      if (categoryIds.length > 0) {
+        const { data: sponsors } = await supabase
+          .from('sponsors')
+          .select('id, name, logo_url, tagline')
+          .in('instrument_category_id', categoryIds)
+          .eq('active', true)
+          .order('priority', { ascending: false })
+          .limit(1)
 
-        const categoryIds = (userInstruments || [])
-          .map((ui: any) => ui.instrument?.category_id)
-          .filter(Boolean)
+        if (sponsors && sponsors.length > 0) {
+          sponsor = sponsors[0]
 
-        if (categoryIds.length > 0) {
-          const { data: sponsors } = await supabase
-            .from('sponsors')
-            .select('id, name, logo_url, tagline')
-            .in('instrument_category_id', categoryIds)
-            .eq('active', true)
-            .order('priority', { ascending: false })
-            .limit(1)
-
-          if (sponsors && sponsors.length > 0) {
-            sponsor = sponsors[0]
-
-            // Track impression
-            await supabase.from('sponsor_impressions').insert({
-              sponsor_id: sponsor.id,
-              user_id: user.id,
-              invoice_id: id,
-            })
-          }
+          // Track impression
+          await supabase.from('sponsor_impressions').insert({
+            sponsor_id: sponsor.id,
+            user_id: user.id,
+            invoice_id: id,
+          })
         }
       }
     }
@@ -142,19 +147,17 @@ export async function GET(
       showBranding,
       sponsor,
       locale: clientData.invoice_language || 'sv',
-      brandingName: brandingConfig?.value || 'Babalisk Manager',
+      brandingName: brandingConfig?.value || 'Tomar',
     })
 
     // Log activity
-    if (user) {
-      await logActivity({
-        userId: user.id,
-        eventType: 'invoice_downloaded',
-        entityType: 'invoice',
-        entityId: id,
-        metadata: { invoice_number: invoice.invoice_number },
-      })
-    }
+    await logActivity({
+      userId: user.id,
+      eventType: 'invoice_downloaded',
+      entityType: 'invoice',
+      entityId: id,
+      metadata: { invoice_number: invoice.invoice_number },
+    })
 
     // Return PDF
     return new NextResponse(new Uint8Array(pdfBuffer), {

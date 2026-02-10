@@ -149,6 +149,15 @@
   }
 }
 
+/* ===== Header Nav ===== */
+.header-nav-link {
+  transition: color 0.15s, background-color 0.15s;
+}
+.header-nav-link:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* ===== Utility Classes ===== */
 @layer utilities {
   .hover-lift {

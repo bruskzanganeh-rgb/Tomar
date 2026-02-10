@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { findDuplicateExpense, type DuplicateExpense } from '@/lib/expenses/duplicate-checker'
 
-// Supabase client med service role för server-side
-const supabase = createClient(
+// Service role client for storage uploads
+const serviceSupabase = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export async function POST(request: NextRequest) {
   try {
+    // Get authenticated user
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const formData = await request.formData()
 
     // Hämta fält
@@ -34,11 +42,12 @@ export async function POST(request: NextRequest) {
 
     // Dublettkontroll med fuzzy matching (om inte forceSave)
     if (!forceSave) {
-      // Hämta alla utgifter för samma datum
+      // Hämta alla utgifter för samma datum (scoped to user)
       const { data: existingExpenses } = await supabase
         .from('expenses')
         .select('id, date, supplier, amount, category')
         .eq('date', date)
+        .eq('user_id', user.id)
 
       if (existingExpenses && existingExpenses.length > 0) {
         const duplicateResult = findDuplicateExpense(
@@ -69,7 +78,7 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await serviceSupabase.storage
         .from('expenses')
         .upload(filePath, buffer, {
           contentType: file.type,
@@ -81,7 +90,7 @@ export async function POST(request: NextRequest) {
         // Fortsätt ändå - spara utgiften utan bilaga
       } else {
         // Hämta public URL
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = serviceSupabase.storage
           .from('expenses')
           .getPublicUrl(filePath)
 
@@ -103,6 +112,7 @@ export async function POST(request: NextRequest) {
         attachment_url: attachmentUrl,
         dropbox_synced: false,
         gig_id: gigId,
+        user_id: user.id,
       })
       .select()
       .single()

@@ -16,7 +16,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 async function setupDatabase() {
-  console.log('🚀 Setting up Babalisk Manager database...\n')
+  console.log('🚀 Setting up Tomar database...\n')
 
   // Read SQL schema
   const schemaPath = path.join(__dirname, '..', 'supabase', 'schema.sql')
@@ -88,7 +88,7 @@ async function setupDatabase() {
   console.log('\n📝 You can now:')
   console.log('  1. Run: npm run dev')
   console.log('  2. Open: http://localhost:3000')
-  console.log('  3. Start using Babalisk Manager!\n')
+  console.log('  3. Start using Tomar!\n')
 }
 
 setupDatabase().catch(err => {

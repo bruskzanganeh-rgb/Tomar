@@ -17,7 +17,12 @@ export async function POST() {
     .single()
 
   if (!subscription?.stripe_subscription_id) {
-    return NextResponse.json({ error: 'No active subscription' }, { status: 400 })
+    // Admin-set Pro (no Stripe subscription) — downgrade directly
+    await supabase
+      .from('subscriptions')
+      .update({ plan: 'free', status: 'active', cancel_at_period_end: false })
+      .eq('user_id', user.id)
+    return NextResponse.json({ success: true })
   }
 
   await stripe.subscriptions.update(subscription.stripe_subscription_id, {

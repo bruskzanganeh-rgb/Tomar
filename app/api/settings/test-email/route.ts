@@ -1,28 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+
+// Service role client for platform config
+const serviceSupabase = createServiceClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const {
-      smtp_host,
-      smtp_port,
-      smtp_user,
-      smtp_password,
-      smtp_from_email,
-      smtp_from_name,
-      to_email,
-    } = body
+    // Authenticate user
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // Validera input
-    if (!smtp_host || !smtp_from_email || !to_email) {
+    const body = await request.json()
+    const { provider, to_email, smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name } = body
+
+    if (!to_email) {
+      return NextResponse.json({ error: 'Recipient email required' }, { status: 400 })
+    }
+
+    if (provider === 'platform') {
+      // Test via Resend - use service role for platform config
+      const { data: configRows } = await serviceSupabase
+        .from('platform_config')
+        .select('key, value')
+        .in('key', ['resend_api_key', 'resend_from_email'])
+
+      const config = Object.fromEntries((configRows || []).map(r => [r.key, r.value]))
+
+      if (!config.resend_api_key) {
+        return NextResponse.json({ error: 'Platform email is not configured. Contact admin.' }, { status: 400 })
+      }
+
+      const resend = new Resend(config.resend_api_key)
+      const fromEmail = config.resend_from_email || 'noreply@babalisk.com'
+
+      await resend.emails.send({
+        from: `Tomar <${fromEmail}>`,
+        to: [to_email],
+        subject: 'Test av e-postinställningar',
+        text: 'Detta är ett testmail från Tomar.',
+        html: `
+          <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #111827;">E-posttest lyckades!</h2>
+            <p style="color: #6b7280;">
+              Detta mail bekräftar att plattformens e-post fungerar korrekt.
+            </p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+            <p style="color: #9ca3af; font-size: 12px;">Skickat från Tomar</p>
+          </div>
+        `,
+      })
+
+      return NextResponse.json({ success: true, message: 'Test email sent!' })
+    }
+
+    // Test via SMTP
+    if (!smtp_host || !smtp_from_email) {
       return NextResponse.json(
-        { error: 'SMTP host, sender email and recipient required' },
+        { error: 'SMTP host and sender email required' },
         { status: 400 }
       )
     }
 
-    // Skapa transporter
     const transporter = nodemailer.createTransport({
       host: smtp_host,
       port: smtp_port || 587,
@@ -33,10 +80,8 @@ export async function POST(request: NextRequest) {
       } : undefined,
     })
 
-    // Verifiera anslutning
     await transporter.verify()
 
-    // Skicka testmail
     const fromAddress = smtp_from_name
       ? `"${smtp_from_name}" <${smtp_from_email}>`
       : smtp_from_email
@@ -45,32 +90,26 @@ export async function POST(request: NextRequest) {
       from: fromAddress,
       to: to_email,
       subject: 'Test av SMTP-inställningar',
-      text: 'Detta är ett testmail från Babalisk Manager för att verifiera att SMTP-inställningarna fungerar korrekt.',
+      text: 'Detta är ett testmail från Tomar för att verifiera att SMTP-inställningarna fungerar korrekt.',
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #111827;">SMTP-test lyckades!</h2>
           <p style="color: #6b7280;">
-            Detta mail bekräftar att dina SMTP-inställningar i Babalisk Manager är korrekt konfigurerade.
+            Detta mail bekräftar att dina SMTP-inställningar i Tomar är korrekt konfigurerade.
           </p>
           <p style="color: #6b7280;">
             Du kan nu skicka fakturor via e-post direkt från systemet.
           </p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-          <p style="color: #9ca3af; font-size: 12px;">
-            Skickat från Babalisk Manager
-          </p>
+          <p style="color: #9ca3af; font-size: 12px;">Skickat från Tomar</p>
         </div>
       `,
     })
 
-    return NextResponse.json({
-      success: true,
-      message: 'Test email sent!',
-    })
+    return NextResponse.json({ success: true, message: 'Test email sent!' })
   } catch (error) {
     console.error('Test email error:', error)
 
-    // Ge mer användbar feedback vid vanliga fel
     let errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
     if (errorMessage.includes('ECONNREFUSED')) {
@@ -83,9 +122,6 @@ export async function POST(request: NextRequest) {
       errorMessage = 'SSL/TLS certificate error. Try another port (587 or 465).'
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

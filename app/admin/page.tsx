@@ -23,6 +23,9 @@ type User = {
   plan: string
   status: string
   stripe_customer_id: string | null
+  stripe_price_id: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
   created_at: string
   company_name: string | null
   org_number: string | null
@@ -57,6 +60,10 @@ type Stats = {
   proUsers: number
   freeUsers: number
   mrr: number
+  arr: number
+  monthlySubscribers: number
+  yearlySubscribers: number
+  adminSetPro: number
   totalImpressions: number
 }
 

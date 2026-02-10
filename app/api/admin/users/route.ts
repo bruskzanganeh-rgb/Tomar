@@ -11,7 +11,7 @@ export async function GET() {
   // Fetch all subscriptions with company info
   const { data: subscriptions } = await supabase
     .from('subscriptions')
-    .select('user_id, plan, status, stripe_customer_id, created_at')
+    .select('user_id, plan, status, stripe_customer_id, stripe_price_id, current_period_end, cancel_at_period_end, created_at')
     .order('created_at', { ascending: false })
 
   // Fetch company settings for all users

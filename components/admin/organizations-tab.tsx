@@ -22,7 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Building2, ChevronDown, ChevronRight, Mail, Phone, MapPin, Trash2, Plus, Loader2 } from 'lucide-react'
+import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -32,6 +32,9 @@ type User = {
   plan: string
   status: string
   stripe_customer_id: string | null
+  stripe_price_id: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
   created_at: string
   company_name: string | null
   org_number: string | null
@@ -217,6 +220,42 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                           <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{u.address}</span>
                         )}
                       </div>
+
+                      {/* Subscription details */}
+                      {u.plan === 'pro' && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <Crown className="h-3 w-3 text-yellow-500" />
+                          <Badge variant="outline" className="text-[10px]">
+                            {u.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID
+                              ? t('monthly') + ' — ' + t('perMonth')
+                              : u.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID
+                                ? t('yearly') + ' — ' + t('perYear')
+                                : t('adminSet')}
+                          </Badge>
+                          {u.current_period_end && (
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {t('renewsAt', { date: new Date(u.current_period_end).toLocaleDateString(formatLocale) })}
+                            </span>
+                          )}
+                          {u.cancel_at_period_end && (
+                            <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
+                              {t('endsAtPeriod')}
+                            </Badge>
+                          )}
+                          {u.status === 'past_due' && (
+                            <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              past_due
+                            </Badge>
+                          )}
+                          {u.status === 'canceled' && (
+                            <Badge variant="outline" className="text-[10px] text-red-600 border-red-300">
+                              canceled
+                            </Badge>
+                          )}
+                        </div>
+                      )}
 
                       {/* Tier change */}
                       <div className="flex items-center gap-3">

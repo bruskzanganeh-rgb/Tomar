@@ -52,7 +52,7 @@ export default function MobileHome() {
     <div className="space-y-6">
       {/* Header */}
       <div className="pt-2">
-        <h1 className="text-2xl font-bold">Babalisk</h1>
+        <h1 className="text-2xl font-bold">Tomar</h1>
         <p className="text-sm text-muted-foreground">
           {format(new Date(), 'EEEE d MMMM', { locale: dateLocale })}
         </p>

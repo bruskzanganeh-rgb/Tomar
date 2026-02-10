@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSubscription } from '@/lib/hooks/use-subscription'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Check, Crown, Loader2 } from 'lucide-react'
+import { AlertTriangle, Check, Crown, Info, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -20,6 +21,15 @@ export function SubscriptionSettings() {
   const [upgrading, setUpgrading] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const searchParams = useSearchParams()
+
+  // Sync subscription from Stripe after successful checkout
+  useEffect(() => {
+    if (searchParams.get('upgrade') === 'success') {
+      fetch('/api/stripe/sync', { method: 'POST' })
+        .then(() => refresh())
+    }
+  }, [searchParams])
 
   async function handleUpgrade(priceId: string) {
     setUpgrading(true)
@@ -152,6 +162,35 @@ export function SubscriptionSettings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment status warnings */}
+      {subscription?.status === 'past_due' && (
+        <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                  {t('pastDueWarning')}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {subscription?.status === 'canceled' && (
+        <Card className="border-muted">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-sm text-muted-foreground">
+                {t('canceledInfo')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upgrade options */}
       <ConfirmDialog

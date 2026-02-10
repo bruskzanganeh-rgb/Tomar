@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createClient } from '@/lib/supabase/server'
 
 type SupplierData = {
   category: string
@@ -16,10 +11,17 @@ type SupplierMapping = Record<string, SupplierData>
 
 export async function GET() {
   try {
-    // Hämta alla utgifter med leverantör, kategori och valuta
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Hämta alla utgifter med leverantör, kategori och valuta (scoped to user)
     const { data: expenses, error } = await supabase
       .from('expenses')
       .select('supplier, category, currency')
+      .eq('user_id', user.id)
       .not('category', 'is', null)
       .not('supplier', 'is', null)
 

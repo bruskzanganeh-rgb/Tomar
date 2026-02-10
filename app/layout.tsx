@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from '@/components/navigation/sidebar'
-import { MobileHeader } from '@/components/navigation/mobile-header'
+import { Header } from '@/components/navigation/header'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 import { NextIntlClientProvider } from 'next-intl'
@@ -21,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Babalisk Manager",
+  title: "Tomar",
   description: "Gig and invoice management for musicians",
 };
 
@@ -44,9 +43,8 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             {user ? (
-              <div className="flex h-screen flex-col md:flex-row overflow-hidden">
-                <MobileHeader />
-                <Sidebar />
+              <div className="flex h-screen flex-col overflow-hidden">
+                <Header />
                 <SessionTracker />
                 <main className="flex-1 overflow-y-auto bg-background">
                   <div className="container mx-auto p-4 md:p-8">

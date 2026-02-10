@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
-// Supabase client med service role för server-side
-const supabase = createClient(
+// Service role client for storage uploads
+const serviceSupabase = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
@@ -89,6 +90,13 @@ function sanitizeStorageFilename(name: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const metadataJson = formData.get('metadata') as string
     const skipDuplicates = formData.get('skipDuplicates') === 'true'
@@ -111,18 +119,20 @@ export async function POST(request: NextRequest) {
 
     console.log(`Starting batch import of ${metadata.length} files...`)
 
-    // Hämta klienter för matching
+    // Hämta klienter för matching (scoped to user)
     const { data: clients } = await supabase
       .from('clients')
       .select('id, name')
+      .eq('user_id', user.id)
 
-    // Hämta befintliga utgifter för dublettkontroll
+    // Hämta befintliga utgifter för dublettkontroll (scoped to user)
     const expenseMetadata = metadata.filter(m => m.type === 'expense')
     const expenseDates = [...new Set(expenseMetadata.map(m => (m.data as ExpenseData).date).filter(Boolean))]
 
     const { data: existingExpenses } = await supabase
       .from('expenses')
       .select('id, date, supplier, amount, category')
+      .eq('user_id', user.id)
       .in('date', expenseDates.length > 0 ? expenseDates : ['1900-01-01'])
 
     const results: ImportResult[] = []
@@ -155,7 +165,7 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await serviceSupabase.storage
           .from('expenses')
           .upload(storagePath, buffer, {
             contentType: file.type,
@@ -167,7 +177,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Hämta public URL
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = serviceSupabase.storage
           .from('expenses')
           .getPublicUrl(storagePath)
 
@@ -206,12 +216,13 @@ export async function POST(request: NextRequest) {
               subtotal: expenseData.subtotal,
               vat_rate: expenseData.vatRate,
               vat_amount: expenseData.vatAmount,
-              amount: expenseData.total, // amount = total inkl moms
+              amount: expenseData.total,
               currency: expenseData.currency || 'SEK',
-              amount_base: expenseData.total, // TODO: Valutakonvertering
+              amount_base: expenseData.total,
               category: expenseData.category || 'Övrigt',
               notes: expenseData.notes || null,
               attachment_url: attachmentUrl,
+              user_id: user.id,
             })
             .select()
             .single()

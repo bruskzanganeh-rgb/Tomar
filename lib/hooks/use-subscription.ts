@@ -39,6 +39,27 @@ export function useSubscription() {
       .select('*')
       .single()
 
+    // Sync with Stripe if user has a Stripe customer ID
+    if (sub?.stripe_customer_id) {
+      try {
+        await fetch('/api/stripe/sync', { method: 'POST' })
+        // Re-fetch after sync to get updated data
+        const { data: refreshed } = await supabase
+          .from('subscriptions')
+          .select('*')
+          .single()
+        if (refreshed) {
+          setSubscription(refreshed)
+        } else {
+          setSubscription(sub)
+        }
+      } catch {
+        setSubscription(sub)
+      }
+    } else {
+      setSubscription(sub)
+    }
+
     const now = new Date()
     const { data: usageData } = await supabase
       .from('usage_tracking')
@@ -47,7 +68,6 @@ export function useSubscription() {
       .eq('month', now.getMonth() + 1)
       .single()
 
-    setSubscription(sub)
     setUsage(usageData || { invoice_count: 0, receipt_scan_count: 0 })
     setLoading(false)
   }

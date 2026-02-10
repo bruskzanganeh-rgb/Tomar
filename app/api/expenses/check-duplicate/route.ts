@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import {
   findDuplicateExpense,
   findDuplicateExpenses,
   type DuplicateExpense,
 } from '@/lib/expenses/duplicate-checker'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
 // POST - Kontrollera om en utgift redan finns (dublett) med fuzzy matching
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { date, supplier, amount } = body
 
@@ -24,11 +25,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hämta alla utgifter för samma datum
+    // Hämta alla utgifter för samma datum (scoped to user)
     const { data: existingExpenses, error } = await supabase
       .from('expenses')
       .select('id, date, supplier, amount, category')
       .eq('date', date)
+      .eq('user_id', user.id)
 
     if (error) {
       console.error('Duplicate check error:', error)
@@ -61,6 +63,12 @@ export async function POST(request: NextRequest) {
 // Batch-kontroll av flera utgifter med fuzzy matching
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { expenses } = body as { expenses: Array<{ date: string; supplier: string; amount: number }> }
 
@@ -71,13 +79,14 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Hämta alla befintliga utgifter för relevanta datum
+    // Hämta alla befintliga utgifter för relevanta datum (scoped to user)
     const uniqueDates = [...new Set(expenses.map(e => e.date))]
 
     const { data: existingExpenses, error } = await supabase
       .from('expenses')
       .select('id, date, supplier, amount, category')
       .in('date', uniqueDates)
+      .eq('user_id', user.id)
 
     if (error) {
       console.error('Batch duplicate check error:', error)

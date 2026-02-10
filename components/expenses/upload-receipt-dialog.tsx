@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
+import { convert, type SupportedCurrency } from '@/lib/currency/exchange'
 import {
   Dialog,
   DialogContent,
@@ -257,13 +258,24 @@ export function UploadReceiptDialog({
     if (!forceSave) setDuplicateWarning(null)
 
     try {
+      // Convert to SEK if needed
+      let amountBase = formData.amount
+      if (formData.currency !== 'SEK' && formData.date) {
+        try {
+          const { converted } = await convert(formData.amount, formData.currency as SupportedCurrency, 'SEK', formData.date)
+          amountBase = converted
+        } catch {
+          // Fallback: use original amount if conversion fails
+        }
+      }
+
       const formDataToSend = new FormData()
       formDataToSend.append('file', file)
       formDataToSend.append('date', formData.date || '')
       formDataToSend.append('supplier', formData.supplier)
       formDataToSend.append('amount', formData.amount.toString())
       formDataToSend.append('currency', formData.currency)
-      formDataToSend.append('amount_base', formData.amount.toString()) // TODO: Valutakonvertering
+      formDataToSend.append('amount_base', amountBase.toString())
       formDataToSend.append('category', formData.category)
       formDataToSend.append('notes', formData.notes || '')
       if (selectedGigId && selectedGigId !== 'none') {

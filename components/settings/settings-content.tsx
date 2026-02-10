@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Cpu, Mail, Send, Crown, Globe } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Mail, Send, Crown, Globe } from 'lucide-react'
 import { SubscriptionSettings } from '@/components/settings/subscription-settings'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -19,6 +21,8 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
+import { useSubscription } from '@/lib/hooks/use-subscription'
+import Link from 'next/link'
 
 type CompanySettings = {
   id: string
@@ -41,20 +45,7 @@ type CompanySettings = {
   smtp_from_name: string | null
   base_currency: string
   locale: string
-}
-
-type AiUsageData = {
-  period: string
-  totalCalls: number
-  totalCostUsd: number
-  breakdown: {
-    [key: string]: {
-      calls: number
-      cost: number
-      label: string
-    }
-  }
-  dailyTotals: Array<{ date: string; cost: number; calls: number }>
+  email_provider: string | null
 }
 
 export default function SettingsPage() {
@@ -67,16 +58,27 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [calendarCopied, setCalendarCopied] = useState(false)
-  const [aiUsage, setAiUsage] = useState<AiUsageData | null>(null)
-  const [aiUsagePeriod, setAiUsagePeriod] = useState('30d')
-  const [aiUsageLoading, setAiUsageLoading] = useState(false)
   const [testingEmail, setTestingEmail] = useState(false)
+  const [emailProvider, setEmailProvider] = useState<string>('platform')
+  const [userId, setUserId] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+  const { isPro } = useSubscription()
+  const searchParams = useSearchParams()
 
-  // Generate calendar URL
-  const calendarUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/api/calendar/feed`
+  // Default to subscription tab if coming from Stripe checkout
+  const defaultTab = searchParams.get('upgrade') ? 'subscription' : 'company'
+
+  // Get user ID for calendar URL
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
+
+  // Generate calendar URL with user parameter
+  const calendarUrl = typeof window !== 'undefined' && userId
+    ? `${window.location.origin}/api/calendar/feed?user=${userId}`
     : ''
   const webcalUrl = calendarUrl.replace('http://', 'webcal://').replace('https://', 'webcal://')
 
@@ -94,24 +96,6 @@ export default function SettingsPage() {
     loadSettings()
   }, [])
 
-  useEffect(() => {
-    loadAiUsage()
-  }, [aiUsagePeriod])
-
-  async function loadAiUsage() {
-    setAiUsageLoading(true)
-    try {
-      const response = await fetch(`/api/settings/ai-usage?period=${aiUsagePeriod}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAiUsage(data)
-      }
-    } catch (error) {
-      console.error('Failed to load AI usage:', error)
-    }
-    setAiUsageLoading(false)
-  }
-
   async function loadSettings() {
     setLoading(true)
     const { data, error } = await supabase
@@ -124,6 +108,7 @@ export default function SettingsPage() {
     } else {
       setSettings(data)
       setLogoPreview(data?.logo_url || null)
+      setEmailProvider(data?.email_provider || 'platform')
     }
     setLoading(false)
   }
@@ -154,6 +139,7 @@ export default function SettingsPage() {
         smtp_from_name: settings.smtp_from_name,
         base_currency: settings.base_currency,
         locale: settings.locale,
+        email_provider: emailProvider,
       })
       .eq('id', settings.id)
 
@@ -168,30 +154,38 @@ export default function SettingsPage() {
   }
 
   async function handleTestEmail() {
-    if (!settings?.smtp_host || !settings?.smtp_from_email) {
+    if (emailProvider === 'smtp' && (!settings?.smtp_host || !settings?.smtp_from_email)) {
       toast.error(t('fillSmtpFirst'))
       return
     }
 
     setTestingEmail(true)
     try {
+      const body = emailProvider === 'platform'
+        ? {
+            provider: 'platform',
+            to_email: settings?.email,
+          }
+        : {
+            provider: 'smtp',
+            smtp_host: settings?.smtp_host,
+            smtp_port: settings?.smtp_port || 587,
+            smtp_user: settings?.smtp_user,
+            smtp_password: settings?.smtp_password,
+            smtp_from_email: settings?.smtp_from_email,
+            smtp_from_name: settings?.smtp_from_name || settings?.company_name,
+            to_email: settings?.email,
+          }
+
       const response = await fetch('/api/settings/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          smtp_host: settings.smtp_host,
-          smtp_port: settings.smtp_port || 587,
-          smtp_user: settings.smtp_user,
-          smtp_password: settings.smtp_password,
-          smtp_from_email: settings.smtp_from_email,
-          smtp_from_name: settings.smtp_from_name || settings.company_name,
-          to_email: settings.email, // Send to company email
-        }),
+        body: JSON.stringify(body),
       })
 
       const result = await response.json()
       if (response.ok) {
-        toast.success(tToast('testEmailSent', { email: settings.email }))
+        toast.success(tToast('testEmailSent', { email: settings?.email || '' }))
       } else {
         toast.error(tToast('testEmailError', { error: result.error || 'Unknown error' }))
       }
@@ -241,18 +235,29 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <Settings className="h-8 w-8" />
-          {t('title')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('subtitle')}
-        </p>
-      </div>
+    <Tabs defaultValue={defaultTab} className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="company" className="gap-2">
+          <Building2 className="h-4 w-4" />
+          {t('tabCompany')}
+        </TabsTrigger>
+        <TabsTrigger value="email" className="gap-2">
+          <Mail className="h-4 w-4" />
+          {t('tabEmail')}
+        </TabsTrigger>
+        <TabsTrigger value="calendar" className="gap-2">
+          <Calendar className="h-4 w-4" />
+          {t('tabCalendar')}
+        </TabsTrigger>
+        <TabsTrigger value="subscription" className="gap-2">
+          <Crown className="h-4 w-4" />
+          {t('tabSubscription')}
+        </TabsTrigger>
+      </TabsList>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Company Tab */}
+      <TabsContent value="company" className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
         {/* Company Info */}
         <Card>
           <CardHeader>
@@ -544,8 +549,20 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* SMTP E-post */}
-        <Card className="md:col-span-2">
+        </div>
+
+        {/* Save button */}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving} size="lg">
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {tc('saveSettings')}
+          </Button>
+        </div>
+      </TabsContent>
+
+      {/* Email Tab */}
+      <TabsContent value="email" className="space-y-6">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
@@ -556,120 +573,199 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="smtp_host">{t('smtpHost')}</Label>
-                <Input
-                  id="smtp_host"
-                  value={settings?.smtp_host || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, smtp_host: e.target.value } : null)
-                  }
-                  placeholder="smtp.gmail.com"
-                />
+            {!isPro ? (
+              <div className="p-4 rounded-lg bg-muted/50 text-center space-y-2">
+                <Crown className="h-8 w-8 mx-auto text-yellow-500" />
+                <p className="text-sm font-medium">{t('emailRequiresPro')}</p>
+                <Link href="/settings#subscription" className="text-sm text-primary underline">
+                  {t('subscription')}
+                </Link>
               </div>
+            ) : (
+              <>
+                {/* Provider selector */}
+                <div className="space-y-2">
+                  <Label>{t('emailProvider')}</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={emailProvider === 'platform' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setEmailProvider('platform')}
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      {t('platformEmail')}
+                    </Button>
+                    <Button
+                      variant={emailProvider === 'smtp' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setEmailProvider('smtp')}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      {t('ownSmtp')}
+                    </Button>
+                  </div>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="smtp_port">{t('smtpPort')}</Label>
-                <Input
-                  id="smtp_port"
-                  type="number"
-                  value={settings?.smtp_port || 587}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, smtp_port: parseInt(e.target.value) || 587 } : null)
-                  }
-                  placeholder="587"
-                />
-              </div>
-            </div>
+                {emailProvider === 'platform' ? (
+                  <>
+                    <div className="p-4 rounded-lg bg-muted/50 flex items-start gap-3">
+                      <Mail className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                      <p className="text-sm text-muted-foreground">
+                        {t('platformEmailInfo')}
+                      </p>
+                    </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="smtp_user">{t('smtpUser')}</Label>
-                <Input
-                  id="smtp_user"
-                  value={settings?.smtp_user || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, smtp_user: e.target.value } : null)
-                  }
-                  placeholder={t('smtpUserPlaceholder')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="smtp_password">{t('smtpPassword')}</Label>
-                <Input
-                  id="smtp_password"
-                  type="password"
-                  value={settings?.smtp_password || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, smtp_password: e.target.value } : null)
-                  }
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="smtp_from_email">{t('smtpFromEmail')}</Label>
-                <Input
-                  id="smtp_from_email"
-                  type="email"
-                  value={settings?.smtp_from_email || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, smtp_from_email: e.target.value } : null)
-                  }
-                  placeholder={t('smtpFromPlaceholder')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="smtp_from_name">{t('smtpFromName')}</Label>
-                <Input
-                  id="smtp_from_name"
-                  value={settings?.smtp_from_name || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, smtp_from_name: e.target.value } : null)
-                  }
-                  placeholder={t('smtpFromNamePlaceholder')}
-                />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t flex items-center justify-between">
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">{t('testConnection')}</p>
-                <p className="text-xs text-muted-foreground">
-                  {t('testConnectionHint', { email: settings?.email || '' })}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleTestEmail}
-                disabled={testingEmail || !settings?.smtp_host}
-              >
-                {testingEmail ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <div className="pt-4 border-t flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">{t('testConnection')}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('testConnectionHint', { email: settings?.email || '' })}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleTestEmail}
+                        disabled={testingEmail}
+                      >
+                        {testingEmail ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        {t('sendTestEmail')}
+                      </Button>
+                    </div>
+                  </>
                 ) : (
-                  <Send className="h-4 w-4 mr-2" />
-                )}
-                {t('sendTestEmail')}
-              </Button>
-            </div>
+                  <>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_host">{t('smtpHost')}</Label>
+                        <Input
+                          id="smtp_host"
+                          value={settings?.smtp_host || ''}
+                          onChange={(e) =>
+                            setSettings(s => s ? { ...s, smtp_host: e.target.value } : null)
+                          }
+                          placeholder="smtp.gmail.com"
+                        />
+                      </div>
 
-            <div className="p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">
-                <strong>Gmail:</strong> {t('smtpGmail')}<br />
-                <strong>Outlook:</strong> {t('smtpOutlook')}<br />
-                <strong>{t('smtpCustom')}</strong>
-              </p>
-            </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_port">{t('smtpPort')}</Label>
+                        <Input
+                          id="smtp_port"
+                          type="number"
+                          value={settings?.smtp_port || 587}
+                          onChange={(e) =>
+                            setSettings(s => s ? { ...s, smtp_port: parseInt(e.target.value) || 587 } : null)
+                          }
+                          placeholder="587"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_user">{t('smtpUser')}</Label>
+                        <Input
+                          id="smtp_user"
+                          value={settings?.smtp_user || ''}
+                          onChange={(e) =>
+                            setSettings(s => s ? { ...s, smtp_user: e.target.value } : null)
+                          }
+                          placeholder={t('smtpUserPlaceholder')}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_password">{t('smtpPassword')}</Label>
+                        <Input
+                          id="smtp_password"
+                          type="password"
+                          value={settings?.smtp_password || ''}
+                          onChange={(e) =>
+                            setSettings(s => s ? { ...s, smtp_password: e.target.value } : null)
+                          }
+                          placeholder="••••••••"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_from_email">{t('smtpFromEmail')}</Label>
+                        <Input
+                          id="smtp_from_email"
+                          type="email"
+                          value={settings?.smtp_from_email || ''}
+                          onChange={(e) =>
+                            setSettings(s => s ? { ...s, smtp_from_email: e.target.value } : null)
+                          }
+                          placeholder={t('smtpFromPlaceholder')}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="smtp_from_name">{t('smtpFromName')}</Label>
+                        <Input
+                          id="smtp_from_name"
+                          value={settings?.smtp_from_name || ''}
+                          onChange={(e) =>
+                            setSettings(s => s ? { ...s, smtp_from_name: e.target.value } : null)
+                          }
+                          placeholder={t('smtpFromNamePlaceholder')}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-medium">{t('testConnection')}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('testConnectionHint', { email: settings?.email || '' })}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={handleTestEmail}
+                        disabled={testingEmail || !settings?.smtp_host}
+                      >
+                        {testingEmail ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4 mr-2" />
+                        )}
+                        {t('sendTestEmail')}
+                      </Button>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground">
+                        <strong>Gmail:</strong> {t('smtpGmail')}<br />
+                        <strong>Outlook:</strong> {t('smtpOutlook')}<br />
+                        <strong>{t('smtpCustom')}</strong>
+                      </p>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Calendar Sync */}
-        <Card className="md:col-span-2">
+        {/* Save button for email */}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving} size="lg">
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {tc('saveSettings')}
+          </Button>
+        </div>
+      </TabsContent>
+
+      {/* Calendar Tab */}
+      <TabsContent value="calendar">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
@@ -738,135 +834,12 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Subscription */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5" />
-              {t('subscription')}
-            </CardTitle>
-            <CardDescription>
-              {t('subscriptionDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SubscriptionSettings />
-          </CardContent>
-        </Card>
+      </TabsContent>
 
-        {/* AI Usage */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Cpu className="h-5 w-5" />
-                  {t('aiUsage')}
-                </CardTitle>
-                <CardDescription>
-                  {t('aiUsageDesc')}
-                </CardDescription>
-              </div>
-              <Select value={aiUsagePeriod} onValueChange={setAiUsagePeriod}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">{t('last7Days')}</SelectItem>
-                  <SelectItem value="30d">{t('last30Days')}</SelectItem>
-                  <SelectItem value="all">{t('all')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {aiUsageLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : aiUsage ? (
-              <div className="space-y-6">
-                {/* Summary */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">{t('totalCalls')}</p>
-                    <p className="text-2xl font-bold">{aiUsage.totalCalls}</p>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">{t('estimatedCost')}</p>
-                    <p className="text-2xl font-bold">
-                      ${aiUsage.totalCostUsd.toFixed(4)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      ≈ {(aiUsage.totalCostUsd * 10.5).toFixed(2)} kr
-                    </p>
-                  </div>
-                </div>
-
-                {/* Breakdown by type */}
-                {Object.keys(aiUsage.breakdown).length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-sm mb-3">{t('breakdownByType')}</h4>
-                    <div className="space-y-2">
-                      {Object.entries(aiUsage.breakdown)
-                        .sort((a, b) => b[1].cost - a[1].cost)
-                        .map(([type, data]) => (
-                          <div
-                            key={type}
-                            className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full bg-blue-500" />
-                              <span className="text-sm">{data.label}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-medium">
-                                {data.calls} {t('calls')}
-                              </span>
-                              <span className="text-sm text-muted-foreground ml-2">
-                                ${data.cost.toFixed(4)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* No data message */}
-                {aiUsage.totalCalls === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Cpu className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p>{t('noAiUsage')}</p>
-                    <p className="text-xs mt-1">
-                      {t('aiUsageHint')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Pricing info */}
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    {t('aiPricing')}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>{t('failedToLoadAiUsage')}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Save button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {tc('saveSettings')}
-        </Button>
-      </div>
-    </div>
+      {/* Subscription Tab */}
+      <TabsContent value="subscription">
+        <SubscriptionSettings />
+      </TabsContent>
+    </Tabs>
   )
 }

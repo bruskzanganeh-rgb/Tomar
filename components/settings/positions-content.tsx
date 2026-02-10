@@ -156,13 +156,7 @@ export default function PositionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('positions')}</h1>
-          <p className="text-muted-foreground">
-            {tPositions('subtitle')}
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {tPositions('newPosition')}
