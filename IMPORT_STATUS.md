@@ -61,7 +61,7 @@ ADD COLUMN dropbox_connected_at TIMESTAMP WITH TIME ZONE;
 1. Gå till din Dropbox App:
    https://www.dropbox.com/developers/apps
 
-2. Klicka på "Babalisk Manager"
+2. Klicka på "Tomar"
 
 3. Gå till "Permissions" fliken
 

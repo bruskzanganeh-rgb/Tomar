@@ -69,7 +69,7 @@ ADD COLUMN dropbox_connected_at TIMESTAMP WITH TIME ZONE;
 1. Go to https://www.dropbox.com/developers/apps/create
 2. Choose **Scoped access**
 3. Choose **Full Dropbox** access
-4. Name your app (e.g., "Babalisk Manager")
+4. Name your app (e.g., "Tomar")
 5. Click **Create app**
 
 ### Step 2: Configure Dropbox App

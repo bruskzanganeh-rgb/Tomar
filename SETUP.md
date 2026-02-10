@@ -1,6 +1,6 @@
-# Babalisk Manager - Setup Guide
+# Tomar - Setup Guide
 
-Följ dessa steg för att få igång Babalisk Manager.
+Följ dessa steg för att få igång Tomar.
 
 ## Steg 1: Skapa Supabase-projekt
 
@@ -78,7 +78,7 @@ npm run dev
 ## Steg 7: Testa i webbläsaren
 
 1. Öppna [http://localhost:3000](http://localhost:3000)
-2. Du ska se Babalisk Manager dashboard
+2. Du ska se Tomar dashboard
 3. Navigationen till vänster ska fungera
 4. Om allt ser bra ut är du redo att börja använda systemet!
 

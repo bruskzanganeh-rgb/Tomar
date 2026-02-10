@@ -46,8 +46,10 @@ export function AvailableWeeks() {
   }, [selectedYear])
 
   useEffect(() => {
-    if (!loading && currentWeekRef.current && selectedYear === currentYear) {
-      currentWeekRef.current.scrollIntoView({ block: 'center', behavior: 'auto' })
+    if (!loading && currentWeekRef.current && scrollContainerRef.current && selectedYear === currentYear) {
+      const container = scrollContainerRef.current
+      const element = currentWeekRef.current
+      container.scrollTop = element.offsetTop - container.offsetTop - container.clientHeight / 2 + element.clientHeight / 2
     }
   }, [loading, selectedYear])
 
