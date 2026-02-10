@@ -43,10 +43,10 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             {user ? (
-              <div className="flex h-screen flex-col overflow-hidden">
+              <div className="flex min-h-screen flex-col">
                 <Header />
                 <SessionTracker />
-                <main className="flex-1 overflow-y-auto bg-background">
+                <main className="flex-1 bg-background">
                   <div className="container mx-auto p-4 md:p-8">
                     {children}
                   </div>

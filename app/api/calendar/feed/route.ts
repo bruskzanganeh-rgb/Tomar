@@ -8,14 +8,19 @@ function getSupabaseClient() {
   )
 }
 
-function formatDateForICS(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-  return `${year}${month}${day}T${hours}${minutes}${seconds}`
+function formatDateOnly(dateStr: string): string {
+  // Input: "2026-02-17" → Output: "20260217"
+  return dateStr.replace(/-/g, '')
+}
+
+function formatNextDay(dateStr: string): string {
+  // ICS all-day DTEND is exclusive, so add 1 day
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + 1)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}${month}${day}`
 }
 
 function escapeICSText(text: string): string {
@@ -30,33 +35,28 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
 
-    // Require user parameter for data isolation
     const userId = request.nextUrl.searchParams.get('user')
     if (!userId) {
       return NextResponse.json({ error: 'User parameter required' }, { status: 400 })
     }
 
-    // Verify user exists
     const { data: userExists } = await supabase.auth.admin.getUserById(userId)
     if (!userExists?.user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Fetch gigs filtered by user
+    // Fetch gigs with their individual dates
     const { data: gigs, error } = await supabase
       .from('gigs')
       .select(`
         id,
-        date,
-        start_date,
-        end_date,
-        total_days,
         project_name,
         venue,
         fee,
         status,
         client:clients(name),
-        gig_type:gig_types(name)
+        gig_type:gig_types(name),
+        gig_dates(date)
       `)
       .eq('user_id', userId)
       .neq('status', 'declined')
@@ -67,11 +67,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch gigs' }, { status: 500 })
     }
 
-    // Build ICS calendar
-    const events = (gigs || []).map((gig: any) => {
-      const startDate = new Date(gig.date)
-      const endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000)
+    const now = new Date()
+    const dtstamp = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}T${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}Z`
 
+    // Build ICS events — one all-day event per gig_date
+    const events = (gigs || []).flatMap((gig: any) => {
       const clientName = gig.client?.name || 'Okänd kund'
       const summary = gig.project_name
         ? `${gig.project_name} (${clientName})`
@@ -86,16 +86,24 @@ export async function GET(request: NextRequest) {
       const description = escapeICSText(descParts.join('\n'))
       const location = gig.venue ? escapeICSText(gig.venue) : ''
 
-      return `BEGIN:VEVENT
-UID:${gig.id}@tomar.babalisk.com
-DTSTAMP:${formatDateForICS(new Date())}
-DTSTART:${formatDateForICS(startDate)}
-DTEND:${formatDateForICS(endDate)}
+      const dates: { date: string }[] = gig.gig_dates || []
+      if (dates.length === 0) return []
+
+      return dates.map((gd, idx) => {
+        const dateFormatted = formatDateOnly(gd.date)
+        const endFormatted = formatNextDay(gd.date)
+
+        return `BEGIN:VEVENT
+UID:${gig.id}-${idx}@tomar.babalisk.com
+DTSTAMP:${dtstamp}
+DTSTART;VALUE=DATE:${dateFormatted}
+DTEND;VALUE=DATE:${endFormatted}
 SUMMARY:${escapeICSText(summary)}
 LOCATION:${location}
 DESCRIPTION:${description}
 STATUS:${gig.status === 'accepted' ? 'CONFIRMED' : 'TENTATIVE'}
 END:VEVENT`
+      })
     }).join('\n')
 
     const icsContent = `BEGIN:VCALENDAR

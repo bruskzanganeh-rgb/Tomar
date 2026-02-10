@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -22,12 +22,6 @@ export function Header() {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const [mobileOpen, setMobileOpen] = useState(false)
-
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      document.querySelector('main')?.scrollTo(0, 0)
-    })
-  }, [pathname])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b" style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}>
