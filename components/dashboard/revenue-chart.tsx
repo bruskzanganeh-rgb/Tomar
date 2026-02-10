@@ -203,7 +203,7 @@ export function RevenueChart() {
             </button>
           </div>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="h-7 text-xs" style={{ width: 80 }}>
+            <SelectTrigger className="h-7 text-xs" style={{ width: 100 }}>
               <SelectValue placeholder={t('year')} />
             </SelectTrigger>
             <SelectContent>
