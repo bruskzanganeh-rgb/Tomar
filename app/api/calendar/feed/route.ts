@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         gig_type:gig_types(name)
       `)
       .eq('user_id', userId)
-      .not('status', 'in', '(declined,cancelled)')
+      .neq('status', 'declined')
       .order('date', { ascending: true })
 
     if (error) {

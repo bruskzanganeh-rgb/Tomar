@@ -24,7 +24,9 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
-    document.querySelector('main')?.scrollTo(0, 0)
+    requestAnimationFrame(() => {
+      document.querySelector('main')?.scrollTo(0, 0)
+    })
   }, [pathname])
 
   return (
