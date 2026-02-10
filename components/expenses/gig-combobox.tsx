@@ -121,7 +121,7 @@ export function GigCombobox({
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
           <CommandInput placeholder={t('searchGig')} />
-          <CommandList className="max-h-[400px]">
+          <CommandList style={{ maxHeight: 250 }}>
             <CommandEmpty>{t('noGigsFound')}</CommandEmpty>
 
             {/* Inget uppdrag */}
