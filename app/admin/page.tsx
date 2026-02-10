@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Shield, Award, TrendingUp, Settings, Music, Building2, ScrollText, Activity } from 'lucide-react'
+import { Shield, Award, TrendingUp, Settings, Music, Building2, ScrollText, Activity, CreditCard } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -15,8 +15,9 @@ import { ConfigTab } from '@/components/admin/config-tab'
 import { OrganizationsTab } from '@/components/admin/organizations-tab'
 import { AuditTab } from '@/components/admin/audit-tab'
 import { SessionsTab } from '@/components/admin/sessions-tab'
+import { StripeTab } from '@/components/admin/stripe-tab'
 
-type AdminTab = 'organizations' | 'sponsors' | 'categories' | 'stats' | 'audit' | 'sessions' | 'config'
+type AdminTab = 'organizations' | 'sponsors' | 'categories' | 'stats' | 'stripe' | 'audit' | 'sessions' | 'config'
 
 type User = {
   user_id: string
@@ -94,6 +95,7 @@ export default function AdminPage() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [categories, setCategories] = useState<InstrumentCategory[]>([])
+  const [stripeData, setStripeData] = useState<any>(null)
 
   // Config
   const [configValues, setConfigValues] = useState<Record<string, string>>({})
@@ -169,7 +171,12 @@ export default function AdminPage() {
       }
     }
 
-    // Organizations data is now derived from users (company_settings)
+    // Stripe
+    const stripeRes = await fetch('/api/admin/stripe')
+    if (stripeRes.ok) {
+      const stripeJson = await stripeRes.json()
+      setStripeData(stripeJson)
+    }
   }
 
   async function handleSaveConfig() {
@@ -201,6 +208,7 @@ export default function AdminPage() {
     { key: 'sponsors' as const, label: t('sponsors'), icon: Award },
     { key: 'categories' as const, label: t('categories'), icon: Music },
     { key: 'stats' as const, label: t('statistics'), icon: TrendingUp },
+    { key: 'stripe' as const, label: t('stripe'), icon: CreditCard },
     { key: 'audit' as const, label: t('audit'), icon: ScrollText },
     { key: 'sessions' as const, label: t('sessions'), icon: Activity },
     { key: 'config' as const, label: t('config'), icon: Settings },
@@ -259,6 +267,9 @@ export default function AdminPage() {
       )}
       {tab === 'stats' && (
         <StatsTab stats={stats} />
+      )}
+      {tab === 'stripe' && (
+        <StripeTab data={stripeData} />
       )}
       {tab === 'audit' && (
         <AuditTab users={users} />

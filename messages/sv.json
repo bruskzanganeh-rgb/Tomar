@@ -829,7 +829,21 @@
     "renewsAt": "Förnyas: {date}",
     "endsAtPeriod": "Avslutas vid periodens slut",
     "perMonth": "49 kr/mån",
-    "perYear": "499 kr/år"
+    "perYear": "499 kr/år",
+    "stripe": "Stripe",
+    "webhookConfigured": "Webhook-hemlighet konfigurerad",
+    "webhookMissing": "Webhook-hemlighet saknas",
+    "activePro": "Aktiva Pro",
+    "cancelingSubscriptions": "Avvaktar avslut",
+    "pastDueSubscriptions": "Förfallen betalning",
+    "recentEvents": "Senaste händelser",
+    "eventUpgrade": "Uppgraderat till Pro",
+    "eventDowngrade": "Nedgraderat till Free",
+    "eventCancelRequested": "Avbokning begärd",
+    "eventStatusChange": "Status ändrad: {status}",
+    "eventNewSubscription": "Ny prenumeration",
+    "noEvents": "Inga händelser än",
+    "timeAgo": "{time} sedan"
   },
   "client": {
     "clients": "Uppdragsgivare",

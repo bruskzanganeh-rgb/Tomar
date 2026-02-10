@@ -829,7 +829,21 @@
     "renewsAt": "Renews: {date}",
     "endsAtPeriod": "Ends at period end",
     "perMonth": "49 kr/mo",
-    "perYear": "499 kr/yr"
+    "perYear": "499 kr/yr",
+    "stripe": "Stripe",
+    "webhookConfigured": "Webhook secret configured",
+    "webhookMissing": "Webhook secret missing",
+    "activePro": "Active Pro",
+    "cancelingSubscriptions": "Pending cancellation",
+    "pastDueSubscriptions": "Past due",
+    "recentEvents": "Recent events",
+    "eventUpgrade": "Upgraded to Pro",
+    "eventDowngrade": "Downgraded to Free",
+    "eventCancelRequested": "Cancellation requested",
+    "eventStatusChange": "Status changed: {status}",
+    "eventNewSubscription": "New subscription",
+    "noEvents": "No events yet",
+    "timeAgo": "{time} ago"
   },
   "client": {
     "clients": "Clients",
