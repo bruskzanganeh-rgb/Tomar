@@ -338,7 +338,7 @@ export function GigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 gap-0" style={{ maxWidth: 1100 }}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-5xl" style={{ maxWidth: 1100 }}>
         <form onSubmit={handleSubmit}>
           {/* Header — spans full width */}
           <div className="px-8 pt-7 pb-2">

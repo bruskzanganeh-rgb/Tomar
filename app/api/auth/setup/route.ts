@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 // Uses service_role key to bypass RLS — needed because after signUp()
 // there's no session yet (email confirmation required), so auth.uid() is NULL.
 export async function POST(request: Request) {
-  const { user_id, company_name } = await request.json()
+  const { user_id, company_name, invitation_code } = await request.json()
 
   if (!user_id) {
     return NextResponse.json({ error: 'user_id required' }, { status: 400 })
@@ -60,6 +60,14 @@ export async function POST(request: Request) {
 
   // Claim any orphaned data (user_id IS NULL rows from before auth was added)
   await supabase.rpc('claim_orphaned_data', { uid: user_id })
+
+  // Track invitation code usage
+  if (invitation_code) {
+    await supabase.rpc('use_invitation_code', {
+      code_value: invitation_code.trim().toUpperCase(),
+      uid: user_id,
+    })
+  }
 
   return NextResponse.json({ ok: true })
 }

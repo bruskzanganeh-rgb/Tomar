@@ -29,6 +29,7 @@ export type ActivityEventType =
   | 'expenses_exported'
   | 'user_created'
   | 'user_deleted'
+  | 'invoice_reminder_sent'
 
 export type LogActivityParams = {
   userId: string

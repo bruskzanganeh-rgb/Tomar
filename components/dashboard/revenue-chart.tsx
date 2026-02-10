@@ -78,7 +78,8 @@ export function RevenueChart() {
       new Date(gd.date).getFullYear().toString()
     ) || []
 
-    const years = [...new Set([...invoiceYears, ...gigYears])].sort()
+    const currentYearStr = new Date().getFullYear().toString()
+    const years = [...new Set([...invoiceYears, ...gigYears, currentYearStr])].sort()
 
     setAvailableYears(years)
     if (years.length > 0 && !years.includes(selectedYear)) {
@@ -202,7 +203,7 @@ export function RevenueChart() {
             </button>
           </div>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-[70px] h-7 text-xs">
+            <SelectTrigger className="h-7 text-xs" style={{ width: 80 }}>
               <SelectValue placeholder={t('year')} />
             </SelectTrigger>
             <SelectContent>

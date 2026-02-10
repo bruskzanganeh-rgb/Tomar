@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         venue,
         fee,
         status,
+        notes,
         client:clients(name),
         gig_type:gig_types(name),
         gig_dates(date)
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
       descParts.push(`Typ: ${gig.gig_type?.name || '-'}`)
       if (gig.fee) descParts.push(`Arvode: ${gig.fee.toLocaleString('sv-SE')} kr`)
       descParts.push(`Status: ${getStatusLabel(gig.status)}`)
+      if (gig.notes) descParts.push(`\n${gig.notes}`)
 
       const description = escapeICSText(descParts.join('\n'))
       const location = gig.venue ? escapeICSText(gig.venue) : ''

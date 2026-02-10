@@ -592,7 +592,51 @@ export default function GigsPage() {
                   <p className="text-sm">{t('noUpcomingHint')}</p>
                 </div>
               ) : (
-                <div className="relative">
+                <>
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                  {sortedUpcoming.map((gig) => {
+                    const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                    return (
+                      <div key={gig.id} className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
+                            <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
+                            {gig.project_name && <p className="text-xs text-muted-foreground truncate">{gig.project_name}</p>}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
+                            <div className="mt-0.5">
+                              <Badge className={`text-[10px] ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
+                                {tStatus(gig.status)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                            <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {gig.status === 'pending' && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-3.5 w-3.5 text-green-600" /></Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateStatus(gig.id, 'declined')}><X className="h-3.5 w-3.5 text-red-600" /></Button>
+                              </>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="relative hidden md:block">
                 <div ref={upcomingScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
                   <table className="w-full caption-bottom text-sm table-fixed">
                     <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -688,6 +732,7 @@ export default function GigsPage() {
                   </div>
                 )}
                 </div>
+                </>
               )}
             </TabsContent>
 
@@ -696,7 +741,44 @@ export default function GigsPage() {
               {sortedHistory.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">{t('noHistory')}</p>
               ) : (
-                <div className="relative">
+                <>
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                  {sortedHistory.map((gig) => {
+                    const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                    return (
+                      <div key={gig.id} className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
+                            <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
+                            <div className="mt-0.5">
+                              <Badge className={`text-[10px] ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
+                                {tStatus(gig.status)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                            <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="relative hidden md:block">
                 <div ref={historyScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
                   <table className="w-full caption-bottom text-sm table-fixed">
                     <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -771,6 +853,7 @@ export default function GigsPage() {
                   </div>
                 )}
                 </div>
+                </>
               )}
             </TabsContent>
 
@@ -779,7 +862,44 @@ export default function GigsPage() {
               {sortedDeclined.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">{t('noDeclined')}</p>
               ) : (
-                <div className="relative">
+                <>
+                {/* Mobile card view */}
+                <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                  {sortedDeclined.map((gig) => {
+                    const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                    return (
+                      <div key={gig.id} className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
+                            <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
+                            <div className="mt-0.5">
+                              <Badge className={`text-[10px] ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
+                                {tStatus(gig.status)}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                            <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="relative hidden md:block">
                 <div ref={declinedScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
                   <table className="w-full caption-bottom text-sm table-fixed">
                     <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -854,6 +974,7 @@ export default function GigsPage() {
                   </div>
                 )}
                 </div>
+                </>
               )}
             </TabsContent>
           </CardContent>

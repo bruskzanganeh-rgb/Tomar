@@ -470,15 +470,15 @@ export function CreateInvoiceDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[1300px] max-h-[90vh] p-0 gap-0 overflow-hidden"
+        className="sm:max-w-[1300px] max-h-[90vh] p-0 gap-0 overflow-hidden w-[calc(100vw-2rem)]"
         aria-describedby={undefined}
       >
         <VisuallyHidden.Root asChild>
           <DialogTitle>{t('newInvoice')}</DialogTitle>
         </VisuallyHidden.Root>
-        <form onSubmit={handleSubmit} className="flex h-full">
-          {/* Preview Section - Left */}
-          <div className="w-[450px] bg-muted/30 p-6 border-r flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row h-full">
+          {/* Preview Section - Left (hidden on mobile) */}
+          <div className="hidden lg:flex w-[450px] bg-muted/30 p-6 border-r flex-col">
             <div className="text-sm font-medium text-muted-foreground mb-3">{t('preview')}</div>
             <div className="flex-1 flex items-start justify-center">
               <div className="w-full">

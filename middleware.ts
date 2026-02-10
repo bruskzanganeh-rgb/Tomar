@@ -1,12 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Mobile user-agent detection
-function isMobile(userAgent: string): boolean {
-  return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
-}
-
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -74,16 +69,6 @@ export async function proxy(request: NextRequest) {
         path: '/',
         maxAge: 60 * 60 * 24 * 365,
       })
-    }
-  }
-
-  // Mobile redirect: if mobile user-agent and not already on /m/ routes
-  if (user && !pathname.startsWith('/m/') && !isApiPath && !isPublicPath) {
-    const userAgent = request.headers.get('user-agent') || ''
-    if (isMobile(userAgent)) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/m' + (pathname === '/' ? '' : pathname)
-      return NextResponse.redirect(url)
     }
   }
 

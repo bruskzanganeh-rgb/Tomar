@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, FileText, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle } from 'lucide-react'
+import { Calendar, FileText, Users, TrendingUp, Clock, ArrowUpRight, AlertTriangle, Plus, Receipt, CalendarDays } from 'lucide-react'
 import Link from 'next/link'
+import { GigDialog } from '@/components/gigs/gig-dialog'
+import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { motion, type Variants } from 'framer-motion'
@@ -86,6 +88,8 @@ export default function DashboardPage() {
   })
   const [pendingGigs, setPendingGigs] = useState<RecentGig[]>([])
   const [loading, setLoading] = useState(true)
+  const [showGigDialog, setShowGigDialog] = useState(false)
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -161,6 +165,39 @@ export default function DashboardPage() {
       animate="visible"
       className="space-y-4"
     >
+      {/* Mobile Quick Actions */}
+      <motion.div variants={itemVariants} className="md:hidden">
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            onClick={() => setShowGigDialog(true)}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors"
+          >
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Plus className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-xs font-medium">{t('newGig')}</span>
+          </button>
+          <button
+            onClick={() => setShowReceiptDialog(true)}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors"
+          >
+            <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <Receipt className="h-5 w-5 text-emerald-500" />
+            </div>
+            <span className="text-xs font-medium">{t('uploadReceipt')}</span>
+          </button>
+          <Link
+            href="/calendar"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors"
+          >
+            <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <CalendarDays className="h-5 w-5 text-blue-500" />
+            </div>
+            <span className="text-xs font-medium">{t('viewCalendar')}</span>
+          </Link>
+        </div>
+      </motion.div>
+
       {/* Stats Grid */}
       <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Upcoming Revenue */}
@@ -290,6 +327,19 @@ export default function DashboardPage() {
       <motion.div variants={itemVariants}>
         <TopClients />
       </motion.div>
+
+      {/* Quick Action Dialogs */}
+      <GigDialog
+        gig={null}
+        open={showGigDialog}
+        onOpenChange={setShowGigDialog}
+        onSuccess={loadDashboardData}
+      />
+      <UploadReceiptDialog
+        open={showReceiptDialog}
+        onOpenChange={setShowReceiptDialog}
+        onSuccess={() => {}}
+      />
     </motion.div>
   )
 }

@@ -264,7 +264,23 @@
     "companyName": "Företagsnamn",
     "emailRequiresPro": "Uppgradera till Pro för att skicka fakturor via e-post",
     "deleteInvoiceError": "Kunde inte ta bort faktura",
-    "statusUpdateError": "Kunde inte uppdatera fakturastatus"
+    "statusUpdateError": "Kunde inte uppdatera fakturastatus",
+    "reminder": {
+      "sendReminder": "Skicka påminnelse",
+      "sendReminderTitle": "Betalningspåminnelse",
+      "sendReminderDesc": "Skicka en betalningspåminnelse till kunden",
+      "reminderNumber": "Påminnelse {count}",
+      "daysOverdue": "{days} dagar försenad",
+      "remindersSent": "{count} påminnelser",
+      "oneReminderSent": "1 påminnelse",
+      "reminderSent": "Påminnelse skickad!",
+      "couldNotSend": "Kunde inte skicka påminnelse",
+      "emailDefaultSubject": "Påminnelse - Faktura #{number}",
+      "emailDefaultBodySv": "Hej,\n\nVi vill påminna om att faktura #{number} på {total} kr förföll till betalning den {dueDate}, dvs för {daysOverdue} dagar sedan.\n\nVi ber vänligen om att betalningen sker omgående.\n\nBankgiro: {bankAccount}\nAnge fakturanummer #{number} som referens vid betalning.\n\nFakturan bifogas för er bekvämlighet.\n\nMed vänliga hälsningar,\n{company}",
+      "emailDefaultSubjectEn": "Reminder - Invoice #{number}",
+      "emailDefaultBodyEn": "Dear Sir/Madam,\n\nThis is a friendly reminder that invoice #{number} for {total} was due on {dueDate}, which is now {daysOverdue} days overdue.\n\nWe kindly ask that payment be made at your earliest convenience.\n\nBank account: {bankAccount}\nPlease reference invoice #{number} when making payment.\n\nThe invoice is attached for your convenience.\n\nBest regards,\n{company}",
+      "sendingReminder": "Skickar påminnelse..."
+    }
   },
   "expense": {
     "expenses": "Utgifter",
@@ -630,7 +646,10 @@
     "freeWeek": "Ledig",
     "fullWeek": "Full",
     "weeksTotalLabel": "veckor totalt",
-    "monthNames": ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"]
+    "monthNames": ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"],
+    "newGig": "Nytt uppdrag",
+    "uploadReceipt": "Kvitto",
+    "viewCalendar": "Kalender"
   },
   "auth": {
     "login": "Logga in",
@@ -649,7 +668,11 @@
     "checkEmail": "Kolla din e-post",
     "confirmationSent": "Vi har skickat en bekräftelselänk till <strong>{email}</strong>. Klicka på länken för att aktivera ditt konto.",
     "backToLogin": "Tillbaka till inloggning",
-    "redirect": "Omdirigerar..."
+    "redirect": "Omdirigerar...",
+    "invitationCode": "Inbjudningskod",
+    "invitationCodeRequired": "Inbjudningskod krävs",
+    "invalidCode": "Ogiltig inbjudningskod",
+    "codeExpired": "Inbjudningskoden har gått ut"
   },
   "onboarding": {
     "companyInfo": "Företagsinfo",
@@ -843,7 +866,21 @@
     "eventStatusChange": "Status ändrad: {status}",
     "eventNewSubscription": "Ny prenumeration",
     "noEvents": "Inga händelser än",
-    "timeAgo": "{time} sedan"
+    "timeAgo": "{time} sedan",
+    "invitations": "Inbjudningar",
+    "createCode": "Skapa kod",
+    "codeField": "Kod",
+    "maxUses": "Max användningar",
+    "expiresAt": "Utgångsdatum",
+    "createdAt": "Skapad",
+    "useCount": "Använd",
+    "active": "Aktiv",
+    "expired": "Utgången",
+    "usedUp": "Förbrukad",
+    "noCodes": "Inga inbjudningskoder",
+    "codeCreated": "Kod skapad",
+    "codeExists": "Koden finns redan",
+    "generateCode": "Generera"
   },
   "client": {
     "clients": "Uppdragsgivare",

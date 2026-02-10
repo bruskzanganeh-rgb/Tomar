@@ -115,6 +115,39 @@ export default function ClientsPage() {
               <p className="text-sm">{t('noClientsHint')}</p>
             </div>
           ) : (
+            <>
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-2">
+              {clients.map((client) => {
+                const invoiceCount = client.invoices?.length || 0
+                const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+                return (
+                  <div key={client.id} className="p-3 rounded-lg border bg-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/clients/${client.id}`} className="font-medium text-sm hover:text-primary hover:underline">
+                          {client.name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {invoiceCount} {t('invoicesColumn').toLowerCase()} · {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} ${tc('kr')}` : '-'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingClient(client)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => confirmDelete(client.id)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -184,6 +217,8 @@ export default function ClientsPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

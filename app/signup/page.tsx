@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [companyName, setCompanyName] = useState('')
+  const [invitationCode, setInvitationCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -26,6 +27,26 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    // Validate invitation code
+    if (!invitationCode.trim()) {
+      setError(t('invitationCodeRequired'))
+      setLoading(false)
+      return
+    }
+
+    const codeRes = await fetch('/api/auth/validate-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: invitationCode }),
+    })
+    const codeData = await codeRes.json()
+
+    if (!codeData.valid) {
+      setError(codeData.reason === 'expired' ? t('codeExpired') : t('invalidCode'))
+      setLoading(false)
+      return
+    }
 
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
@@ -44,7 +65,7 @@ export default function SignupPage() {
       await fetch('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: data.user.id, company_name: companyName }),
+        body: JSON.stringify({ user_id: data.user.id, company_name: companyName, invitation_code: invitationCode }),
       })
     }
 
@@ -101,6 +122,17 @@ export default function SignupPage() {
                 {error}
               </div>
             )}
+            <div className="space-y-2">
+              <Label htmlFor="invitationCode">{t('invitationCode')}</Label>
+              <Input
+                id="invitationCode"
+                value={invitationCode}
+                onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                required
+                className="uppercase tracking-widest font-mono"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="companyName">{t('companyName')}</Label>
               <Input

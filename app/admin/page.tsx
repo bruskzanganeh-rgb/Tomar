@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Shield, Award, TrendingUp, Settings, Music, Building2, ScrollText, Activity, CreditCard } from 'lucide-react'
+import { Shield, Award, TrendingUp, Settings, Music, Building2, ScrollText, Activity, CreditCard, Ticket } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -16,8 +16,9 @@ import { OrganizationsTab } from '@/components/admin/organizations-tab'
 import { AuditTab } from '@/components/admin/audit-tab'
 import { SessionsTab } from '@/components/admin/sessions-tab'
 import { StripeTab } from '@/components/admin/stripe-tab'
+import { InvitationsTab } from '@/components/admin/invitations-tab'
 
-type AdminTab = 'organizations' | 'sponsors' | 'categories' | 'stats' | 'stripe' | 'audit' | 'sessions' | 'config'
+type AdminTab = 'organizations' | 'sponsors' | 'categories' | 'stats' | 'stripe' | 'audit' | 'sessions' | 'invitations' | 'config'
 
 type User = {
   user_id: string
@@ -211,6 +212,7 @@ export default function AdminPage() {
     { key: 'stripe' as const, label: t('stripe'), icon: CreditCard },
     { key: 'audit' as const, label: t('audit'), icon: ScrollText },
     { key: 'sessions' as const, label: t('sessions'), icon: Activity },
+    { key: 'invitations' as const, label: t('invitations'), icon: Ticket },
     { key: 'config' as const, label: t('config'), icon: Settings },
   ]
 
@@ -276,6 +278,9 @@ export default function AdminPage() {
       )}
       {tab === 'sessions' && (
         <SessionsTab users={users} />
+      )}
+      {tab === 'invitations' && (
+        <InvitationsTab />
       )}
       {tab === 'config' && (
         <ConfigTab

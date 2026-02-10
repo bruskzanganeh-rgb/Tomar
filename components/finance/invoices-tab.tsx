@@ -16,12 +16,13 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, FileText, Download, Mail, Check, Trash2, ClipboardList, ChevronDown } from 'lucide-react'
+import { Plus, FileText, Download, Mail, Check, Trash2, ClipboardList, ChevronDown, Bell } from 'lucide-react'
 import { CreateInvoiceDialog } from '@/components/invoices/create-invoice-dialog'
 import { SendInvoiceDialog } from '@/components/invoices/send-invoice-dialog'
+import { SendReminderDialog } from '@/components/invoices/send-reminder-dialog'
 import { EditInvoiceDialog } from '@/components/invoices/edit-invoice-dialog'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
-import { format } from 'date-fns'
+import { format, differenceInDays } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { toast } from 'sonner'
@@ -45,7 +46,7 @@ type Invoice = {
   client_id: string
   original_pdf_url: string | null
   imported_from_pdf: boolean
-  client: { id: string; name: string; email: string | null }
+  client: { id: string; name: string; email: string | null; invoice_language: string | null }
 }
 
 type Client = {
@@ -107,6 +108,8 @@ export default function InvoicesTab() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [selectedGigForInvoice, setSelectedGigForInvoice] = useState<PendingGig | null>(null)
   const [selectedPendingGigIds, setSelectedPendingGigIds] = useState<Set<string>>(new Set())
+  const [showReminderDialog, setShowReminderDialog] = useState(false)
+  const [reminderCounts, setReminderCounts] = useState<Record<string, number>>({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
   const supabase = createClient()
@@ -242,7 +245,7 @@ export default function InvoicesTab() {
       .from('invoices')
       .select(`
         *,
-        client:clients(id, name, email)
+        client:clients(id, name, email, invoice_language)
       `)
       .order('invoice_number', { ascending: false })
 
@@ -250,6 +253,22 @@ export default function InvoicesTab() {
       console.error('Error loading invoices:', error)
     } else {
       setInvoices(data || [])
+      // Load reminder counts for overdue invoices
+      const overdueIds = (data || []).filter(inv => inv.status === 'overdue').map(inv => inv.id)
+      if (overdueIds.length > 0) {
+        const { data: reminders } = await supabase
+          .from('invoice_reminders')
+          .select('invoice_id, reminder_number')
+          .in('invoice_id', overdueIds)
+          .order('reminder_number', { ascending: false })
+        const counts: Record<string, number> = {}
+        for (const r of (reminders || [])) {
+          if (!counts[r.invoice_id]) counts[r.invoice_id] = r.reminder_number
+        }
+        setReminderCounts(counts)
+      } else {
+        setReminderCounts({})
+      }
     }
     setLoading(false)
   }
@@ -510,7 +529,68 @@ export default function InvoicesTab() {
               <p className="text-sm">{t('noInvoicesHint')}</p>
             </div>
           ) : (
-            <div className="relative">
+            <>
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+              {invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => {
+                    setSelectedInvoice(invoice)
+                    setShowEditDialog(true)
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">#{invoice.invoice_number}</span>
+                        <Badge
+                          className={`text-[10px] ${statusConfig[invoice.status as keyof typeof statusConfig]?.color}`}
+                        >
+                          {t(`status.${invoice.status}`)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate mt-0.5">{invoice.client.name}</p>
+                    </div>
+                    <span className="font-semibold text-sm whitespace-nowrap">
+                      {formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(invoice.due_date), 'd MMM yyyy', { locale: dateLocale })}
+                      {invoice.status === 'overdue' && (
+                        <span className="text-red-600 ml-1">
+                          · {differenceInDays(new Date(), new Date(invoice.due_date))}d
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {invoice.status !== 'paid' && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markAsPaid(invoice.id)}>
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(`/api/invoices/${invoice.id}/pdf`, '_blank')}>
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedInvoice(invoice); setShowSendDialog(true) }}>
+                        <Mail className="h-3.5 w-3.5" />
+                      </Button>
+                      {invoice.status === 'overdue' && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" onClick={() => { setSelectedInvoice(invoice); setShowReminderDialog(true) }}>
+                          <Bell className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="relative hidden md:block">
             <div ref={scrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
               <table className="w-full caption-bottom text-sm table-fixed">
                 <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -562,15 +642,26 @@ export default function InvoicesTab() {
                           {formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={
-                              statusConfig[
-                                invoice.status as keyof typeof statusConfig
-                              ]?.color
-                            }
-                          >
-                            {t(`status.${invoice.status}`)}
-                          </Badge>
+                          <div className="flex flex-col gap-0.5">
+                            <Badge
+                              className={
+                                statusConfig[
+                                  invoice.status as keyof typeof statusConfig
+                                ]?.color
+                              }
+                            >
+                              {t(`status.${invoice.status}`)}
+                            </Badge>
+                            {invoice.status === 'overdue' && (
+                              <span className="text-[10px] text-red-600">
+                                {differenceInDays(new Date(), new Date(invoice.due_date))}d · {reminderCounts[invoice.id]
+                                  ? (reminderCounts[invoice.id] === 1
+                                    ? t('reminder.oneReminderSent')
+                                    : t('reminder.remindersSent', { count: reminderCounts[invoice.id] }))
+                                  : ''}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
@@ -605,6 +696,20 @@ export default function InvoicesTab() {
                             >
                               <Mail className="h-4 w-4" />
                             </Button>
+                            {invoice.status === 'overdue' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedInvoice(invoice)
+                                  setShowReminderDialog(true)
+                                }}
+                                title={t('reminder.sendReminder')}
+                                className="text-amber-600 hover:text-amber-700"
+                              >
+                                <Bell className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -639,6 +744,7 @@ export default function InvoicesTab() {
               </div>
             )}
             </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -684,6 +790,17 @@ export default function InvoicesTab() {
         }}
         onSuccess={loadInvoices}
         clients={clients}
+      />
+
+      <SendReminderDialog
+        invoice={selectedInvoice}
+        open={showReminderDialog}
+        onOpenChange={(open) => {
+          setShowReminderDialog(open)
+          if (!open) setSelectedInvoice(null)
+        }}
+        onSuccess={loadInvoices}
+        reminderCount={selectedInvoice ? (reminderCounts[selectedInvoice.id] || 0) : 0}
       />
 
       <ConfirmDialog

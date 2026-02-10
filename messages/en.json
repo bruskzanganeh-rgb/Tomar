@@ -264,7 +264,23 @@
     "companyName": "Company name",
     "emailRequiresPro": "Upgrade to Pro to send invoices via email",
     "deleteInvoiceError": "Could not delete invoice",
-    "statusUpdateError": "Could not update invoice status"
+    "statusUpdateError": "Could not update invoice status",
+    "reminder": {
+      "sendReminder": "Send reminder",
+      "sendReminderTitle": "Payment reminder",
+      "sendReminderDesc": "Send a payment reminder to the client",
+      "reminderNumber": "Reminder {count}",
+      "daysOverdue": "{days} days overdue",
+      "remindersSent": "{count} reminders",
+      "oneReminderSent": "1 reminder",
+      "reminderSent": "Reminder sent!",
+      "couldNotSend": "Could not send reminder",
+      "emailDefaultSubject": "Reminder - Invoice #{number}",
+      "emailDefaultBodySv": "Hi,\n\nThis is a friendly reminder that invoice #{number} for {total} kr was due on {dueDate}, which is now {daysOverdue} days overdue.\n\nWe kindly ask that payment be made at your earliest convenience.\n\nBank account: {bankAccount}\nPlease reference invoice #{number} when making payment.\n\nThe invoice is attached for your convenience.\n\nBest regards,\n{company}",
+      "emailDefaultSubjectEn": "Reminder - Invoice #{number}",
+      "emailDefaultBodyEn": "Dear Sir/Madam,\n\nThis is a friendly reminder that invoice #{number} for {total} was due on {dueDate}, which is now {daysOverdue} days overdue.\n\nWe kindly ask that payment be made at your earliest convenience.\n\nBank account: {bankAccount}\nPlease reference invoice #{number} when making payment.\n\nThe invoice is attached for your convenience.\n\nBest regards,\n{company}",
+      "sendingReminder": "Sending reminder..."
+    }
   },
   "expense": {
     "expenses": "Expenses",
@@ -630,7 +646,10 @@
     "freeWeek": "Free",
     "fullWeek": "Full",
     "weeksTotalLabel": "weeks total",
-    "monthNames": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    "monthNames": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "newGig": "New gig",
+    "uploadReceipt": "Receipt",
+    "viewCalendar": "Calendar"
   },
   "auth": {
     "login": "Log in",
@@ -649,7 +668,11 @@
     "checkEmail": "Check your email",
     "confirmationSent": "We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.",
     "backToLogin": "Back to login",
-    "redirect": "Redirecting..."
+    "redirect": "Redirecting...",
+    "invitationCode": "Invitation code",
+    "invitationCodeRequired": "Invitation code is required",
+    "invalidCode": "Invalid invitation code",
+    "codeExpired": "Invitation code has expired"
   },
   "onboarding": {
     "companyInfo": "Company info",
@@ -843,7 +866,21 @@
     "eventStatusChange": "Status changed: {status}",
     "eventNewSubscription": "New subscription",
     "noEvents": "No events yet",
-    "timeAgo": "{time} ago"
+    "timeAgo": "{time} ago",
+    "invitations": "Invitations",
+    "createCode": "Create code",
+    "codeField": "Code",
+    "maxUses": "Max uses",
+    "expiresAt": "Expires",
+    "createdAt": "Created",
+    "useCount": "Used",
+    "active": "Active",
+    "expired": "Expired",
+    "usedUp": "Used up",
+    "noCodes": "No invitation codes",
+    "codeCreated": "Code created",
+    "codeExists": "Code already exists",
+    "generateCode": "Generate"
   },
   "client": {
     "clients": "Clients",
