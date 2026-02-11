@@ -276,7 +276,7 @@ export default function DashboardPage() {
                   <p className="text-xs">{t('noPendingRequests')}</p>
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-h-[230px] overflow-y-auto md:max-h-none md:overflow-visible">
                   {pendingGigs.slice(0, 5).map((gig) => {
                     const deadlineInfo = getDeadlineInfo(gig.response_deadline, dateLocale)
                     return (

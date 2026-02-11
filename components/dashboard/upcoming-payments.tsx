@@ -115,7 +115,7 @@ export function UpcomingPayments({ className }: { className?: string }) {
           </div>
         ) : (
           <div className="flex-1 relative" style={{ minHeight: 0 }}>
-            <div className="absolute inset-0 space-y-1.5 overflow-y-auto pr-1">
+            <div className="max-h-[230px] overflow-y-auto md:max-h-none md:absolute md:inset-0 space-y-1.5 pr-1">
               {invoices.slice(0, 5).map((invoice) => {
                 const daysUntil = getDaysUntilDue(invoice.due_date)
                 return (
