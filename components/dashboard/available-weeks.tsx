@@ -197,7 +197,7 @@ export function AvailableWeeks() {
               </div>
             </div>
 
-            <div className="flex-1 relative" style={{ minHeight: 0 }}>
+            <div className="md:flex-1 relative" style={{ minHeight: 0 }}>
               <div
                 ref={scrollContainerRef}
                 className="max-h-[320px] overflow-y-auto md:max-h-none md:absolute md:inset-0 space-y-1 pr-1"
