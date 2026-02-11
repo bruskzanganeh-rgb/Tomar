@@ -526,7 +526,7 @@ export default function GigsPage() {
       <Card>
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setShowScrollHint(true) }}>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <TabsList>
                 <TabsTrigger value="upcoming" className="gap-2">
                   <Calendar className="h-4 w-4" />
@@ -541,9 +541,9 @@ export default function GigsPage() {
                   {t('declined')} ({sortedDeclined.length})
                 </TabsTrigger>
               </TabsList>
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('newGig')}
+              <Button onClick={() => setShowCreateDialog(true)} size="sm">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t('newGig')}</span>
               </Button>
             </div>
             {activeTab === 'history' && (

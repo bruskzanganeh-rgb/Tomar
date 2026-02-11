@@ -151,7 +151,7 @@ export default function DashboardPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-4 overflow-x-hidden"
+      className="space-y-4"
     >
       {/* Mobile Quick Actions */}
       <motion.div variants={itemVariants} className="md:hidden">
@@ -198,7 +198,7 @@ export default function DashboardPage() {
       >
 
         {/* Column 1: Upcoming Gigs */}
-        <Card className="md:h-full md:flex md:flex-col md:min-h-0 md:overflow-hidden">
+        <Card className="overflow-hidden md:h-full md:flex md:flex-col md:min-h-0">
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
@@ -254,8 +254,8 @@ export default function DashboardPage() {
         </Card>
 
         {/* Column 2: Needs Response + Unpaid Invoices */}
-        <div className="flex flex-col gap-4 md:h-full md:min-h-0 md:overflow-hidden">
-          <Card className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col gap-4 overflow-hidden md:h-full md:min-h-0">
+          <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <CardHeader className="pb-2 pt-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
