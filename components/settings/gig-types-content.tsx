@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Plus, Tag, Edit, Trash2 } from 'lucide-react'
 import { CreateGigTypeDialog } from '@/components/gig-types/create-gig-type-dialog'
+import { EditGigTypeDialog } from '@/components/gig-types/edit-gig-type-dialog'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
@@ -30,6 +31,8 @@ export default function GigTypesPage() {
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [selectedGigType, setSelectedGigType] = useState<GigType | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [gigTypeToDelete, setGigTypeToDelete] = useState<string | null>(null)
   const supabase = createClient()
@@ -101,7 +104,6 @@ export default function GigTypesPage() {
                   <TableHead>{tGigTypes('nameEn')}</TableHead>
                   <TableHead>{tGigTypes('vatRate')}</TableHead>
                   <TableHead>{tGigTypes('color')}</TableHead>
-                  <TableHead>{tGigTypes('default')}</TableHead>
                   <TableHead className="text-right">{tGigTypes('actions')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -130,17 +132,21 @@ export default function GigTypesPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {type.is_default && (
-                        <Badge variant="secondary">{tGigTypes('default')}</Badge>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={type.is_default}
+                          onClick={() => {
+                            setSelectedGigType(type)
+                            setShowEditDialog(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => confirmDelete(type.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -158,6 +164,16 @@ export default function GigTypesPage() {
       <CreateGigTypeDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+        onSuccess={loadGigTypes}
+      />
+
+      <EditGigTypeDialog
+        gigType={selectedGigType}
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) setSelectedGigType(null)
+        }}
         onSuccess={loadGigTypes}
       />
 

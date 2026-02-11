@@ -1012,6 +1012,9 @@
     "deleteDescription": "Are you sure you want to delete this gig type?",
     "deleteError": "Could not delete gig type",
     "createError": "Could not create gig type",
+    "editGigType": "Edit gig type",
+    "editGigTypeDescription": "Change name, VAT or color",
+    "updateError": "Could not update gig type",
     "suggestions": "Suggestions",
     "suggestionsHint": "Click to quickly add"
   },

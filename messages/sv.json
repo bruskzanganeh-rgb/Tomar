@@ -1012,6 +1012,9 @@
     "deleteDescription": "Är du säker på att du vill ta bort denna uppdragstyp?",
     "deleteError": "Kunde inte ta bort uppdragstyp",
     "createError": "Kunde inte skapa uppdragstyp",
+    "editGigType": "Redigera uppdragstyp",
+    "editGigTypeDescription": "Ändra namn, moms eller färg",
+    "updateError": "Kunde inte uppdatera uppdragstyp",
     "suggestions": "Förslag",
     "suggestionsHint": "Klicka för att snabbt lägga till"
   },
