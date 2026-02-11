@@ -127,7 +127,7 @@ export function AvailableWeeks() {
   const totalWeeks = weeks.length
 
   return (
-    <Card className="h-full min-h-0 flex flex-col">
+    <Card className="h-full min-h-0 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-1.5">
@@ -157,7 +157,7 @@ export function AvailableWeeks() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pb-4 flex-1 flex flex-col">
+      <CardContent className="pb-4 flex-1 flex flex-col" style={{ minHeight: 0 }}>
         {loading ? (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
@@ -182,7 +182,7 @@ export function AvailableWeeks() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
               <div className="text-center p-2 rounded-lg bg-sky-500/5">
                 <p className="text-lg font-bold text-sky-600 dark:text-sky-400">{freeCount}</p>
                 <p className="text-[10px] text-muted-foreground">{t('free')}</p>
@@ -197,39 +197,41 @@ export function AvailableWeeks() {
               </div>
             </div>
 
-            <div
-              ref={scrollContainerRef}
-              className="space-y-1 flex-1 overflow-y-auto pr-1"
-            >
-              {weeks.map((week, index) => {
-                const style = getStatusStyle(week.status)
-                const Icon = style.icon
-                const isCurrentWeek = selectedYear === currentYear && week.weekNumber === currentWeekNumber
-                return (
-                  <div
-                    key={`${selectedYear}-${index}`}
-                    ref={isCurrentWeek ? currentWeekRef : null}
-                    className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${style.bg} ${isCurrentWeek ? 'border-l-4 border-blue-500' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Icon className={`h-3 w-3 ${style.text}`} />
-                      <span className="font-medium">V{week.weekNumber}</span>
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className={`text-[10px] ${style.text} bg-transparent border-0`}
+            <div className="flex-1 relative" style={{ minHeight: 0 }}>
+              <div
+                ref={scrollContainerRef}
+                className="absolute inset-0 space-y-1 overflow-y-auto pr-1"
+              >
+                {weeks.map((week, index) => {
+                  const style = getStatusStyle(week.status)
+                  const Icon = style.icon
+                  const isCurrentWeek = selectedYear === currentYear && week.weekNumber === currentWeekNumber
+                  return (
+                    <div
+                      key={`${selectedYear}-${index}`}
+                      ref={isCurrentWeek ? currentWeekRef : null}
+                      className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors ${style.bg} ${isCurrentWeek ? 'border-l-4 border-blue-500' : ''}`}
                     >
-                      {week.status === 'free' ? t('freeWeek') :
-                       week.status === 'partial' ? `${week.gigDays}d` :
-                       t('fullWeek')}
-                    </Badge>
-                  </div>
-                )
-              })}
+                      <div className="flex items-center gap-2">
+                        <Icon className={`h-3 w-3 ${style.text}`} />
+                        <span className="font-medium">V{week.weekNumber}</span>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] ${style.text} bg-transparent border-0`}
+                      >
+                        {week.status === 'free' ? t('freeWeek') :
+                         week.status === 'partial' ? `${week.gigDays}d` :
+                         t('fullWeek')}
+                      </Badge>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </>
         )}
-        <div className="mt-2 pt-2 border-t text-center">
+        <div className="mt-2 pt-2 border-t text-center shrink-0">
           <p className="text-[10px] text-muted-foreground">
             jan–dec {selectedYear} • {totalWeeks} {t('weeksTotalLabel')}
           </p>

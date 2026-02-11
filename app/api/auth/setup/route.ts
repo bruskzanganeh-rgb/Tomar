@@ -31,10 +31,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, message: 'Already set up' })
   }
 
-  // Create company_settings
+  // Create company_settings (all NOT NULL text columns need empty-string defaults)
   await supabase.from('company_settings').insert({
     user_id,
-    company_name: company_name || null,
+    company_name: company_name || '',
+    org_number: '',
+    address: '',
+    email: '',
+    phone: '',
+    bank_account: '',
     base_currency: 'SEK',
     onboarding_completed: false,
   })
@@ -46,17 +51,7 @@ export async function POST(request: Request) {
     status: 'active',
   })
 
-  // Create default gig types
-  await supabase.from('gig_types').insert([
-    { name: 'Konsert', vat_rate: 0, color: '#3b82f6', is_default: true, user_id },
-    { name: 'Inspelning', vat_rate: 6, color: '#8b5cf6', is_default: false, user_id },
-    { name: 'Undervisning', vat_rate: 25, color: '#f59e0b', is_default: false, user_id },
-  ])
-
-  // Create default positions
-  await supabase.from('positions').insert([
-    { name: 'Tutti', sort_order: 1, user_id },
-  ])
+  // Gig types + positions are created during onboarding (quick-add presets)
 
   // Claim any orphaned data (user_id IS NULL rows from before auth was added)
   await supabase.rpc('claim_orphaned_data', { uid: user_id })

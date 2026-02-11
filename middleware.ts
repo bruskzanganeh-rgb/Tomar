@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
       .select('onboarding_completed, locale')
       .single()
 
-    if (settings && settings.onboarding_completed === false) {
+    if (!settings || settings.onboarding_completed === false) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)

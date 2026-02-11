@@ -22,7 +22,6 @@ import {
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useSubscription } from '@/lib/hooks/use-subscription'
-import Link from 'next/link'
 
 type CompanySettings = {
   id: string
@@ -68,6 +67,7 @@ export default function SettingsPage() {
 
   // Default to subscription tab if coming from Stripe checkout
   const defaultTab = searchParams.get('upgrade') ? 'subscription' : 'company'
+  const [activeTab, setActiveTab] = useState(defaultTab)
 
   // Get user ID for calendar URL
   useEffect(() => {
@@ -235,7 +235,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <Tabs defaultValue={defaultTab} className="space-y-6">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList>
         <TabsTrigger value="company" className="gap-2">
           <Building2 className="h-4 w-4" />
@@ -577,9 +577,9 @@ export default function SettingsPage() {
               <div className="p-4 rounded-lg bg-muted/50 text-center space-y-2">
                 <Crown className="h-8 w-8 mx-auto text-yellow-500" />
                 <p className="text-sm font-medium">{t('emailRequiresPro')}</p>
-                <Link href="/settings#subscription" className="text-sm text-primary underline">
+                <button onClick={() => setActiveTab('subscription')} className="text-sm text-primary underline">
                   {t('subscription')}
-                </Link>
+                </button>
               </div>
             ) : (
               <>

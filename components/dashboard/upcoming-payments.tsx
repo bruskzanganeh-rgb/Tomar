@@ -95,7 +95,7 @@ export function UpcomingPayments({ className }: { className?: string }) {
           <span className="text-sm font-semibold">{totalUnpaid.toLocaleString(formatLocale)} {tc('kr')}</span>
         </div>
       </CardHeader>
-      <CardContent className="pb-4 flex-1 overflow-y-auto">
+      <CardContent className="pb-4 flex-1 flex flex-col" style={{ minHeight: 0 }}>
         {loading ? (
           <div className="space-y-2">
             {[...Array(3)].map((_, i) => (
@@ -114,26 +114,28 @@ export function UpcomingPayments({ className }: { className?: string }) {
             <p className="text-xs">{t('allPaid')}</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {invoices.slice(0, 5).map((invoice) => {
-              const daysUntil = getDaysUntilDue(invoice.due_date)
-              return (
-                <div
-                  key={invoice.id}
-                  className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
-                    daysUntil < 0 ? 'bg-red-500/10' : 'bg-secondary/50 hover:bg-secondary'
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="font-medium truncate block">{invoice.client.name}</span>
+          <div className="flex-1 relative" style={{ minHeight: 0 }}>
+            <div className="absolute inset-0 space-y-1.5 overflow-y-auto pr-1">
+              {invoices.slice(0, 5).map((invoice) => {
+                const daysUntil = getDaysUntilDue(invoice.due_date)
+                return (
+                  <div
+                    key={invoice.id}
+                    className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
+                      daysUntil < 0 ? 'bg-red-500/10' : 'bg-secondary/50 hover:bg-secondary'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium truncate block">{invoice.client.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="font-semibold">{formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}</span>
+                      {getStatusBadge(daysUntil)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-semibold">{formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}</span>
-                    {getStatusBadge(daysUntil)}
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
       </CardContent>

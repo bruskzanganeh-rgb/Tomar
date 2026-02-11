@@ -193,12 +193,12 @@ export default function DashboardPage() {
         style={{
           ...(gridHeight ? { height: gridHeight, maxHeight: gridHeight, overflow: 'hidden' } : {}),
           gridTemplateColumns: gridHeight ? '2.618fr 1.618fr 1fr' : undefined,
-          gridTemplateRows: gridHeight ? '1fr' : undefined,
+          gridTemplateRows: gridHeight ? 'minmax(0, 1fr)' : undefined,
         }}
       >
 
         {/* Column 1: Upcoming Gigs */}
-        <Card className="md:h-full md:flex md:flex-col md:min-h-0">
+        <Card className="md:h-full md:flex md:flex-col md:min-h-0 md:overflow-hidden">
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
@@ -213,7 +213,7 @@ export default function DashboardPage() {
               {upcomingRevenue.toLocaleString(formatLocale)} <span className="text-sm font-normal text-muted-foreground">{tc('kr')}</span>
             </div>
           </CardHeader>
-          <CardContent className="pb-4 md:flex-1 md:overflow-y-auto">
+          <CardContent className="pb-4 md:flex-1 md:flex md:flex-col" style={{ minHeight: 0 }}>
             {loading ? (
               <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
                 {tc('loading')}
@@ -224,35 +224,37 @@ export default function DashboardPage() {
                 <p className="text-xs">{t('noUpcoming')}</p>
               </div>
             ) : (
-              <div className="space-y-1">
-                {upcomingGigs.map((gig) => (
-                  <Link
-                    key={gig.id}
-                    href="/gigs"
-                    className="flex items-center justify-between py-2 px-3 rounded-lg text-xs bg-secondary/50 hover:bg-secondary transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="font-mono text-muted-foreground shrink-0">
-                        {format(new Date(gig.date), 'd MMM', { locale: dateLocale })}
-                      </span>
-                      <span className="font-medium truncate">
-                        {gig.project_name || gig.client?.name || gig.gig_type?.name || '—'}
-                      </span>
-                    </div>
-                    {gig.fee && (
-                      <span className="text-muted-foreground shrink-0 ml-2">
-                        {gig.fee.toLocaleString(formatLocale)} {tc('kr')}
-                      </span>
-                    )}
-                  </Link>
-                ))}
+              <div className="md:flex-1 md:relative" style={{ minHeight: 0 }}>
+                <div className="md:absolute md:inset-0 space-y-1 md:overflow-y-auto md:pr-1">
+                  {upcomingGigs.map((gig) => (
+                    <Link
+                      key={gig.id}
+                      href="/gigs"
+                      className="flex items-center justify-between py-2 px-3 rounded-lg text-xs bg-secondary/50 hover:bg-secondary transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className="font-mono text-muted-foreground shrink-0">
+                          {format(new Date(gig.date), 'd MMM', { locale: dateLocale })}
+                        </span>
+                        <span className="font-medium truncate">
+                          {gig.project_name || gig.client?.name || gig.gig_type?.name || '—'}
+                        </span>
+                      </div>
+                      {gig.fee && (
+                        <span className="text-muted-foreground shrink-0 ml-2">
+                          {gig.fee.toLocaleString(formatLocale)} {tc('kr')}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Column 2: Needs Response + Unpaid Invoices */}
-        <div className="flex flex-col gap-4 md:h-full md:min-h-0">
+        <div className="flex flex-col gap-4 md:h-full md:min-h-0 md:overflow-hidden">
           <Card className="flex-1 flex flex-col min-h-0">
             <CardHeader className="pb-2 pt-4">
               <div className="flex items-center justify-between">
@@ -263,7 +265,7 @@ export default function DashboardPage() {
                 <span className="text-xs text-muted-foreground">{t('pendingCount', { count: pendingGigs.length })}</span>
               </div>
             </CardHeader>
-            <CardContent className="pb-4 flex-1 overflow-y-auto">
+            <CardContent className="pb-4 flex-1 flex flex-col" style={{ minHeight: 0 }}>
               {loading ? (
                 <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
                   {tc('loading')}
