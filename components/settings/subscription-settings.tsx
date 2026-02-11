@@ -20,6 +20,7 @@ export function SubscriptionSettings() {
   const { subscription, usage, isPro, limits, loading, refresh } = useSubscription()
   const [upgrading, setUpgrading] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [reactivating, setReactivating] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const searchParams = useSearchParams()
 
@@ -49,6 +50,21 @@ export function SubscriptionSettings() {
     } catch (err: any) {
       toast.error(err.message)
       setUpgrading(false)
+    }
+  }
+
+  async function handleReactivate() {
+    setReactivating(true)
+    try {
+      const res = await fetch('/api/stripe/reactivate', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success(t('reactivateSuccess'))
+      refresh()
+    } catch (err: any) {
+      toast.error(t('reactivateError'))
+    } finally {
+      setReactivating(false)
     }
   }
 
@@ -108,9 +124,20 @@ export function SubscriptionSettings() {
                 </p>
               )}
               {subscription?.cancel_at_period_end && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  {t('cancelledActiveUntil')}
-                </p>
+                <div className="mt-2">
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    {t('cancelledActiveUntil')}
+                  </p>
+                  <Button
+                    onClick={handleReactivate}
+                    size="sm"
+                    className="mt-2"
+                    disabled={reactivating}
+                  >
+                    {reactivating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                    {t('reactivate')}
+                  </Button>
+                </div>
               )}
               {!subscription?.cancel_at_period_end && (
                 <div className="mt-4 pt-4 border-t">
