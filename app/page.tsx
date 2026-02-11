@@ -151,37 +151,37 @@ export default function DashboardPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-4"
+      className="space-y-4 overflow-x-hidden"
     >
       {/* Mobile Quick Actions */}
       <motion.div variants={itemVariants} className="md:hidden">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => setShowGigDialog(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors"
+            className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border hover:bg-accent transition-colors"
           >
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Plus className="h-5 w-5 text-primary" />
+            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+              <Plus className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-xs font-medium">{t('newGig')}</span>
+            <span className="text-[11px] font-medium">{t('newGig')}</span>
           </button>
           <button
             onClick={() => setShowReceiptDialog(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors"
+            className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border hover:bg-accent transition-colors"
           >
-            <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <Receipt className="h-5 w-5 text-emerald-500" />
+            <div className="h-9 w-9 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <Receipt className="h-4 w-4 text-emerald-500" />
             </div>
-            <span className="text-xs font-medium">{t('uploadReceipt')}</span>
+            <span className="text-[11px] font-medium">{t('uploadReceipt')}</span>
           </button>
           <Link
             href="/calendar"
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-accent transition-colors"
+            className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-card border hover:bg-accent transition-colors"
           >
-            <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <CalendarDays className="h-5 w-5 text-blue-500" />
+            <div className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <CalendarDays className="h-4 w-4 text-blue-500" />
             </div>
-            <span className="text-xs font-medium">{t('viewCalendar')}</span>
+            <span className="text-[11px] font-medium">{t('viewCalendar')}</span>
           </Link>
         </div>
       </motion.div>

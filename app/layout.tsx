@@ -46,7 +46,7 @@ export default async function RootLayout({
               <div className="flex min-h-screen flex-col">
                 <Header />
                 <SessionTracker />
-                <main className="flex-1 bg-background">
+                <main className="flex-1 bg-background overflow-x-hidden">
                   <div className="container mx-auto p-4 md:p-8">
                     {children}
                   </div>

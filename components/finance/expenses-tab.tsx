@@ -170,20 +170,20 @@ export default function ExpensesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={() => setShowExportDialog(true)}>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => setShowExportDialog(true)} className="w-full sm:w-auto">
           <Download className="mr-2 h-4 w-4" />
           {tc('export')}
         </Button>
-        <Button onClick={() => setShowUploadDialog(true)}>
+        <Button onClick={() => setShowUploadDialog(true)} className="w-full sm:w-auto">
           <Upload className="mr-2 h-4 w-4" />
           {t('uploadReceipt')}
         </Button>
       </div>
 
       {/* Filter */}
-      <div className="flex gap-4 flex-wrap">
-        <div className="w-32">
+      <div className="grid grid-cols-2 gap-2 md:flex md:gap-4">
+        <div className="md:w-32">
           <Select value={yearFilter} onValueChange={setYearFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allYears')} />
@@ -196,7 +196,7 @@ export default function ExpensesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-48">
+        <div className="md:w-48">
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allCategories')} />
@@ -209,7 +209,7 @@ export default function ExpensesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-56">
+        <div className="md:w-56">
           <Select value={supplierFilter} onValueChange={setSupplierFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allSuppliers')} />
@@ -222,7 +222,7 @@ export default function ExpensesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-44">
+        <div className="md:w-44">
           <Select value={gigFilter} onValueChange={setGigFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allGigs')} />
