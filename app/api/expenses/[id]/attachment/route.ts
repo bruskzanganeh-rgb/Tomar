@@ -36,8 +36,8 @@ export async function GET(
 
     const { id } = await params
 
-    // Hämta expense - verifiera ägarskap
-    const { data: expense, error: fetchError } = await supabase
+    // Hämta expense - verifiera ägarskap (service role för att undvika RLS-problem)
+    const { data: expense, error: fetchError } = await serviceSupabase
       .from('expenses')
       .select('attachment_url')
       .eq('id', id)
@@ -115,8 +115,8 @@ export async function POST(
       )
     }
 
-    // Hämta befintlig expense - verifiera ägarskap
-    const { data: expense, error: fetchError } = await supabase
+    // Hämta befintlig expense - verifiera ägarskap (service role för att undvika RLS-problem)
+    const { data: expense, error: fetchError } = await serviceSupabase
       .from('expenses')
       .select('attachment_url, date')
       .eq('id', id)
@@ -168,7 +168,7 @@ export async function POST(
       .getPublicUrl(filePath)
 
     // Uppdatera expense med ny attachment_url
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from('expenses')
       .update({ attachment_url: urlData.publicUrl })
       .eq('id', id)
@@ -214,8 +214,8 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Hämta expense - verifiera ägarskap
-    const { data: expense, error: fetchError } = await supabase
+    // Hämta expense - verifiera ägarskap (service role för att undvika RLS-problem)
+    const { data: expense, error: fetchError } = await serviceSupabase
       .from('expenses')
       .select('attachment_url')
       .eq('id', id)
@@ -249,7 +249,7 @@ export async function DELETE(
     }
 
     // Uppdatera expense - ta bort attachment_url
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from('expenses')
       .update({ attachment_url: null })
       .eq('id', id)

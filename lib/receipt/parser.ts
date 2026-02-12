@@ -64,7 +64,8 @@ VIKTIGT: Returnera BARA JSON, inget annat.`
 
 export async function parseReceiptWithVision(
   imageBase64: string,
-  mimeType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+  mimeType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+  userId?: string
 ): Promise<ParsedReceiptData> {
   try {
     const model = 'claude-3-5-haiku-20241022'
@@ -100,6 +101,7 @@ export async function parseReceiptWithVision(
       model,
       inputTokens: message.usage.input_tokens,
       outputTokens: message.usage.output_tokens,
+      userId,
     })
 
     const responseText = message.content[0]?.type === 'text'
@@ -138,7 +140,7 @@ export async function parseReceiptWithVision(
 /**
  * Parse receipt from extracted text (cheaper than vision)
  */
-export async function parseReceiptWithText(text: string): Promise<ParsedReceiptData> {
+export async function parseReceiptWithText(text: string, userId?: string): Promise<ParsedReceiptData> {
   try {
     const model = 'claude-3-5-haiku-20241022'
     const message = await anthropic.messages.create({
@@ -160,6 +162,7 @@ export async function parseReceiptWithText(text: string): Promise<ParsedReceiptD
       model,
       inputTokens: message.usage.input_tokens,
       outputTokens: message.usage.output_tokens,
+      userId,
     })
 
     const responseText = message.content[0]?.type === 'text'

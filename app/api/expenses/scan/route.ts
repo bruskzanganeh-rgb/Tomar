@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { parseReceiptWithVision, parseReceiptWithText } from '@/lib/receipt/parser'
 import { extractText, renderPageAsImage } from 'unpdf'
 
@@ -22,6 +23,13 @@ async function pdfToBase64Image(buffer: ArrayBuffer): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    // Autentisera användare
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
 
@@ -69,12 +77,12 @@ export async function POST(request: NextRequest) {
 
         if (text && text.trim().length >= MIN_TEXT_LENGTH) {
           console.log(`PDF text extracted (${text.length} chars), using text parsing`)
-          result = await parseReceiptWithText(text)
+          result = await parseReceiptWithText(text, user.id)
         } else {
           // Steg 2: För lite text, fallback till bildkonvertering
           console.log('PDF text insufficient, falling back to image conversion')
           const base64Image = await pdfToBase64Image(arrayBuffer)
-          result = await parseReceiptWithVision(base64Image, 'image/png')
+          result = await parseReceiptWithVision(base64Image, 'image/png', user.id)
         }
       } catch (pdfError) {
         console.error('PDF text extraction failed, trying image conversion:', pdfError)
@@ -82,7 +90,7 @@ export async function POST(request: NextRequest) {
         // Steg 3: Textextraktion misslyckades, försök med bild
         try {
           const base64Image = await pdfToBase64Image(arrayBuffer)
-          result = await parseReceiptWithVision(base64Image, 'image/png')
+          result = await parseReceiptWithVision(base64Image, 'image/png', user.id)
         } catch (imageError) {
           console.error('PDF image conversion also failed:', imageError)
           return NextResponse.json(
@@ -102,7 +110,7 @@ export async function POST(request: NextRequest) {
       const mimeType = file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
 
       // Parsa med Claude Vision
-      result = await parseReceiptWithVision(base64, mimeType)
+      result = await parseReceiptWithVision(base64, mimeType, user.id)
     }
 
     return NextResponse.json({

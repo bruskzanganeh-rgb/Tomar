@@ -24,6 +24,7 @@ export type LogAiUsageParams = {
   model: string
   inputTokens: number
   outputTokens: number
+  userId?: string
   metadata?: Record<string, unknown>
 }
 
@@ -59,6 +60,7 @@ export async function logAiUsage(params: LogAiUsageParams): Promise<void> {
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       estimated_cost_usd: estimatedCostUsd,
+      user_id: params.userId || null,
       metadata: metadata || null,
     })
 
