@@ -61,13 +61,22 @@ export async function DELETE(
     supabase.from('usage_tracking').delete().eq('user_id', targetUserId),
     supabase.from('organization_members').delete().eq('user_id', targetUserId),
     supabase.from('sponsor_impressions').delete().eq('user_id', targetUserId),
+    supabase.from('ai_usage_logs').delete().eq('user_id', targetUserId),
+    supabase.from('exchange_rates').delete().eq('user_id', targetUserId),
   ])
 
   // 4. Delete subscription and company settings
   await supabase.from('subscriptions').delete().eq('user_id', targetUserId)
   await supabase.from('company_settings').delete().eq('user_id', targetUserId)
 
-  // 5. Delete auth user
+  // 5. Clean up invitation_codes references (nullable FKs)
+  await Promise.all([
+    supabase.from('invitation_codes').update({ created_by: null }).eq('created_by', targetUserId),
+    supabase.from('invitation_codes').update({ used_by: null }).eq('used_by', targetUserId),
+    supabase.from('admin_users').update({ granted_by: null }).eq('granted_by', targetUserId),
+  ])
+
+  // 6. Delete auth user
   const { error: authError } = await supabase.auth.admin.deleteUser(targetUserId)
   if (authError) {
     console.error('Error deleting auth user:', authError)

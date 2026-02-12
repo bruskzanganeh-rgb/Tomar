@@ -31,6 +31,8 @@ export async function GET(
         currency,
         reference_person_override,
         notes,
+        reverse_charge,
+        customer_vat_number,
         client:clients(name, org_number, address, payment_terms, reference_person, invoice_language)
       `)
       .eq('id', id)
@@ -139,6 +141,8 @@ export async function GET(
         total: invoice.total,
         reference_person_override: invoice.reference_person_override,
         notes: invoice.notes,
+        reverse_charge: invoice.reverse_charge,
+        customer_vat_number: invoice.customer_vat_number,
       },
       client: clientData,
       company,

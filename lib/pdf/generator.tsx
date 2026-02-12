@@ -44,6 +44,8 @@ type InvoiceData = {
   total: number
   reference_person_override?: string | null
   notes?: string | null
+  reverse_charge?: boolean
+  customer_vat_number?: string | null
 }
 
 type InvoiceLine = {
@@ -97,6 +99,8 @@ const PDF_LABELS: Record<string, Record<string, string>> = {
     createdWith: 'Skapad med',
     poweredBy: 'Sponsrad av',
     invoicedAmount: 'Fakturerat belopp',
+    reverseCharge: 'Omvänd skattskyldighet — Reverse charge pursuant to Article 196, Council Directive 2006/112/EC',
+    customerVatNumber: 'Kundens momsnr',
   },
   en: {
     invoice: 'Invoice',
@@ -123,6 +127,8 @@ const PDF_LABELS: Record<string, Record<string, string>> = {
     createdWith: 'Created with',
     poweredBy: 'Powered by',
     invoicedAmount: 'Invoiced amount',
+    reverseCharge: 'Reverse charge — VAT to be accounted for by the recipient pursuant to Article 196, Council Directive 2006/112/EC',
+    customerVatNumber: 'Customer VAT no.',
   },
 }
 
@@ -452,14 +458,19 @@ const PDF_CURRENCY_SUFFIX: Record<string, string> = {
   DKK: 'DKK',
   EUR: 'EUR',
   USD: 'USD',
+  GBP: 'GBP',
+  CHF: 'CHF',
+  CZK: 'CZK',
+  PLN: 'PLN',
 }
 
 // Format currency for PDF — uses the invoice currency
 function formatCurrencyPdf(amount: number, currency = 'SEK'): string {
   const formatted = amount.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const symbol = PDF_CURRENCY_SUFFIX[currency] || currency
-  if (currency === 'EUR' || currency === 'USD') {
-    return `${currency === 'EUR' ? '€' : '$'}${formatted}`
+  if (currency === 'EUR' || currency === 'USD' || currency === 'GBP') {
+    const prefix = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$'
+    return `${prefix}${formatted}`
   }
   return `${formatted} ${symbol}`
 }
@@ -615,6 +626,20 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
             </View>
           </View>
         </View>
+
+        {/* Reverse charge notice */}
+        {invoice.reverse_charge && (
+          <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef3c7', borderRadius: 4 }}>
+            <Text style={{ fontSize: 7.5, color: '#92400e', fontWeight: 700 }}>
+              {l.reverseCharge}
+            </Text>
+            {invoice.customer_vat_number && (
+              <Text style={{ fontSize: 7, color: '#92400e', marginTop: 2 }}>
+                {l.customerVatNumber}: {invoice.customer_vat_number}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Footer - 4 column layout */}
         <View style={styles.footer}>

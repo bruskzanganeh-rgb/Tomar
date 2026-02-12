@@ -231,6 +231,8 @@
     "optionalMessagePlaceholder": "Valfritt meddelande som visas under fakturarader",
     "prefilledFromNotes": "Förfylls från uppdragets faktura-anteckningar",
     "addReceiptsAsLines": "Lägg till kvitton som fakturarader",
+    "reverseChargeNotice": "Omvänd skattskyldighet (reverse charge) tillämpas — moms sätts till 0%",
+    "reverseChargeText": "Omvänd skattskyldighet — Reverse charge pursuant to Article 196, Council Directive 2006/112/EC",
     "couldNotCreateInvoice": "Kunde inte skapa faktura",
     "couldNotCreateLines": "Kunde inte skapa fakturarader",
     "invoiceLimitReached": "Du har nått gränsen på {limit} fakturor/månad. Uppgradera till Pro.",
@@ -484,6 +486,7 @@
     "companyInfo": "Företagsinformation",
     "companyInfoDesc": "Denna information visas på dina fakturor",
     "companyName": "Företagsnamn",
+    "country": "Land",
     "orgNumber": "Organisationsnummer",
     "address": "Adress",
     "email": "E-post",
@@ -583,12 +586,20 @@
     "USD": "US Dollar",
     "NOK": "Norsk krone",
     "DKK": "Dansk krone",
+    "GBP": "Brittiskt pund",
+    "CHF": "Schweizisk franc",
+    "CZK": "Tjeckisk krona",
+    "PLN": "Polsk zloty",
     "symbol": {
       "SEK": "kr",
       "EUR": "€",
       "USD": "$",
       "NOK": "kr",
-      "DKK": "kr"
+      "DKK": "kr",
+      "GBP": "£",
+      "CHF": "CHF",
+      "CZK": "Kč",
+      "PLN": "zł"
     }
   },
   "pdf": {
@@ -706,7 +717,10 @@
     "onboardingCompleteError": "Kunde inte slutföra konfiguration",
     "onboardingGigTypeError": "Kunde inte spara uppdragstyp",
     "onboardingPositionError": "Kunde inte spara position",
-    "onboardingSaveError": "Kunde inte spara inställningar"
+    "onboardingSaveError": "Kunde inte spara inställningar",
+    "country": "Land",
+    "countryDesc": "Välj vilket land du är verksam i. Detta styr momssatser, valuta och fältetiketter.",
+    "selectCountry": "Välj land"
   },
   "subscription": {
     "yourPlan": "Din plan",
@@ -913,6 +927,10 @@
     "actionsColumn": "Åtgärder",
     "couldNotDeleteClient": "Kunde inte ta bort uppdragsgivare",
     "updateInfoFor": "Uppdatera information för {name}",
+    "country": "Land",
+    "selectCountry": "Välj land",
+    "vatNumber": "Momsnummer",
+    "vatNumberPlaceholder": "t.ex. SE559087745101",
     "invoiceLanguage": "Fakturaspråk",
     "invoiceLanguageHint": "Språk på fakturor som skickas till denna kund",
     "newClientDescription": "Lägg till en ny uppdragsgivare",

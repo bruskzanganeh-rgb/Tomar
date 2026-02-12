@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
 
-export type SupportedCurrency = 'SEK' | 'EUR' | 'USD' | 'DKK' | 'NOK'
+export type SupportedCurrency = 'SEK' | 'EUR' | 'USD' | 'DKK' | 'NOK' | 'GBP' | 'CHF' | 'CZK' | 'PLN'
 
-export const SUPPORTED_CURRENCIES: SupportedCurrency[] = ['SEK', 'EUR', 'USD', 'DKK', 'NOK']
+export const SUPPORTED_CURRENCIES: SupportedCurrency[] = ['SEK', 'EUR', 'USD', 'DKK', 'NOK', 'GBP', 'CHF', 'CZK', 'PLN']
 
 export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
   SEK: 'kr',
@@ -10,18 +10,22 @@ export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
   USD: '$',
   DKK: 'kr',
   NOK: 'kr',
+  GBP: '£',
+  CHF: 'CHF',
+  CZK: 'Kč',
+  PLN: 'zł',
 }
 
 export function formatCurrency(amount: number, currency: SupportedCurrency, locale = 'sv-SE'): string {
   const symbol = CURRENCY_SYMBOLS[currency]
   const formatted = amount.toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 
-  // For EUR and USD, put symbol before amount
-  if (currency === 'EUR' || currency === 'USD') {
+  // For EUR, USD, GBP, put symbol before amount
+  if (currency === 'EUR' || currency === 'USD' || currency === 'GBP') {
     return `${symbol}${formatted}`
   }
-  // For Scandinavian currencies, put symbol after
-  return `${formatted} ${currency === 'SEK' ? 'kr' : `${currency.toLowerCase()}`}`
+  // For other currencies, put symbol after
+  return `${formatted} ${symbol}`
 }
 
 /**

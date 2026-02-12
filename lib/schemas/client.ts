@@ -10,6 +10,8 @@ export const createClientSchema = z.object({
   reference_person: z.string().optional(),
   notes: z.string().optional(),
   invoice_language: z.string().optional(),
+  country_code: z.string().optional(),
+  vat_number: z.string().optional(),
 })
 
 export type CreateClientFormData = z.infer<typeof createClientSchema>

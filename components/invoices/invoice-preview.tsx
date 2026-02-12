@@ -52,6 +52,7 @@ type InvoicePreviewProps = {
   primaryVatRate: number
   referencePerson?: string
   notes?: string
+  reverseCharge?: boolean
 }
 
 export function InvoicePreview({
@@ -67,6 +68,7 @@ export function InvoicePreview({
   primaryVatRate,
   referencePerson,
   notes,
+  reverseCharge,
 }: InvoicePreviewProps) {
   const tp = useTranslations('pdf')
   const t = useTranslations('invoice')
@@ -275,6 +277,13 @@ export function InvoicePreview({
                 <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{formatCurrency(total)}</span>
               </div>
             </div>
+
+            {/* Reverse charge notice */}
+            {reverseCharge && (
+              <div style={{ marginTop: '6px', padding: '6px 8px', backgroundColor: '#fef3c7', borderRadius: '3px', fontSize: '7px', color: '#92400e', fontWeight: 600 }}>
+                {t('reverseChargeText')}
+              </div>
+            )}
 
             {/* Footer - 4 column layout */}
             <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: '10px', marginTop: '5px' }}>

@@ -28,6 +28,7 @@ import { toast } from 'sonner'
 import { InvoicePreview } from './invoice-preview'
 import { useSubscription } from '@/lib/hooks/use-subscription'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { shouldReverseCharge } from '@/lib/country-config'
 import Link from 'next/link'
 
 type GigExpense = {
@@ -67,7 +68,7 @@ type CreateInvoiceDialogProps = {
   initialGigs?: InitialGig[]
 }
 
-type Client = { id: string; name: string; org_number: string | null; address: string | null; payment_terms: number; reference_person: string | null; invoice_language: string | null }
+type Client = { id: string; name: string; org_number: string | null; address: string | null; payment_terms: number; reference_person: string | null; invoice_language: string | null; country_code: string | null; vat_number: string | null }
 type Gig = { id: string; date: string; fee: number | null; travel_expense: number | null; client: { name: string }; gig_type: { vat_rate: number } }
 type GigType = { id: string; name: string; name_en: string | null; vat_rate: number }
 type CompanySettings = {
@@ -80,6 +81,7 @@ type CompanySettings = {
   logo_url: string | null
   vat_registration_number: string | null
   late_payment_interest_text: string | null
+  country_code: string
 }
 
 type InvoiceLine = {
@@ -137,6 +139,17 @@ export function CreateInvoiceDialog({
     return date.toISOString().split('T')[0]
   }, [formData.invoice_date, formData.payment_terms])
 
+  // Get selected client for preview
+  const selectedClient = useMemo(() => {
+    return clients.find(c => c.id === formData.client_id) || null
+  }, [clients, formData.client_id])
+
+  // Auto-detect reverse charge
+  const isReverseCharge = useMemo(() => {
+    if (!selectedClient?.country_code || !companySettings?.country_code) return false
+    return shouldReverseCharge(companySettings.country_code, selectedClient.country_code)
+  }, [selectedClient, companySettings])
+
   // Calculate totals for preview
   const { previewLines, subtotal, vatAmount, total, primaryVatRate } = useMemo(() => {
     const linesWithVat = lines.map(line => {
@@ -151,17 +164,13 @@ export function CreateInvoiceDialog({
     })
 
     const subtotal = linesWithVat.reduce((sum, l) => sum + l.amount, 0)
-    const vatAmount = linesWithVat.reduce((sum, l) => sum + (l.amount * l.vat_rate / 100), 0)
+    // If reverse charge, VAT is 0
+    const vatAmount = isReverseCharge ? 0 : linesWithVat.reduce((sum, l) => sum + (l.amount * l.vat_rate / 100), 0)
     const total = subtotal + vatAmount
-    const primaryVatRate = linesWithVat.find(l => l.vat_rate > 0)?.vat_rate || 25
+    const primaryVatRate = isReverseCharge ? 0 : (linesWithVat.find(l => l.vat_rate > 0)?.vat_rate || 25)
 
     return { previewLines: linesWithVat, subtotal, vatAmount, total, primaryVatRate }
-  }, [lines, gigTypes])
-
-  // Get selected client for preview
-  const selectedClient = useMemo(() => {
-    return clients.find(c => c.id === formData.client_id) || null
-  }, [clients, formData.client_id])
+  }, [lines, gigTypes, isReverseCharge])
 
   useEffect(() => {
     if (open) {
@@ -200,7 +209,7 @@ export function CreateInvoiceDialog({
   async function loadClients() {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, org_number, address, payment_terms, reference_person, invoice_language')
+      .select('id, name, org_number, address, payment_terms, reference_person, invoice_language, country_code, vat_number')
       .order('name')
     setClients(data || [])
   }
@@ -232,7 +241,7 @@ export function CreateInvoiceDialog({
   async function loadCompanySettings() {
     const { data } = await supabase
       .from('company_settings')
-      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice')
+      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code')
       .single()
     setCompanySettings(data)
   }
@@ -394,6 +403,8 @@ export function CreateInvoiceDialog({
           status: 'draft',
           reference_person_override: referencePersonOverride,
           notes: formData.notes || null,
+          reverse_charge: isReverseCharge,
+          customer_vat_number: isReverseCharge ? (client?.vat_number || null) : null,
         },
       ])
       .select()
@@ -500,6 +511,7 @@ export function CreateInvoiceDialog({
                   primaryVatRate={primaryVatRate}
                   referencePerson={formData.reference_person}
                   notes={formData.notes}
+                  reverseCharge={isReverseCharge}
                 />
               </div>
             </div>
@@ -548,6 +560,13 @@ export function CreateInvoiceDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {isReverseCharge && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
+                      <span className="text-xs font-medium">
+                        {t('reverseChargeNotice')}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Uppdrag att fakturera */}

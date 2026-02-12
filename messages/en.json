@@ -231,6 +231,8 @@
     "optionalMessagePlaceholder": "Optional message shown below invoice lines",
     "prefilledFromNotes": "Pre-filled from gig invoice notes",
     "addReceiptsAsLines": "Add receipts as invoice lines",
+    "reverseChargeNotice": "Reverse charge applies — VAT set to 0%",
+    "reverseChargeText": "Reverse charge — VAT to be accounted for by the recipient pursuant to Article 196, Council Directive 2006/112/EC",
     "couldNotCreateInvoice": "Could not create invoice",
     "couldNotCreateLines": "Could not create invoice lines",
     "invoiceLimitReached": "You have reached the limit of {limit} invoices/month. Upgrade to Pro.",
@@ -484,6 +486,7 @@
     "companyInfo": "Company information",
     "companyInfoDesc": "This information is shown on your invoices",
     "companyName": "Company name",
+    "country": "Country",
     "orgNumber": "Organization number",
     "address": "Address",
     "email": "Email",
@@ -583,12 +586,20 @@
     "USD": "US Dollar",
     "NOK": "Norwegian krone",
     "DKK": "Danish krone",
+    "GBP": "British pound",
+    "CHF": "Swiss franc",
+    "CZK": "Czech koruna",
+    "PLN": "Polish zloty",
     "symbol": {
       "SEK": "kr",
       "EUR": "€",
       "USD": "$",
       "NOK": "kr",
-      "DKK": "kr"
+      "DKK": "kr",
+      "GBP": "£",
+      "CHF": "CHF",
+      "CZK": "Kč",
+      "PLN": "zł"
     }
   },
   "pdf": {
@@ -706,7 +717,10 @@
     "onboardingCompleteError": "Could not complete setup",
     "onboardingGigTypeError": "Could not save gig type",
     "onboardingPositionError": "Could not save position",
-    "onboardingSaveError": "Could not save settings"
+    "onboardingSaveError": "Could not save settings",
+    "country": "Country",
+    "countryDesc": "Select the country you operate in. This controls VAT rates, currency and field labels.",
+    "selectCountry": "Select country"
   },
   "subscription": {
     "yourPlan": "Your plan",
@@ -913,6 +927,10 @@
     "actionsColumn": "Actions",
     "couldNotDeleteClient": "Could not delete client",
     "updateInfoFor": "Update information for {name}",
+    "country": "Country",
+    "selectCountry": "Select country",
+    "vatNumber": "VAT number",
+    "vatNumberPlaceholder": "e.g. SE559087745101",
     "invoiceLanguage": "Invoice language",
     "invoiceLanguageHint": "Language used on invoices sent to this client",
     "newClientDescription": "Add a new client",

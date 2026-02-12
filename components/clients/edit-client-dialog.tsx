@@ -26,9 +26,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Globe } from 'lucide-react'
+import { Loader2, Globe, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLocale } from 'next-intl'
+import { COUNTRY_CONFIGS } from '@/lib/country-config'
 
 type Client = {
   id: string
@@ -41,6 +42,8 @@ type Client = {
   reference_person: string | null
   notes: string | null
   invoice_language: string | null
+  country_code: string | null
+  vat_number: string | null
 }
 
 type EditClientDialogProps = {
@@ -90,6 +93,8 @@ export function EditClientDialog({
         reference_person: client.reference_person || '',
         notes: client.notes || '',
         invoice_language: client.invoice_language || locale,
+        country_code: client.country_code || '',
+        vat_number: client.vat_number || '',
       })
     }
   }, [client, form])
@@ -111,6 +116,8 @@ export function EditClientDialog({
         reference_person: data.reference_person || null,
         notes: data.notes || null,
         invoice_language: data.invoice_language || locale,
+        country_code: data.country_code || null,
+        vat_number: data.vat_number || null,
       })
       .eq('id', client.id)
 
@@ -180,6 +187,50 @@ export function EditClientDialog({
                       <FormLabel>{t('orgNumber')}</FormLabel>
                       <FormControl>
                         <Input placeholder="123456-7890" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="country_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {t('country')}
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('selectCountry')} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(COUNTRY_CONFIGS).map(([code, config]) => (
+                            <SelectItem key={code} value={code}>
+                              {config.flag} {locale === 'sv' ? config.name.sv : config.name.en}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="vat_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('vatNumber')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder={t('vatNumberPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

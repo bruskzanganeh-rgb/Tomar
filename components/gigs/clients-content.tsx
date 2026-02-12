@@ -33,6 +33,8 @@ type Client = {
   reference_person: string | null
   notes: string | null
   invoice_language: string | null
+  country_code: string | null
+  vat_number: string | null
   created_at: string
   invoices: { total: number }[]
 }

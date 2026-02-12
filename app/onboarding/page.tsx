@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Music, Building2, Guitar, Users, ChevronRight, ChevronLeft, Check, Plus, X, Loader2, Sparkles, Globe } from 'lucide-react'
+import { Music, Building2, Guitar, Users, ChevronRight, ChevronLeft, Check, Plus, X, Loader2, Sparkles, Globe, MapPin } from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { toast } from 'sonner'
+import { COUNTRY_CONFIGS, getCountryConfig } from '@/lib/country-config'
 
 type InstrumentCategory = {
   id: string
@@ -35,19 +36,23 @@ type Position = {
   sort_order: number
 }
 
-const GIG_TYPE_PRESETS: Record<string, { name: string; name_en: string; vat_rate: number; color: string }[]> = {
-  sv: [
-    { name: 'Konsert', name_en: 'Concert', vat_rate: 0, color: '#3b82f6' },
-    { name: 'Inspelning', name_en: 'Recording', vat_rate: 6, color: '#8b5cf6' },
-    { name: 'Undervisning', name_en: 'Teaching', vat_rate: 25, color: '#10b981' },
-    { name: 'Utgifter', name_en: 'Expenses', vat_rate: 0, color: '#6b7280' },
-  ],
-  en: [
-    { name: 'Concert', name_en: 'Concert', vat_rate: 0, color: '#3b82f6' },
-    { name: 'Recording', name_en: 'Recording', vat_rate: 6, color: '#8b5cf6' },
-    { name: 'Teaching', name_en: 'Teaching', vat_rate: 25, color: '#10b981' },
-    { name: 'Expenses', name_en: 'Expenses', vat_rate: 0, color: '#6b7280' },
-  ],
+function getGigTypePresets(locale: string, countryCode: string): { name: string; name_en: string; vat_rate: number; color: string }[] {
+  const config = getCountryConfig(countryCode)
+  const vat = config.defaultVatRates
+  if (locale === 'sv') {
+    return [
+      { name: 'Konsert', name_en: 'Concert', vat_rate: vat.concert, color: '#3b82f6' },
+      { name: 'Inspelning', name_en: 'Recording', vat_rate: vat.recording, color: '#8b5cf6' },
+      { name: 'Undervisning', name_en: 'Teaching', vat_rate: vat.teaching, color: '#10b981' },
+      { name: 'Utgifter', name_en: 'Expenses', vat_rate: vat.expenses, color: '#6b7280' },
+    ]
+  }
+  return [
+    { name: 'Concert', name_en: 'Concert', vat_rate: vat.concert, color: '#3b82f6' },
+    { name: 'Recording', name_en: 'Recording', vat_rate: vat.recording, color: '#8b5cf6' },
+    { name: 'Teaching', name_en: 'Teaching', vat_rate: vat.teaching, color: '#10b981' },
+    { name: 'Expenses', name_en: 'Expenses', vat_rate: vat.expenses, color: '#6b7280' },
+  ]
 }
 
 const POSITION_PRESETS: Record<string, string[]> = {
@@ -69,13 +74,18 @@ export default function OnboardingPage() {
 
   const STEPS = [
     { label: t('language'), icon: Globe },
+    { label: t('country'), icon: MapPin },
     { label: t('companyInfo'), icon: Building2 },
     { label: t('instruments'), icon: Guitar },
     { label: t('gigTypes'), icon: Music },
     { label: t('roles'), icon: Users },
   ]
 
-  // Step 1: Company info
+  // Step 1: Country
+  const [countryCode, setCountryCode] = useState('SE')
+  const countryConfig = getCountryConfig(countryCode)
+
+  // Step 2: Company info
   const [companyName, setCompanyName] = useState('')
   const [orgNumber, setOrgNumber] = useState('')
   const [address, setAddress] = useState('')
@@ -90,6 +100,7 @@ export default function OnboardingPage() {
   // Step 3: Gig types
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
   const [newGigTypeName, setNewGigTypeName] = useState('')
+  const [newGigTypeVat, setNewGigTypeVat] = useState('')
 
   // Step 4: Positions
   const [positions, setPositions] = useState<Position[]>([])
@@ -103,7 +114,7 @@ export default function OnboardingPage() {
     // Load company settings (pre-filled from signup)
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('company_name, org_number, address, email, phone, bank_account')
+      .select('company_name, org_number, address, email, phone, bank_account, country_code')
       .single()
 
     if (settings) {
@@ -113,6 +124,7 @@ export default function OnboardingPage() {
       setEmail(settings.email || '')
       setPhone(settings.phone || '')
       setBankAccount(settings.bank_account || '')
+      if (settings.country_code) setCountryCode(settings.country_code)
     }
 
     // Load instrument categories + instruments
@@ -167,13 +179,14 @@ export default function OnboardingPage() {
     if (!newGigTypeName.trim()) return
     const { data, error } = await supabase
       .from('gig_types')
-      .insert({ name: newGigTypeName.trim(), vat_rate: 0, color: '#6b7280' })
+      .insert({ name: newGigTypeName.trim(), vat_rate: parseFloat(newGigTypeVat) || 0, color: '#6b7280' })
       .select()
       .single()
 
     if (data) {
       setGigTypes(prev => [...prev, data])
       setNewGigTypeName('')
+      setNewGigTypeVat('')
     }
     if (error) toast.error(tToast('onboardingGigTypeError'))
   }
@@ -204,7 +217,7 @@ export default function OnboardingPage() {
     setPositions(prev => prev.filter(p => p.id !== id))
   }
 
-  async function quickAddGigType(preset: typeof GIG_TYPE_PRESETS.sv[0]) {
+  async function quickAddGigType(preset: { name: string; name_en: string; vat_rate: number; color: string }) {
     const { data, error } = await supabase
       .from('gig_types')
       .insert({ name: preset.name, name_en: preset.name_en, vat_rate: preset.vat_rate, color: preset.color })
@@ -223,7 +236,7 @@ export default function OnboardingPage() {
     if (data) setPositions(prev => [...prev, data])
   }
 
-  const gigTypePresets = (GIG_TYPE_PRESETS[locale] || GIG_TYPE_PRESETS.en)
+  const gigTypePresets = getGigTypePresets(locale, countryCode)
     .filter(p => !gigTypes.some(gt => gt.name.toLowerCase() === p.name.toLowerCase()))
 
   const positionPresets = (POSITION_PRESETS[locale] || POSITION_PRESETS.en)
@@ -243,6 +256,8 @@ export default function OnboardingPage() {
             email,
             phone,
             bank_account: bankAccount,
+            country_code: countryCode,
+            base_currency: countryConfig.currency,
           },
           instruments: selectedInstruments,
         }),
@@ -348,8 +363,41 @@ export default function OnboardingPage() {
           </Card>
         )}
 
-        {/* Step 1: Company Info */}
+        {/* Step 1: Country */}
         {step === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                {t('country')}
+              </CardTitle>
+              <CardDescription>
+                {t('countryDesc')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {Object.entries(COUNTRY_CONFIGS).map(([code, config]) => (
+                  <button
+                    key={code}
+                    onClick={() => setCountryCode(code)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-colors ${
+                      countryCode === code
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/50 hover:bg-muted'
+                    }`}
+                  >
+                    <span className="text-lg">{config.flag}</span>
+                    {locale === 'sv' ? config.name.sv : config.name.en}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 2: Company Info */}
+        {step === 2 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -371,12 +419,12 @@ export default function OnboardingPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="orgNumber">{tSettings('orgNumber')}</Label>
+                  <Label htmlFor="orgNumber">{locale === 'sv' ? countryConfig.orgLabel.sv : countryConfig.orgLabel.en}</Label>
                   <Input
                     id="orgNumber"
                     value={orgNumber}
                     onChange={e => setOrgNumber(e.target.value)}
-                    placeholder="XXXXXX-XXXX"
+                    placeholder={countryConfig.orgPlaceholder}
                   />
                 </div>
               </div>
@@ -419,8 +467,8 @@ export default function OnboardingPage() {
           </Card>
         )}
 
-        {/* Step 2: Instruments */}
-        {step === 2 && (
+        {/* Step 3: Instruments */}
+        {step === 3 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -467,8 +515,8 @@ export default function OnboardingPage() {
           </Card>
         )}
 
-        {/* Step 3: Gig Types */}
-        {step === 3 && (
+        {/* Step 4: Gig Types */}
+        {step === 4 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -533,7 +581,19 @@ export default function OnboardingPage() {
                   onChange={e => setNewGigTypeName(e.target.value)}
                   placeholder={t('newGigTypePlaceholder')}
                   onKeyDown={e => e.key === 'Enter' && addGigType()}
+                  className="flex-1"
                 />
+                <div className="relative w-20">
+                  <Input
+                    type="number"
+                    value={newGigTypeVat}
+                    onChange={e => setNewGigTypeVat(e.target.value)}
+                    placeholder={t('vat')}
+                    onKeyDown={e => e.key === 'Enter' && addGigType()}
+                    className="pr-6"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                </div>
                 <Button onClick={addGigType} size="sm" variant="outline">
                   <Plus className="h-4 w-4 mr-1" />
                   {tc('add')}
@@ -543,8 +603,8 @@ export default function OnboardingPage() {
           </Card>
         )}
 
-        {/* Step 4: Positions */}
-        {step === 4 && (
+        {/* Step 5: Positions */}
+        {step === 5 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

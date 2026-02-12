@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useSubscription } from '@/lib/hooks/use-subscription'
+import { COUNTRY_CONFIGS, getCountryConfig } from '@/lib/country-config'
 
 type CompanySettings = {
   id: string
@@ -45,12 +46,14 @@ type CompanySettings = {
   base_currency: string
   locale: string
   email_provider: string | null
+  country_code: string
 }
 
 export default function SettingsPage() {
   const t = useTranslations('settings')
   const tToast = useTranslations('toast')
   const tc = useTranslations('common')
+  const locale = useLocale()
 
   const [settings, setSettings] = useState<CompanySettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -64,6 +67,7 @@ export default function SettingsPage() {
   const supabase = createClient()
   const { isPro } = useSubscription()
   const searchParams = useSearchParams()
+  const countryConfig = getCountryConfig(settings?.country_code || 'SE')
 
   // Default to subscription tab if coming from Stripe checkout
   const defaultTab = searchParams.get('upgrade') ? 'subscription' : 'company'
@@ -140,6 +144,7 @@ export default function SettingsPage() {
         base_currency: settings.base_currency,
         locale: settings.locale,
         email_provider: emailProvider,
+        country_code: settings.country_code,
       })
       .eq('id', settings.id)
 
@@ -282,14 +287,35 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="org_number">{t('orgNumber')}</Label>
+              <Label>{t('country')}</Label>
+              <Select
+                value={settings?.country_code || 'SE'}
+                onValueChange={(value) =>
+                  setSettings(s => s ? { ...s, country_code: value } : null)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(COUNTRY_CONFIGS).map(([code, config]) => (
+                    <SelectItem key={code} value={code}>
+                      {config.flag} {locale === 'sv' ? config.name.sv : config.name.en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="org_number">{locale === 'sv' ? countryConfig.orgLabel.sv : countryConfig.orgLabel.en}</Label>
               <Input
                 id="org_number"
                 value={settings?.org_number || ''}
                 onChange={(e) =>
                   setSettings(s => s ? { ...s, org_number: e.target.value } : null)
                 }
-                placeholder="XXXXXX-XXXX"
+                placeholder={countryConfig.orgPlaceholder}
               />
             </div>
 
@@ -361,14 +387,14 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="bank_account">{t('bankAccount')}</Label>
+              <Label htmlFor="bank_account">{locale === 'sv' ? countryConfig.bankLabel.sv : countryConfig.bankLabel.en}</Label>
               <Input
                 id="bank_account"
                 value={settings?.bank_account || ''}
                 onChange={(e) =>
                   setSettings(s => s ? { ...s, bank_account: e.target.value } : null)
                 }
-                placeholder="XXXX-XXXX"
+                placeholder={countryConfig.bankPlaceholder}
               />
               <p className="text-xs text-muted-foreground">
                 {t('bankAccountHint')}
@@ -424,6 +450,10 @@ export default function SettingsPage() {
                   <SelectItem value="DKK">DKK — Danska kronor</SelectItem>
                   <SelectItem value="EUR">EUR — Euro</SelectItem>
                   <SelectItem value="USD">USD — US Dollar</SelectItem>
+                  <SelectItem value="GBP">GBP — Brittiskt pund</SelectItem>
+                  <SelectItem value="CHF">CHF — Schweizisk franc</SelectItem>
+                  <SelectItem value="CZK">CZK — Tjeckisk krona</SelectItem>
+                  <SelectItem value="PLN">PLN — Polsk zloty</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
