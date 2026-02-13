@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 import { Resend } from 'resend'
 import { logActivity } from '@/lib/activity'
+import { generateInvoicePdf } from '@/lib/pdf/generator'
 
 const serviceSupabase = createServiceClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,10 +29,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch invoice with client - verify ownership
+    // Fetch invoice with client - verify ownership (include fields needed for PDF generation)
     const { data: invoice, error: fetchError } = await supabase
       .from('invoices')
-      .select('*, client:clients(name, email)')
+      .select('*, client:clients(name, email, org_number, address, payment_terms, reference_person, invoice_language)')
       .eq('id', invoiceId)
       .eq('user_id', user.id)
       .single()
@@ -51,10 +52,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Pro plan required to send emails' }, { status: 403 })
     }
 
-    // Fetch company settings
+    // Fetch company settings (include fields needed for PDF generation)
     const { data: company, error: companyError } = await supabase
       .from('company_settings')
-      .select('smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name, email_provider')
+      .select('smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name, email_provider, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
       .eq('user_id', user.id)
       .single()
 
@@ -62,13 +63,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not fetch company settings' }, { status: 500 })
     }
 
-    // Generate PDF (reuse original invoice PDF)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-    const pdfResponse = await fetch(`${baseUrl}/api/invoices/${invoiceId}/pdf`)
-    if (!pdfResponse.ok) {
-      return NextResponse.json({ error: 'Could not generate PDF for the invoice' }, { status: 500 })
+    // Generate PDF directly (avoid server-to-server fetch which lacks auth cookies)
+    const { data: lines } = await supabase
+      .from('invoice_lines')
+      .select('description, amount, vat_rate')
+      .eq('invoice_id', invoiceId)
+      .order('sort_order')
+
+    const clientData = invoice.client as unknown as {
+      name: string; org_number: string | null; address: string | null;
+      payment_terms: number; reference_person: string | null; invoice_language: string | null
     }
-    const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer())
+
+    const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+
+    const { data: brandingConfig } = await supabase
+      .from('platform_config')
+      .select('value')
+      .eq('key', 'branding_name')
+      .single()
+
+    const pdfBuffer = await generateInvoicePdf({
+      invoice: {
+        invoice_number: invoice.invoice_number,
+        invoice_date: invoice.invoice_date,
+        due_date: invoice.due_date,
+        subtotal: invoice.subtotal,
+        vat_rate: invoice.vat_rate,
+        vat_amount: invoice.vat_amount,
+        total: invoice.total,
+        reference_person_override: invoice.reference_person_override,
+        notes: invoice.notes,
+        reverse_charge: invoice.reverse_charge,
+        customer_vat_number: invoice.customer_vat_number,
+      },
+      client: clientData,
+      company,
+      lines: lines || undefined,
+      currency: invoice.currency || 'SEK',
+      showBranding: !isPro,
+      locale: clientData.invoice_language || 'sv',
+      brandingName: brandingConfig?.value || 'Tomar',
+    })
 
     const fileAttachments = [
       {
