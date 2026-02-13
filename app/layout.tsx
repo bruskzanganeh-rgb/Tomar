@@ -8,6 +8,8 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { SessionTracker } from '@/components/session-tracker'
 import { createClient } from '@/lib/supabase/server'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +24,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tomar",
   description: "Gig and invoice management for musicians",
+  metadataBase: new URL('https://tomar.babalisk.com'),
+  openGraph: {
+    title: 'Tomar',
+    description: 'Gig and invoice management for freelance musicians',
+    url: 'https://tomar.babalisk.com',
+    siteName: 'Tomar',
+    locale: 'sv_SE',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Tomar',
+    description: 'Gig and invoice management for freelance musicians',
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -69,6 +85,8 @@ export default async function RootLayout({
             <Toaster />
           </ThemeProvider>
         </NextIntlClientProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
