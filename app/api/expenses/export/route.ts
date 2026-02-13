@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logActivity } from '@/lib/activity'
 import JSZip from 'jszip'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
-
-// Supabase client med service role för server-side
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 type Expense = {
   id: string
@@ -48,7 +42,7 @@ function extractFilePath(attachmentUrl: string): string | null {
 }
 
 // Hämta signerad URL för kvitto
-async function getSignedUrl(attachmentUrl: string): Promise<string | null> {
+async function getSignedUrl(attachmentUrl: string, supabase: ReturnType<typeof createAdminClient>): Promise<string | null> {
   const filePath = extractFilePath(attachmentUrl)
   if (!filePath) return null
 
@@ -98,6 +92,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const supabase = createAdminClient()
     const { searchParams } = new URL(request.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
     const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString())
@@ -130,7 +125,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching expenses:', error)
       return NextResponse.json(
-        { error: 'Could not fetch expenses: ' + error.message },
+        { error: 'Could not fetch expenses' },
         { status: 500 }
       )
     }
@@ -264,7 +259,7 @@ export async function GET(request: NextRequest) {
 
         try {
           // Skapa signerad URL för att kunna hämta från privat bucket
-          const signedUrl = await getSignedUrl(expense.attachment_url)
+          const signedUrl = await getSignedUrl(expense.attachment_url, supabase)
           if (!signedUrl) {
             console.error(`Failed to get signed URL for: ${expense.attachment_url}`)
             continue
@@ -378,7 +373,7 @@ export async function GET(request: NextRequest) {
         if (!expense.attachment_url) continue
 
         try {
-          const signedUrl = await getSignedUrl(expense.attachment_url)
+          const signedUrl = await getSignedUrl(expense.attachment_url, supabase)
           if (!signedUrl) {
             console.error(`Failed to get signed URL for PDF: ${expense.attachment_url}`)
             continue
@@ -507,7 +502,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Export error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Export failed' },
+      { error: 'Export failed' },
       { status: 500 }
     )
   }

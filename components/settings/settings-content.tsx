@@ -47,6 +47,7 @@ type CompanySettings = {
   locale: string
   email_provider: string | null
   country_code: string
+  calendar_token: string | null
 }
 
 export default function SettingsPage() {
@@ -80,9 +81,10 @@ export default function SettingsPage() {
     })
   }, [])
 
-  // Generate calendar URL with user parameter
-  const calendarUrl = typeof window !== 'undefined' && userId
-    ? `${window.location.origin}/api/calendar/feed?user=${userId}`
+  // Generate calendar URL with user parameter and auth token
+  const calendarToken = settings?.calendar_token || ''
+  const calendarUrl = typeof window !== 'undefined' && userId && calendarToken
+    ? `${window.location.origin}/api/calendar/feed?user=${userId}&token=${calendarToken}`
     : ''
   const webcalUrl = calendarUrl.replace('http://', 'webcal://').replace('https://', 'webcal://')
 

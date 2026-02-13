@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { findDuplicateExpense, type DuplicateExpense } from '@/lib/expenses/duplicate-checker'
-
-// Service role client for storage uploads
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceSupabase = createAdminClient()
     const formData = await request.formData()
 
     // Hämta fält
@@ -132,7 +127,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Create expense error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not create expense' },
+      { error: 'Could not create expense' },
       { status: 500 }
     )
   }

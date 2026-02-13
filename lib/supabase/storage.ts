@@ -31,7 +31,7 @@ export async function uploadGigAttachment(
     .upload(filePath, file)
 
   if (uploadError) {
-    throw new Error(`Kunde inte ladda upp fil: ${uploadError.message}`)
+    throw new Error('Kunde inte ladda upp fil')
   }
 
   // Save metadata to database
@@ -51,7 +51,7 @@ export async function uploadGigAttachment(
   if (error) {
     // Try to clean up the uploaded file
     await supabase.storage.from('gig-attachments').remove([filePath])
-    throw new Error(`Kunde inte spara filinfo: ${error.message}`)
+    throw new Error('Kunde inte spara filinfo')
   }
 
   return data as GigAttachment
@@ -76,7 +76,7 @@ export async function deleteGigAttachment(attachmentId: string, filePath: string
     .eq('id', attachmentId)
 
   if (error) {
-    throw new Error(`Kunde inte ta bort fil: ${error.message}`)
+    throw new Error('Kunde inte ta bort fil')
   }
 }
 
@@ -90,7 +90,7 @@ export async function getGigAttachments(gigId: string): Promise<GigAttachment[]>
     .order('uploaded_at', { ascending: false })
 
   if (error) {
-    throw new Error(`Kunde inte hämta bilagor: ${error.message}`)
+    throw new Error('Kunde inte hämta bilagor')
   }
 
   return data as GigAttachment[]
@@ -110,7 +110,7 @@ export async function getGigAttachmentsByCategory(
     .order('uploaded_at', { ascending: false })
 
   if (error) {
-    throw new Error(`Kunde inte hämta bilagor: ${error.message}`)
+    throw new Error('Kunde inte hämta bilagor')
   }
 
   return data as GigAttachment[]

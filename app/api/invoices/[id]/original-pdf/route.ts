@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-
-// Service role client for storage signed URLs
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Extrahera filsökväg från public URL
 function extractFilePath(attachmentUrl: string): string | null {
@@ -33,6 +27,7 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const serviceSupabase = createAdminClient()
 
     const { id } = await params
 

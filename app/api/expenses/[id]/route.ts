@@ -56,7 +56,7 @@ export async function PATCH(
     if (error) {
       console.error('Update expense error:', error)
       return NextResponse.json(
-        { error: 'Could not update expense: ' + error.message },
+        { error: 'Could not update expense' },
         { status: 500 }
       )
     }
@@ -68,7 +68,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Expense PATCH error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not update expense' },
+      { error: 'Could not update expense' },
       { status: 500 }
     )
   }
@@ -96,7 +96,7 @@ export async function DELETE(
     if (error) {
       console.error('Delete expense error:', error)
       return NextResponse.json(
-        { error: 'Could not delete expense: ' + error.message },
+        { error: 'Could not delete expense' },
         { status: 500 }
       )
     }
@@ -107,7 +107,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Expense DELETE error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not delete expense' },
+      { error: 'Could not delete expense' },
       { status: 500 }
     )
   }

@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-
-// Service role client for storage operations
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Extrahera filsökväg från public URL
 function extractFilePath(attachmentUrl: string): string | null {
@@ -35,6 +29,7 @@ export async function GET(
     }
 
     const { id } = await params
+    const serviceSupabase = createAdminClient()
 
     // Hämta expense - verifiera ägarskap (service role för att undvika RLS-problem)
     const { data: expense, error: fetchError } = await serviceSupabase
@@ -105,6 +100,7 @@ export async function POST(
     }
 
     const { id } = await params
+    const serviceSupabase = createAdminClient()
     const formData = await request.formData()
     const file = formData.get('file') as File
 
@@ -157,7 +153,7 @@ export async function POST(
     if (uploadError) {
       console.error('Upload error:', uploadError)
       return NextResponse.json(
-        { error: 'Could not upload file: ' + uploadError.message },
+        { error: 'Could not upload file' },
         { status: 500 }
       )
     }
@@ -213,6 +209,7 @@ export async function DELETE(
     }
 
     const { id } = await params
+    const serviceSupabase = createAdminClient()
 
     // Hämta expense - verifiera ägarskap (service role för att undvika RLS-problem)
     const { data: expense, error: fetchError } = await serviceSupabase

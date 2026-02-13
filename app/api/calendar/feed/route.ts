@@ -1,12 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-
-function getSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { createAdminClient } from '@/lib/supabase/admin'
 
 function formatDateOnly(dateStr: string): string {
   // Input: "2026-02-17" → Output: "20260217"
@@ -33,16 +26,23 @@ function escapeICSText(text: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient()
+    const supabase = createAdminClient()
 
     const userId = request.nextUrl.searchParams.get('user')
-    if (!userId) {
-      return NextResponse.json({ error: 'User parameter required' }, { status: 400 })
+    const token = request.nextUrl.searchParams.get('token')
+    if (!userId || !token) {
+      return NextResponse.json({ error: 'User and token parameters required' }, { status: 400 })
     }
 
-    const { data: userExists } = await supabase.auth.admin.getUserById(userId)
-    if (!userExists?.user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    // Verify token matches the user's stored calendar_token
+    const { data: settings } = await supabase
+      .from('company_settings')
+      .select('calendar_token')
+      .eq('user_id', userId)
+      .single()
+
+    if (!settings || settings.calendar_token !== token) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 403 })
     }
 
     // Fetch gigs with their individual dates

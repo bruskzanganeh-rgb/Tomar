@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 import { Resend } from 'resend'
 import { logActivity } from '@/lib/activity'
 import { generateInvoicePdf } from '@/lib/pdf/generator'
-
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +23,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const serviceSupabase = createAdminClient()
 
     // Fetch invoice with client - verify ownership (include fields needed for PDF generation)
     const { data: invoice, error: fetchError } = await supabase
@@ -216,7 +213,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Send reminder error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not send reminder' },
+      { error: 'Could not send reminder' },
       { status: 500 }
     )
   }

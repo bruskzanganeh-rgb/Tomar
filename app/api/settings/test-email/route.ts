@@ -2,13 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-
-// Service role client for platform config
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +19,8 @@ export async function POST(request: NextRequest) {
     if (!to_email) {
       return NextResponse.json({ error: 'Recipient email required' }, { status: 400 })
     }
+
+    const serviceSupabase = createAdminClient()
 
     if (provider === 'platform') {
       // Test via Resend - use service role for platform config

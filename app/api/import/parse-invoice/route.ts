@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to parse invoice',
+        error: 'Failed to parse invoice',
       },
       { status: 500 }
     )

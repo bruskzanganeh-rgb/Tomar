@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export type ActivityEventType =
   | 'invoice_sent'
@@ -43,6 +38,7 @@ export type LogActivityParams = {
 
 export async function logActivity(params: LogActivityParams): Promise<void> {
   try {
+    const supabaseAdmin = createAdminClient()
     const { error } = await supabaseAdmin.from('activity_events').insert({
       user_id: params.userId,
       event_type: params.eventType,

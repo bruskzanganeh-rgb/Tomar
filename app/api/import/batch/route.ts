@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-
-// Service role client for storage uploads
-const serviceSupabase = createServiceClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type FileMetadata = {
   id: string
@@ -97,6 +91,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const serviceSupabase = createAdminClient()
     const formData = await request.formData()
     const metadataJson = formData.get('metadata') as string
     const skipDuplicates = formData.get('skipDuplicates') === 'true'
@@ -376,7 +371,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Batch import error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Import failed' },
+      { error: 'Import failed' },
       { status: 500 }
     )
   }

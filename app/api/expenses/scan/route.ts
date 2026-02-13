@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Receipt scan error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not read receipt' },
+      { error: 'Could not read receipt' },
       { status: 500 }
     )
   }

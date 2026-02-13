@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-// Supabase client for server-side logging
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // Anthropic pricing per 1M tokens (December 2024)
 const PRICING: Record<string, { input: number; output: number }> = {
@@ -54,6 +48,7 @@ export async function logAiUsage(params: LogAiUsageParams): Promise<void> {
   const estimatedCostUsd = calculateCost(model, inputTokens, outputTokens)
 
   try {
+    const supabase = createAdminClient()
     const { error } = await supabase.from('ai_usage_logs').insert({
       usage_type: usageType,
       model,

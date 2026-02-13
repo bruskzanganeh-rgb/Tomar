@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Analyze error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Could not analyze file' },
+      { error: 'Could not analyze file' },
       { status: 500 }
     )
   }
