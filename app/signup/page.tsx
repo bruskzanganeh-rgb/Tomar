@@ -73,7 +73,7 @@ export default function SignupPage() {
     if (data.user && !data.session) {
       setSuccess(true)
     } else {
-      router.push('/')
+      router.push('/dashboard')
       router.refresh()
     }
 

@@ -31,7 +31,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b" style={{ backgroundColor: '#0f172a', borderColor: '#1e293b' }}>
       <div className="container mx-auto flex h-14 items-center gap-4 px-4">
         {/* Logo */}
-        <Link href="/" className="mr-4 flex items-center shrink-0">
+        <Link href="/dashboard" className="mr-4 flex items-center shrink-0">
           <span className="text-xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
             Tomar
           </span>
@@ -40,9 +40,7 @@ export function Header() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-0.5 flex-1 min-w-0">
           {navigationItems.map((item) => {
-            const isActive = item.href === '/'
-              ? pathname === '/'
-              : pathname === item.href || pathname.startsWith(item.href + '/')
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link
                 key={item.nameKey}
@@ -94,9 +92,7 @@ export function Header() {
 
               <nav className="flex-1 space-y-1 px-3 py-4">
                 {navigationItems.map((item) => {
-                  const isActive = item.href === '/'
-                    ? pathname === '/'
-                    : pathname === item.href || pathname.startsWith(item.href + '/')
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
                   return (
                     <Link
                       key={item.nameKey}

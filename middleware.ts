@@ -33,20 +33,28 @@ export async function middleware(request: NextRequest) {
   // Public routes that don't require auth
   const publicPaths = ['/login', '/signup', '/auth/callback']
   const isPublicPath = publicPaths.some(p => pathname.startsWith(p))
+  const isLandingPage = pathname === '/'
   const isApiPath = pathname.startsWith('/api/')
 
-  // If not logged in and not on a public page, redirect to login
-  if (!user && !isPublicPath && !isApiPath) {
+  // If not logged in and not on a public page or landing page, redirect to login
+  if (!user && !isPublicPath && !isLandingPage && !isApiPath) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
-  // If logged in and on login/signup, redirect to home
+  // If logged in and on landing page, redirect to dashboard
+  if (user && isLandingPage) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // If logged in and on login/signup, redirect to dashboard
   if (user && isPublicPath) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
@@ -78,6 +86,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files and _next
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

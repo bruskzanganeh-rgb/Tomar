@@ -15,7 +15,7 @@ export type NavItem = {
 }
 
 export const navigationItems: NavItem[] = [
-  { nameKey: 'dashboard', href: '/', icon: LayoutDashboard },
+  { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { nameKey: 'gigs', href: '/gigs', icon: Calendar },
   { nameKey: 'finance', href: '/finance', icon: Wallet },
   { nameKey: 'calendar', href: '/calendar', icon: CalendarDays },

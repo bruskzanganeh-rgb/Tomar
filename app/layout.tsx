@@ -22,6 +22,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tomar",
   description: "Gig and invoice management for musicians",
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Tomar',
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/apple-touch-icon.png',
+  },
+  themeColor: '#3b82f6',
 };
 
 export default async function RootLayout({

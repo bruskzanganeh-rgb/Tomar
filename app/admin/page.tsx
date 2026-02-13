@@ -109,13 +109,13 @@ export default function AdminPage() {
   async function checkAdmin() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push('/')
+      router.push('/dashboard')
       return
     }
 
     const { data } = await supabase.rpc('is_admin', { uid: user.id })
     if (!data) {
-      router.push('/')
+      router.push('/dashboard')
       return
     }
 

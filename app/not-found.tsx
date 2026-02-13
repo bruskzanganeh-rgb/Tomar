@@ -11,7 +11,7 @@ export default function NotFound() {
         The page you are looking for does not exist.
       </p>
       <Button asChild variant="outline">
-        <Link href="/">Go home</Link>
+        <Link href="/dashboard">Go home</Link>
       </Button>
     </div>
   )

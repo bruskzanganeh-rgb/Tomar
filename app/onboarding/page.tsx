@@ -269,7 +269,7 @@ export default function OnboardingPage() {
       }
 
       toast.success(tToast('onboardingComplete'))
-      router.push('/')
+      router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
       toast.error(err.message || tToast('onboardingCompleteError'))
