@@ -27,7 +27,11 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
-import { ClientInvoiceChart } from '@/components/clients/client-invoice-chart'
+import dynamic from 'next/dynamic'
+const ClientInvoiceChart = dynamic(
+  () => import('@/components/clients/client-invoice-chart').then(mod => ({ default: mod.ClientInvoiceChart })),
+  { ssr: false, loading: () => <div className="h-[200px] animate-pulse bg-muted rounded" /> }
+)
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
 type Client = {

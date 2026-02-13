@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -73,8 +74,6 @@ export default function ExpensesTab() {
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
 
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [loading, setLoading] = useState(true)
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [supplierFilter, setSupplierFilter] = useState<string>('all')
@@ -82,7 +81,6 @@ export default function ExpensesTab() {
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
-  const [gigs, setGigs] = useState<Gig[]>([])
 
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -90,35 +88,31 @@ export default function ExpensesTab() {
 
   const supabase = createClient()
 
-  useEffect(() => {
-    loadExpenses()
-    loadGigs()
-  }, [])
+  const { data: expenses = [], isLoading: loading, mutate: mutateExpenses } = useSWR<Expense[]>(
+    'expenses-with-gigs',
+    async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*, gig:gigs(id, project_name, date, client:clients(name))')
+        .order('date', { ascending: false })
+      if (error) throw error
+      return (data || []) as Expense[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+  )
 
-  async function loadExpenses() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*, gig:gigs(id, project_name, date, client:clients(name))')
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error loading expenses:', error)
-    } else {
-      setExpenses(data || [])
-    }
-    setLoading(false)
-  }
-
-  async function loadGigs() {
-    const { data } = await supabase
-      .from('gigs')
-      .select('id, date, project_name, venue, status, client:clients(name)')
-      .in('status', ['pending', 'accepted', 'completed', 'invoiced', 'paid'])
-      .order('date', { ascending: false })
-
-    setGigs((data || []) as unknown as Gig[])
-  }
+  const { data: gigs = [] } = useSWR<Gig[]>(
+    'gigs-for-expenses',
+    async () => {
+      const { data } = await supabase
+        .from('gigs')
+        .select('id, date, project_name, venue, status, client:clients(name)')
+        .in('status', ['pending', 'accepted', 'completed', 'invoiced', 'paid'])
+        .order('date', { ascending: false })
+      return (data || []) as unknown as Gig[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  )
 
   async function openPreview(expenseId: string) {
     setPreviewOpen(true)
@@ -409,7 +403,7 @@ export default function ExpensesTab() {
       <UploadReceiptDialog
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}
-        onSuccess={loadExpenses}
+        onSuccess={() => mutateExpenses()}
       />
 
       <ExportDialog
@@ -421,7 +415,7 @@ export default function ExpensesTab() {
         expense={selectedExpense}
         open={selectedExpense !== null}
         onOpenChange={(open) => !open && setSelectedExpense(null)}
-        onSuccess={loadExpenses}
+        onSuccess={() => mutateExpenses()}
         gigs={gigs}
       />
 

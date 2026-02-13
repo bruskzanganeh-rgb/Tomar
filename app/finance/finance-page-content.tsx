@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense } from 'react'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -61,21 +62,27 @@ export function FinancePageContent() {
         </TabsList>
 
         <TabsContent value="invoices" className="mt-6">
-          <Suspense fallback={<TabSkeleton />}>
-            <InvoicesTab />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<TabSkeleton />}>
+              <InvoicesTab />
+            </Suspense>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="expenses" className="mt-6">
-          <Suspense fallback={<TabSkeleton />}>
-            <ExpensesTab />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<TabSkeleton />}>
+              <ExpensesTab />
+            </Suspense>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="import" className="mt-6">
-          <Suspense fallback={<TabSkeleton />}>
-            <ImportTab />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<TabSkeleton />}>
+              <ImportTab />
+            </Suspense>
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

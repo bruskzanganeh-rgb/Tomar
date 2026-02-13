@@ -25,15 +25,11 @@ export async function GET() {
   const year = now.getFullYear()
   const month = now.getMonth() + 1
 
-  // Fetch per-user stats in parallel
+  // Fetch per-user stats with consolidated RPC (1 query instead of 5)
   const userIds = (subscriptions || []).map(s => s.user_id)
 
-  const [invoiceCounts, clientCounts, positionCounts, gigTypeCounts, expenseCounts, usageData] = await Promise.all([
-    supabase.rpc('count_by_user', { table_name: 'invoices', user_ids: userIds }).then(r => r.data),
-    supabase.rpc('count_by_user', { table_name: 'clients', user_ids: userIds }).then(r => r.data),
-    supabase.rpc('count_by_user', { table_name: 'positions', user_ids: userIds }).then(r => r.data),
-    supabase.rpc('count_by_user', { table_name: 'gig_types', user_ids: userIds }).then(r => r.data),
-    supabase.rpc('count_by_user', { table_name: 'expenses', user_ids: userIds }).then(r => r.data),
+  const [statsData, usageData] = await Promise.all([
+    supabase.rpc('admin_user_stats', { p_user_ids: userIds }).then(r => r.data),
     supabase
       .from('usage_tracking')
       .select('user_id, invoice_count, receipt_scan_count')
@@ -44,17 +40,10 @@ export async function GET() {
   ])
 
   // Build lookup maps
-  const makeMap = (data: any[] | null) => {
-    const map = new Map<string, number>()
-    if (data) data.forEach((d: any) => map.set(d.user_id, d.count))
-    return map
+  const statsMap = new Map<string, { invoice_count: number; client_count: number; position_count: number; gig_type_count: number; expense_count: number }>()
+  if (statsData) {
+    statsData.forEach((s: any) => statsMap.set(s.user_id, s))
   }
-
-  const invoiceMap = makeMap(invoiceCounts)
-  const clientMap = makeMap(clientCounts)
-  const positionMap = makeMap(positionCounts)
-  const gigTypeMap = makeMap(gigTypeCounts)
-  const expenseMap = makeMap(expenseCounts)
 
   const usageMap = new Map<string, { invoices: number; scans: number }>()
   if (usageData) {
@@ -66,21 +55,24 @@ export async function GET() {
     })
   }
 
-  const users = (subscriptions || []).map(sub => ({
-    ...sub,
-    company_name: settingsMap.get(sub.user_id)?.company_name || null,
-    org_number: settingsMap.get(sub.user_id)?.org_number || null,
-    email: settingsMap.get(sub.user_id)?.email || null,
-    address: settingsMap.get(sub.user_id)?.address || null,
-    phone: settingsMap.get(sub.user_id)?.phone || null,
-    invoice_count: invoiceMap.get(sub.user_id) || 0,
-    client_count: clientMap.get(sub.user_id) || 0,
-    position_count: positionMap.get(sub.user_id) || 0,
-    gig_type_count: gigTypeMap.get(sub.user_id) || 0,
-    expense_count: expenseMap.get(sub.user_id) || 0,
-    monthly_invoices: usageMap.get(sub.user_id)?.invoices || 0,
-    monthly_scans: usageMap.get(sub.user_id)?.scans || 0,
-  }))
+  const users = (subscriptions || []).map(sub => {
+    const stats = statsMap.get(sub.user_id)
+    return {
+      ...sub,
+      company_name: settingsMap.get(sub.user_id)?.company_name || null,
+      org_number: settingsMap.get(sub.user_id)?.org_number || null,
+      email: settingsMap.get(sub.user_id)?.email || null,
+      address: settingsMap.get(sub.user_id)?.address || null,
+      phone: settingsMap.get(sub.user_id)?.phone || null,
+      invoice_count: stats?.invoice_count || 0,
+      client_count: stats?.client_count || 0,
+      position_count: stats?.position_count || 0,
+      gig_type_count: stats?.gig_type_count || 0,
+      expense_count: stats?.expense_count || 0,
+      monthly_invoices: usageMap.get(sub.user_id)?.invoices || 0,
+      monthly_scans: usageMap.get(sub.user_id)?.scans || 0,
+    }
+  })
 
   return NextResponse.json({ users })
 }

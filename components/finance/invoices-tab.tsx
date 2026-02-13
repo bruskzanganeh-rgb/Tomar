@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import useSWR from 'swr'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -98,11 +99,6 @@ export default function InvoicesTab() {
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
 
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [pendingGigs, setPendingGigs] = useState<PendingGig[]>([])
-  const [upcomingRevenue, setUpcomingRevenue] = useState(0)
-  const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showSendDialog, setShowSendDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -110,12 +106,168 @@ export default function InvoicesTab() {
   const [selectedGigForInvoice, setSelectedGigForInvoice] = useState<PendingGig | null>(null)
   const [selectedPendingGigIds, setSelectedPendingGigIds] = useState<Set<string>>(new Set())
   const [showReminderDialog, setShowReminderDialog] = useState(false)
-  const [reminderCounts, setReminderCounts] = useState<Record<string, number>>({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
   const supabase = createClient()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollHint, setShowScrollHint] = useState(true)
+
+  // SWR: Invoices + reminder counts
+  const { data: invoiceData, isLoading: loading, mutate: mutateInvoices } = useSWR(
+    'invoices-with-reminders',
+    async () => {
+      // Mark overdue invoices
+      const today = new Date().toISOString().split('T')[0]
+      await supabase
+        .from('invoices')
+        .update({ status: 'overdue' })
+        .eq('status', 'sent')
+        .lt('due_date', today)
+
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          client:clients(id, name, email, invoice_language)
+        `)
+        .order('invoice_number', { ascending: false })
+
+      if (error) throw error
+      const invoices = (data || []) as Invoice[]
+
+      // Load reminder counts for overdue invoices
+      const overdueIds = invoices.filter(inv => inv.status === 'overdue').map(inv => inv.id)
+      let reminderCounts: Record<string, number> = {}
+      if (overdueIds.length > 0) {
+        const { data: reminders } = await supabase
+          .from('invoice_reminders')
+          .select('invoice_id, reminder_number')
+          .in('invoice_id', overdueIds)
+          .order('reminder_number', { ascending: false })
+        for (const r of (reminders || [])) {
+          if (!reminderCounts[r.invoice_id]) reminderCounts[r.invoice_id] = r.reminder_number
+        }
+      }
+
+      return { invoices, reminderCounts }
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+  )
+
+  const invoices = invoiceData?.invoices ?? []
+  const reminderCounts = invoiceData?.reminderCounts ?? {}
+
+  // SWR: Clients
+  const { data: clients = [] } = useSWR<Client[]>(
+    'clients-for-invoices',
+    async () => {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, name')
+        .order('name')
+      return (data || []) as Client[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  )
+
+  // SWR: Pending gigs (completed, not yet invoiced)
+  const { data: pendingGigs = [], mutate: mutatePendingGigs } = useSWR<PendingGig[]>(
+    'pending-gigs-for-invoicing',
+    async () => {
+      // Get gigs already linked to invoices via junction table
+      const { data: linkedGigs } = await supabase
+        .from('invoice_gigs')
+        .select('gig_id')
+      const linkedGigIds = new Set((linkedGigs || []).map((g: any) => g.gig_id))
+
+      // Get completed gigs with fee that don't have invoices
+      const { data, error } = await supabase
+        .from('gigs')
+        .select(`
+          id,
+          fee,
+          travel_expense,
+          date,
+          start_date,
+          end_date,
+          total_days,
+          project_name,
+          invoice_notes,
+          client_id,
+          client:clients(name, payment_terms),
+          gig_type:gig_types(id, name, name_en, vat_rate)
+        `)
+        .eq('status', 'completed')
+        .not('fee', 'is', null)
+        .not('client_id', 'is', null)
+        .order('date', { ascending: false })
+
+      if (error) throw error
+
+      const filteredGigs = (data || []).filter((gig: any) => gig.client && !linkedGigIds.has(gig.id))
+      const gigIds = filteredGigs.map(g => g.id)
+
+      // Fetch expenses for these gigs
+      let expensesData: any[] = []
+      if (gigIds.length > 0) {
+        const { data: expenses } = await supabase
+          .from('expenses')
+          .select('id, gig_id, supplier, amount, amount_base, category, notes')
+          .in('gig_id', gigIds)
+        expensesData = expenses || []
+      }
+
+      // Group expenses by gig_id
+      const expensesByGig = expensesData.reduce((acc, expense) => {
+        if (!acc[expense.gig_id]) acc[expense.gig_id] = []
+        acc[expense.gig_id].push({
+          id: expense.id,
+          supplier: expense.supplier,
+          amount: expense.amount,
+          amount_base: expense.amount_base || expense.amount,
+          category: expense.category,
+          notes: expense.notes,
+        })
+        return acc
+      }, {} as Record<string, GigExpense[]>)
+
+      return filteredGigs.map(gig => ({
+        id: gig.id,
+        fee: gig.fee!,
+        travel_expense: gig.travel_expense,
+        date: gig.date,
+        start_date: gig.start_date,
+        end_date: gig.end_date,
+        total_days: gig.total_days || 1,
+        project_name: gig.project_name,
+        invoice_notes: (gig as any).invoice_notes || null,
+        client_id: gig.client_id!,
+        client_name: (gig.client as any)?.name || '',
+        gig_type_id: (gig.gig_type as any)?.id || '',
+        gig_type_name: (gig.gig_type as any)?.name || '',
+        gig_type_name_en: (gig.gig_type as any)?.name_en || null,
+        gig_type_vat_rate: (gig.gig_type as any)?.vat_rate || 25,
+        client_payment_terms: (gig.client as any)?.payment_terms || 30,
+        expenses: expensesByGig[gig.id] || [],
+      }))
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+  )
+
+  // SWR: Upcoming revenue
+  const { data: upcomingRevenue = 0 } = useSWR(
+    'upcoming-revenue',
+    async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data: upcoming } = await supabase
+        .from('gigs')
+        .select('fee')
+        .gte('date', today)
+        .eq('status', 'accepted')
+      return (upcoming || []).reduce((sum, g: any) => sum + (g.fee || 0), 0)
+    },
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  )
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget
@@ -131,160 +283,6 @@ export default function InvoicesTab() {
     overscan: 5,
   })
 
-  useEffect(() => {
-    loadInvoices()
-    loadClients()
-    loadPendingGigs()
-    loadUpcomingRevenue()
-  }, [])
-
-  async function loadClients() {
-    const { data } = await supabase
-      .from('clients')
-      .select('id, name')
-      .order('name')
-    setClients(data || [])
-  }
-
-  async function loadUpcomingRevenue() {
-    const today = new Date().toISOString().split('T')[0]
-    const { data: upcoming } = await supabase
-      .from('gigs')
-      .select('fee')
-      .gte('date', today)
-      .eq('status', 'accepted')
-    setUpcomingRevenue((upcoming || []).reduce((sum, g: any) => sum + (g.fee || 0), 0))
-  }
-
-  async function loadPendingGigs() {
-    // Get gigs already linked to invoices via junction table
-    const { data: linkedGigs } = await supabase
-      .from('invoice_gigs')
-      .select('gig_id')
-    const linkedGigIds = new Set((linkedGigs || []).map((g: any) => g.gig_id))
-
-    // Get completed gigs with fee that don't have invoices
-    const { data, error } = await supabase
-      .from('gigs')
-      .select(`
-        id,
-        fee,
-        travel_expense,
-        date,
-        start_date,
-        end_date,
-        total_days,
-        project_name,
-        invoice_notes,
-        client_id,
-        client:clients(name, payment_terms),
-        gig_type:gig_types(id, name, name_en, vat_rate)
-      `)
-      .eq('status', 'completed')
-      .not('fee', 'is', null)
-      .not('client_id', 'is', null)
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error loading pending gigs:', error)
-      return
-    }
-
-    const filteredGigs = (data || []).filter((gig: any) => gig.client && !linkedGigIds.has(gig.id))
-    const gigIds = filteredGigs.map(g => g.id)
-
-    // Fetch expenses for these gigs
-    let expensesData: any[] = []
-    if (gigIds.length > 0) {
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('id, gig_id, supplier, amount, amount_base, category, notes')
-        .in('gig_id', gigIds)
-      expensesData = expenses || []
-    }
-
-    // Group expenses by gig_id
-    const expensesByGig = expensesData.reduce((acc, expense) => {
-      if (!acc[expense.gig_id]) acc[expense.gig_id] = []
-      acc[expense.gig_id].push({
-        id: expense.id,
-        supplier: expense.supplier,
-        amount: expense.amount,
-        amount_base: expense.amount_base || expense.amount,
-        category: expense.category,
-        notes: expense.notes,
-      })
-      return acc
-    }, {} as Record<string, GigExpense[]>)
-
-    const pending = filteredGigs.map(gig => ({
-      id: gig.id,
-      fee: gig.fee!,
-      travel_expense: gig.travel_expense,
-      date: gig.date,
-      start_date: gig.start_date,
-      end_date: gig.end_date,
-      total_days: gig.total_days || 1,
-      project_name: gig.project_name,
-      invoice_notes: (gig as any).invoice_notes || null,
-      client_id: gig.client_id!,
-      client_name: (gig.client as any)?.name || '',
-      gig_type_id: (gig.gig_type as any)?.id || '',
-      gig_type_name: (gig.gig_type as any)?.name || '',
-      gig_type_name_en: (gig.gig_type as any)?.name_en || null,
-      gig_type_vat_rate: (gig.gig_type as any)?.vat_rate || 25,
-      client_payment_terms: (gig.client as any)?.payment_terms || 30,
-      expenses: expensesByGig[gig.id] || [],
-    }))
-
-    setPendingGigs(pending)
-  }
-
-  async function updateOverdueInvoices() {
-    const today = new Date().toISOString().split('T')[0]
-    await supabase
-      .from('invoices')
-      .update({ status: 'overdue' })
-      .eq('status', 'sent')
-      .lt('due_date', today)
-  }
-
-  async function loadInvoices() {
-    setLoading(true)
-    await updateOverdueInvoices()
-
-    const { data, error } = await supabase
-      .from('invoices')
-      .select(`
-        *,
-        client:clients(id, name, email, invoice_language)
-      `)
-      .order('invoice_number', { ascending: false })
-
-    if (error) {
-      console.error('Error loading invoices:', error)
-    } else {
-      setInvoices(data || [])
-      // Load reminder counts for overdue invoices
-      const overdueIds = (data || []).filter(inv => inv.status === 'overdue').map(inv => inv.id)
-      if (overdueIds.length > 0) {
-        const { data: reminders } = await supabase
-          .from('invoice_reminders')
-          .select('invoice_id, reminder_number')
-          .in('invoice_id', overdueIds)
-          .order('reminder_number', { ascending: false })
-        const counts: Record<string, number> = {}
-        for (const r of (reminders || [])) {
-          if (!counts[r.invoice_id]) counts[r.invoice_id] = r.reminder_number
-        }
-        setReminderCounts(counts)
-      } else {
-        setReminderCounts({})
-      }
-    }
-    setLoading(false)
-  }
-
   async function markAsPaid(id: string) {
     const { error } = await supabase
       .from('invoices')
@@ -298,7 +296,7 @@ export default function InvoicesTab() {
       console.error('Error marking as paid:', error)
       toast.error(tToast('statusUpdateError'))
     } else {
-      loadInvoices()
+      mutateInvoices()
     }
   }
 
@@ -341,8 +339,8 @@ export default function InvoicesTab() {
           .update({ status: 'completed' })
           .in('id', gigIds)
       }
-      loadInvoices()
-      loadPendingGigs()
+      mutateInvoices()
+      mutatePendingGigs()
     }
   }
 
@@ -777,8 +775,8 @@ export default function InvoicesTab() {
           }
         }}
         onSuccess={() => {
-          loadInvoices()
-          loadPendingGigs()
+          mutateInvoices()
+          mutatePendingGigs()
           setSelectedPendingGigIds(new Set())
         }}
         initialGig={selectedGigForInvoice || undefined}
@@ -796,7 +794,7 @@ export default function InvoicesTab() {
           setShowSendDialog(open)
           if (!open) setSelectedInvoice(null)
         }}
-        onSuccess={loadInvoices}
+        onSuccess={() => mutateInvoices()}
       />
 
       <EditInvoiceDialog
@@ -806,7 +804,7 @@ export default function InvoicesTab() {
           setShowEditDialog(open)
           if (!open) setSelectedInvoice(null)
         }}
-        onSuccess={loadInvoices}
+        onSuccess={() => mutateInvoices()}
         clients={clients}
       />
 
@@ -817,7 +815,7 @@ export default function InvoicesTab() {
           setShowReminderDialog(open)
           if (!open) setSelectedInvoice(null)
         }}
-        onSuccess={loadInvoices}
+        onSuccess={() => mutateInvoices()}
         reminderCount={selectedInvoice ? (reminderCounts[selectedInvoice.id] || 0) : 0}
       />
 

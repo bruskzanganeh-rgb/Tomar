@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense } from 'react'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 
 import dynamic from 'next/dynamic'
 
@@ -19,8 +20,10 @@ function TabSkeleton() {
 
 export function GigsPageContent() {
   return (
-    <Suspense fallback={<TabSkeleton />}>
-      <GigsTab />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<TabSkeleton />}>
+        <GigsTab />
+      </Suspense>
+    </ErrorBoundary>
   )
 }

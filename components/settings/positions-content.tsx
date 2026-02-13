@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,8 +34,6 @@ export default function PositionsPage() {
   const tToast = useTranslations('toast')
   const tPositions = useTranslations('positions')
 
-  const [positions, setPositions] = useState<Position[]>([])
-  const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newPositionName, setNewPositionName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -44,24 +43,18 @@ export default function PositionsPage() {
   const [positionToDelete, setPositionToDelete] = useState<string | null>(null)
   const supabase = createClient()
 
-  useEffect(() => {
-    loadPositions()
-  }, [])
-
-  async function loadPositions() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('positions')
-      .select('*')
-      .order('sort_order')
-
-    if (error) {
-      console.error('Error loading positions:', error)
-    } else {
-      setPositions(data || [])
-    }
-    setLoading(false)
-  }
+  const { data: positions = [], isLoading: loading, mutate } = useSWR<Position[]>(
+    'positions',
+    async () => {
+      const { data, error } = await supabase
+        .from('positions')
+        .select('*')
+        .order('sort_order')
+      if (error) throw error
+      return (data || []) as Position[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  )
 
   async function handleCreate() {
     if (!newPositionName.trim()) return
@@ -82,7 +75,7 @@ export default function PositionsPage() {
       toast.success(tPositions('createSuccess'))
       setNewPositionName('')
       setShowCreateDialog(false)
-      loadPositions()
+      mutate()
     }
     setSaving(false)
   }
@@ -102,7 +95,7 @@ export default function PositionsPage() {
       console.error('Error deleting position:', error)
       toast.error(tPositions('deleteError'))
     } else {
-      loadPositions()
+      mutate()
     }
   }
 
@@ -127,7 +120,7 @@ export default function PositionsPage() {
       toast.success(tPositions('updateSuccess'))
       setEditingPosition(null)
       setEditName('')
-      loadPositions()
+      mutate()
     }
     setSaving(false)
   }
@@ -153,7 +146,7 @@ export default function PositionsPage() {
         .eq('id', update.id)
     }
 
-    loadPositions()
+    mutate()
   }
 
   return (

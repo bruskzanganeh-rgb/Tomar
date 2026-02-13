@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -8,6 +9,10 @@ const anthropic = new Anthropic({
 })
 
 export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const { success } = rateLimit(`translate:${ip}`, 20, 60_000)
+  if (!success) return rateLimitResponse()
+
   // Auth check
   const cookieStore = await cookies()
   const supabase = createServerClient(
@@ -20,11 +25,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { text, targetLang = 'en' } = await request.json()
-
-  if (!text || typeof text !== 'string' || text.trim().length === 0) {
-    return NextResponse.json({ error: 'Missing text' }, { status: 400 })
+  const body = await request.json()
+  const { translateSchema } = await import('@/lib/schemas/translate')
+  const parsed = translateSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
   }
+
+  const { text, targetLang } = parsed.data
 
   try {
     const message = await anthropic.messages.create({

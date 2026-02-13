@@ -13,6 +13,7 @@ import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { motion, type Variants } from 'framer-motion'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { AvailableWeeks } from '@/components/dashboard/available-weeks'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
 const containerVariants: Variants = {
@@ -313,11 +314,15 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <UpcomingPayments className="flex-1 flex flex-col min-h-0" />
+          <ErrorBoundary>
+            <UpcomingPayments className="flex-1 flex flex-col min-h-0" />
+          </ErrorBoundary>
         </div>
 
         {/* Column 3: Availability */}
-        <AvailableWeeks />
+        <ErrorBoundary>
+          <AvailableWeeks />
+        </ErrorBoundary>
       </motion.div>
 
       {/* Quick Action Dialogs */}

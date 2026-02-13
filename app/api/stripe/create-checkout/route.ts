@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
+import { createCheckoutSchema } from '@/lib/schemas/stripe'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const { success } = rateLimit(`checkout:${ip}`, 5, 60_000)
+  if (!success) return rateLimitResponse()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -10,11 +15,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { priceId } = await request.json()
-
-  if (!priceId) {
-    return NextResponse.json({ error: 'priceId required' }, { status: 400 })
+  const body = await request.json()
+  const parsed = createCheckoutSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
   }
+
+  const { priceId } = parsed.data
 
   // Get or create Stripe customer
   const { data: subscription } = await supabase

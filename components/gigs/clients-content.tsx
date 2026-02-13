@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,8 +42,6 @@ type Client = {
 }
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -52,27 +51,21 @@ export default function ClientsPage() {
   const t = useTranslations('client')
   const tc = useTranslations('common')
 
-  useEffect(() => {
-    loadClients()
-  }, [])
-
-  async function loadClients() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('clients')
-      .select(`
-        *,
-        invoices(total)
-      `)
-      .order('name')
-
-    if (error) {
-      console.error('Error loading clients:', error)
-    } else {
-      setClients(data || [])
-    }
-    setLoading(false)
-  }
+  const { data: clients = [], isLoading: loading, mutate } = useSWR<Client[]>(
+    'clients-with-invoices',
+    async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select(`
+          *,
+          invoices(total)
+        `)
+        .order('name')
+      if (error) throw error
+      return (data || []) as Client[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+  )
 
   function confirmDelete(id: string) {
     setClientToDelete(id)
@@ -89,7 +82,7 @@ export default function ClientsPage() {
       console.error('Error deleting client:', error)
       toast.error(t('couldNotDeleteClient'))
     } else {
-      loadClients()
+      mutate()
     }
   }
 
@@ -250,14 +243,14 @@ export default function ClientsPage() {
       <CreateClientDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        onSuccess={loadClients}
+        onSuccess={() => mutate()}
       />
 
       <EditClientDialog
         client={editingClient}
         open={editingClient !== null}
         onOpenChange={(open) => !open && setEditingClient(null)}
-        onSuccess={loadClients}
+        onSuccess={() => mutate()}
       />
 
       <ConfirmDialog

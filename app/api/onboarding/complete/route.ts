@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { logActivity } from '@/lib/activity'
+import { completeOnboardingSchema } from '@/lib/schemas/onboarding'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -10,7 +11,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { company_info, instruments } = await request.json()
+  const body = await request.json()
+  const parsed = completeOnboardingSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten().fieldErrors }, { status: 400 })
+  }
+
+  const { company_info, instruments } = parsed.data
 
   // Update company_settings
   const { error: settingsError } = await supabase
@@ -22,11 +29,12 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
 
   if (settingsError) {
-    return NextResponse.json({ error: settingsError.message }, { status: 500 })
+    console.error('Onboarding settings error:', settingsError)
+    return NextResponse.json({ error: 'Could not save settings' }, { status: 500 })
   }
 
   // Insert user instruments
-  if (instruments?.length > 0) {
+  if (instruments && instruments.length > 0) {
     const { error: instrError } = await supabase
       .from('user_instruments')
       .upsert(

@@ -1,14 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { authSetupSchema } from '@/lib/schemas/auth'
 
 // Uses service_role key to bypass RLS — needed because after signUp()
 // there's no session yet (email confirmation required), so auth.uid() is NULL.
 export async function POST(request: Request) {
-  const { user_id, company_name, invitation_code } = await request.json()
-
-  if (!user_id) {
-    return NextResponse.json({ error: 'user_id required' }, { status: 400 })
+  const body = await request.json()
+  const parsed = authSetupSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
   }
+
+  const { user_id, company_name, invitation_code } = parsed.data
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

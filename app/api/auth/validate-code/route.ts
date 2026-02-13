@@ -1,12 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { validateCodeSchema } from '@/lib/schemas/auth'
 
 export async function POST(request: Request) {
-  const { code } = await request.json()
-
-  if (!code || typeof code !== 'string') {
+  const body = await request.json()
+  const parsed = validateCodeSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ valid: false }, { status: 400 })
   }
+
+  const { code } = parsed.data
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

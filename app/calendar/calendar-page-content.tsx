@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense } from 'react'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useRouter, usePathname } from 'next/navigation'
@@ -52,15 +53,19 @@ export function CalendarPageContent() {
         </TabsList>
 
         <TabsContent value="calendar" className="mt-3">
-          <Suspense fallback={<TabSkeleton />}>
-            <CalendarTab />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<TabSkeleton />}>
+              <CalendarTab />
+            </Suspense>
+          </ErrorBoundary>
         </TabsContent>
 
         <TabsContent value="availability" className="mt-3">
-          <Suspense fallback={<TabSkeleton />}>
-            <AvailabilityTab />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<TabSkeleton />}>
+              <AvailabilityTab />
+            </Suspense>
+          </ErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

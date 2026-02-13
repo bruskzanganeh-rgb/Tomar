@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { updateExpenseSchema } from '@/lib/schemas/expense'
 
 export async function PATCH(
   request: NextRequest,
@@ -15,19 +16,14 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const {
-      date,
-      supplier,
-      amount,
-      currency,
-      amount_base,
-      category,
-      notes,
-      gig_id,
-    } = body
+    const parsed = updateExpenseSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten().fieldErrors }, { status: 400 })
+    }
 
     // Bygg uppdateringsobjekt med endast definierade fält
     const updateData: Record<string, unknown> = {}
+    const { date, supplier, amount, currency, amount_base, category, notes, gig_id } = parsed.data
 
     if (date !== undefined) updateData.date = date
     if (supplier !== undefined) updateData.supplier = supplier

@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { generateInvoicePdf } from '@/lib/pdf/generator'
 import { logActivity } from '@/lib/activity'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const { success } = rateLimit(`pdf:${ip}`, 20, 60_000)
+  if (!success) return rateLimitResponse()
+
   try {
     const { id } = await params
     const supabase = await createClient()

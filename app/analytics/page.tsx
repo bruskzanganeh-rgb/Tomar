@@ -21,10 +21,19 @@ import {
 } from '@/components/ui/select'
 import { BarChart3, TrendingUp, XCircle, Calendar, Music, CalendarClock, Wallet, HelpCircle } from 'lucide-react'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
-import { RevenueChart } from '@/components/dashboard/revenue-chart'
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts'
+import dynamic from 'next/dynamic'
 
-const CLIENT_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b']
+const RevenueChart = dynamic(
+  () => import('@/components/dashboard/revenue-chart').then(mod => ({ default: mod.RevenueChart })),
+  { ssr: false, loading: () => <div className="h-[300px] animate-pulse bg-muted rounded" /> }
+)
+
+const LazyBarChart = dynamic(
+  () => import('@/components/analytics/top-clients-chart'),
+  { ssr: false, loading: () => <div className="h-[160px] animate-pulse bg-muted rounded" /> }
+)
+
+// CLIENT_COLORS moved to components/analytics/top-clients-chart.tsx
 
 type Gig = {
   id: string
@@ -436,44 +445,12 @@ export default function AnalyticsPage() {
                 <CardTitle className="text-sm font-medium">{t('topClients')}</CardTitle>
               </CardHeader>
               <CardContent className="pb-4">
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart
-                    data={topClients}
-                    layout="vertical"
-                    margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
-                  >
-                    <XAxis
-                      type="number"
-                      tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fontSize: 10, fill: 'var(--foreground)' }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={100}
-                      tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
-                    />
-                    <RechartsTooltip
-                      formatter={(value: number) => [`${value.toLocaleString(formatLocale)} ${tc('kr')}`, t('totalRevenue')]}
-                      contentStyle={{
-                        backgroundColor: 'var(--popover)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        color: 'var(--foreground)',
-                      }}
-                    />
-                    <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
-                      {topClients.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={CLIENT_COLORS[index % CLIENT_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <LazyBarChart
+                  data={topClients}
+                  formatLocale={formatLocale}
+                  currencyLabel={tc('kr')}
+                  revenueLabel={t('totalRevenue')}
+                />
               </CardContent>
             </Card>
           )}

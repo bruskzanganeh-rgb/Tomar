@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -170,8 +171,6 @@ export default function GigsPage() {
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
 
-  const [gigs, setGigs] = useState<Gig[]>([])
-  const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingGig, setEditingGig] = useState<Gig | null>(null)
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null)
@@ -192,6 +191,28 @@ export default function GigsPage() {
   const historyScrollRef = useRef<HTMLDivElement>(null)
   const declinedScrollRef = useRef<HTMLDivElement>(null)
 
+  const { data: gigs = [], isLoading: loading, mutate: mutateGigs } = useSWR<Gig[]>(
+    'gigs-full',
+    async () => {
+      const { data, error } = await supabase
+        .from('gigs')
+        .select(`
+          *,
+          client:clients(name, payment_terms),
+          gig_type:gig_types(name, vat_rate, color),
+          position:positions(name),
+          gig_dates(date)
+        `)
+        .order('date', { ascending: false })
+        .limit(500)
+      if (error) throw error
+      return (data || []) as Gig[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+  )
+
+  const loadGigs = useCallback(() => mutateGigs(), [mutateGigs])
+
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50
@@ -200,37 +221,12 @@ export default function GigsPage() {
   }
 
   useEffect(() => {
-    loadGigs()
-  }, [])
-
-  useEffect(() => {
     if (selectedGig) {
       loadGigExpenses(selectedGig.id)
     } else {
       setGigExpenses([])
     }
   }, [selectedGig?.id])
-
-  async function loadGigs() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('gigs')
-      .select(`
-        *,
-        client:clients(name, payment_terms),
-        gig_type:gig_types(name, vat_rate, color),
-        position:positions(name),
-        gig_dates(date)
-      `)
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error loading gigs:', error)
-    } else {
-      setGigs(data || [])
-    }
-    setLoading(false)
-  }
 
   async function loadGigExpenses(gigId: string) {
     const { data, error } = await supabase
@@ -318,8 +314,8 @@ export default function GigsPage() {
       console.error('Error saving notes:', error)
       toast.error(tToast('notesError'))
     } else {
-      // Update local state
-      setGigs(gigs.map(g => g.id === id ? { ...g, notes: notes || null } : g))
+      // Update local cache optimistically
+      mutateGigs(gigs.map(g => g.id === id ? { ...g, notes: notes || null } : g), false)
       if (selectedGig?.id === id) {
         setSelectedGig({ ...selectedGig, notes: notes || null })
       }

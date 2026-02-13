@@ -5,6 +5,7 @@ import {
   findDuplicateExpenses,
   type DuplicateExpense,
 } from '@/lib/expenses/duplicate-checker'
+import { checkDuplicateSchema, batchCheckDuplicateSchema } from '@/lib/schemas/expense'
 
 // POST - Kontrollera om en utgift redan finns (dublett) med fuzzy matching
 export async function POST(request: NextRequest) {
@@ -16,14 +17,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { date, supplier, amount } = body
-
-    if (!date || !supplier || amount === undefined) {
-      return NextResponse.json(
-        { error: 'Date, supplier, and amount are required' },
-        { status: 400 }
-      )
+    const parsed = checkDuplicateSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten().fieldErrors }, { status: 400 })
     }
+
+    const { date, supplier, amount } = parsed.data
 
     // Hämta alla utgifter för samma datum (scoped to user)
     const { data: existingExpenses, error } = await supabase
@@ -70,14 +69,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { expenses } = body as { expenses: Array<{ date: string; supplier: string; amount: number }> }
-
-    if (!expenses || !Array.isArray(expenses)) {
-      return NextResponse.json(
-        { error: 'List of expenses is required' },
-        { status: 400 }
-      )
+    const parsed = batchCheckDuplicateSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten().fieldErrors }, { status: 400 })
     }
+
+    const { expenses } = parsed.data
 
     // Hämta alla befintliga utgifter för relevanta datum (scoped to user)
     const uniqueDates = [...new Set(expenses.map(e => e.date))]

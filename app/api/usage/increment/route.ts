@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { incrementUsage, checkUsageLimit } from '@/lib/usage'
 import { NextResponse } from 'next/server'
+import { incrementUsageSchema } from '@/lib/schemas/usage'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -10,11 +11,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { type } = await request.json()
-
-  if (!type || !['invoice', 'receipt_scan'].includes(type)) {
+  const body = await request.json()
+  const parsed = incrementUsageSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
   }
+
+  const { type } = parsed.data
 
   // Check limit first
   const { allowed } = await checkUsageLimit(user.id, type)

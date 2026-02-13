@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { extractTextFromPDF } from '@/lib/pdf/extractor'
 import { parseInvoiceWithAI } from '@/lib/pdf/parser'
 import { matchClient } from '@/lib/import/client-matcher'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const { success } = rateLimit(`parse:${ip}`, 10, 60_000)
+  if (!success) return rateLimitResponse()
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null

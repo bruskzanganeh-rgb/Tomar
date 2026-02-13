@@ -5,8 +5,13 @@ import { Resend } from 'resend'
 import { logActivity } from '@/lib/activity'
 import { generateInvoicePdf } from '@/lib/pdf/generator'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const { success } = rateLimit(`send-email:${ip}`, 10, 60_000)
+  if (!success) return rateLimitResponse()
+
   try {
     // Authenticate user
     const supabase = await createClient()

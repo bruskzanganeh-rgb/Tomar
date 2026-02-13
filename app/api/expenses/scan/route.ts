@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { parseReceiptWithVision, parseReceiptWithText } from '@/lib/receipt/parser'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { extractText, renderPageAsImage } from 'unpdf'
 
 // Konvertera PDF-sida till base64-bild
@@ -22,6 +23,10 @@ async function pdfToBase64Image(buffer: ArrayBuffer): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown'
+  const { success } = rateLimit(`scan:${ip}`, 10, 60_000)
+  if (!success) return rateLimitResponse()
+
   try {
     // Autentisera användare
     const supabase = await createClient()

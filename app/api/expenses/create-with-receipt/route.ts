@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       console.error('Insert error:', insertError)
       return NextResponse.json(
-        { error: 'Could not save expense: ' + insertError.message },
+        { error: 'Could not save expense' },
         { status: 500 }
       )
     }

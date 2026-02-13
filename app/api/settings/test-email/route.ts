@@ -14,11 +14,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { provider, to_email, smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name } = body
-
-    if (!to_email) {
-      return NextResponse.json({ error: 'Recipient email required' }, { status: 400 })
+    const { testEmailSchema } = await import('@/lib/schemas/settings')
+    const parsed = testEmailSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten().fieldErrors }, { status: 400 })
     }
+
+    const { provider, to_email, smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name } = parsed.data
 
     const serviceSupabase = createAdminClient()
 
