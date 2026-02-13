@@ -9,10 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Music, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
 
 export default function SignupPage() {
-  const t = useTranslations('auth')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -30,7 +28,7 @@ export default function SignupPage() {
 
     // Validate invitation code
     if (!invitationCode.trim()) {
-      setError(t('invitationCodeRequired'))
+      setError('Invitation code is required')
       setLoading(false)
       return
     }
@@ -43,7 +41,7 @@ export default function SignupPage() {
     const codeData = await codeRes.json()
 
     if (!codeData.valid) {
-      setError(codeData.reason === 'expired' ? t('codeExpired') : t('invalidCode'))
+      setError(codeData.reason === 'expired' ? 'This code has expired' : 'Invalid invitation code')
       setLoading(false)
       return
     }
@@ -88,15 +86,15 @@ export default function SignupPage() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
               <Music className="h-7 w-7 text-green-600" />
             </div>
-            <CardTitle>{t('checkEmail')}</CardTitle>
+            <CardTitle>Check your email</CardTitle>
             <CardDescription>
-              {t.rich('confirmationSent', { email, strong: (chunks) => <strong>{chunks}</strong> })}
+              We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/login">
               <Button variant="outline" className="w-full">
-                {t('backToLogin')}
+                Back to login
               </Button>
             </Link>
           </CardContent>
@@ -112,8 +110,8 @@ export default function SignupPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle className="text-2xl">{t('signup')}</CardTitle>
-          <CardDescription>{t('signupSubtitle')}</CardDescription>
+          <CardTitle className="text-2xl">Create your account</CardTitle>
+          <CardDescription>Get started with Tomar — it&apos;s free</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
@@ -123,7 +121,7 @@ export default function SignupPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="invitationCode">{t('invitationCode')}</Label>
+              <Label htmlFor="invitationCode">Invitation code</Label>
               <Input
                 id="invitationCode"
                 value={invitationCode}
@@ -134,47 +132,47 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="companyName">{t('companyName')}</Label>
+              <Label htmlFor="companyName">Company name</Label>
               <Input
                 id="companyName"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="Ditt företag AB"
+                placeholder="Your Company AB"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">{t('email')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="din@email.se"
+                placeholder="you@example.com"
                 required
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t('password')}</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('minChars')}
+                placeholder="Min. 6 characters"
                 required
                 minLength={6}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('signup')}
+              Create account
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            {t('hasAccount')}{' '}
+            Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline">
-              {t('login')}
+              Log in
             </Link>
           </p>
         </CardContent>

@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Music, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { useTranslations } from 'next-intl'
 
 export default function LoginPage() {
   return (
@@ -20,7 +19,6 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const t = useTranslations('auth')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,7 +37,7 @@ function LoginForm() {
 
     if (error) {
       setError(error.message === 'Invalid login credentials'
-        ? t('wrongCredentials')
+        ? 'Wrong email or password'
         : error.message)
       setLoading(false)
     } else {
@@ -56,7 +54,7 @@ function LoginForm() {
             <Music className="h-7 w-7 text-primary" />
           </div>
           <CardTitle className="text-2xl">Tomar</CardTitle>
-          <CardDescription>{t('loginSubtitle')}</CardDescription>
+          <CardDescription>Log in to manage your gigs and invoices</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -66,19 +64,19 @@ function LoginForm() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">{t('email')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="din@email.se"
+                placeholder="you@example.com"
                 required
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t('password')}</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -90,13 +88,13 @@ function LoginForm() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('loginButton')}
+              Log in
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            {t('noAccount')}{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-primary hover:underline">
-              {t('createAccount')}
+              Create one
             </Link>
           </p>
         </CardContent>
