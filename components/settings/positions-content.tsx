@@ -79,6 +79,7 @@ export default function PositionsPage() {
       console.error('Error creating position:', error)
       toast.error(tPositions('createError'))
     } else {
+      toast.success(tPositions('createSuccess'))
       setNewPositionName('')
       setShowCreateDialog(false)
       loadPositions()
@@ -123,6 +124,7 @@ export default function PositionsPage() {
       console.error('Error updating position:', error)
       toast.error(tPositions('updateError'))
     } else {
+      toast.success(tPositions('updateSuccess'))
       setEditingPosition(null)
       setEditName('')
       loadPositions()

@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 export const createClientSchema = z.object({
-  name: z.string().min(1, 'Namn krävs'),
+  name: z.string().min(1),
   client_code: z.string().optional(),
   org_number: z.string().optional(),
-  email: z.string().email('Ogiltig e-postadress').optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
   address: z.string().optional(),
-  payment_terms: z.string().min(1, 'Betalningsvillkor krävs'),
+  payment_terms: z.string().min(1),
   reference_person: z.string().optional(),
   notes: z.string().optional(),
   invoice_language: z.string().optional(),

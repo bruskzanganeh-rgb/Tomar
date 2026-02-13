@@ -87,7 +87,9 @@
     "noUpcoming": "Inga kommande uppdrag",
     "noUpcomingHint": "Klicka på \"Nytt uppdrag\" för att lägga till",
     "noHistory": "Ingen historik ännu",
+    "noHistoryHint": "Genomförda och betalda uppdrag visas här",
     "noDeclined": "Inga avböjda uppdrag",
+    "noDeclinedHint": "Uppdrag du tackat nej till visas här",
     "days": "dagar",
     "notSpecified": "Ej angiven",
     "notSet": "Ej angivet",
@@ -1033,6 +1035,8 @@
     "editGigType": "Redigera uppdragstyp",
     "editGigTypeDescription": "Ändra namn, moms eller färg",
     "updateError": "Kunde inte uppdatera uppdragstyp",
+    "createSuccess": "Uppdragstyp skapad",
+    "updateSuccess": "Uppdragstyp uppdaterad",
     "suggestions": "Förslag",
     "suggestionsHint": "Klicka för att snabbt lägga till"
   },
@@ -1051,6 +1055,8 @@
     "deleteError": "Kunde inte ta bort roll",
     "createError": "Kunde inte skapa roll",
     "updateError": "Kunde inte uppdatera roll",
+    "createSuccess": "Roll skapad",
+    "updateSuccess": "Roll uppdaterad",
     "saving": "Sparar...",
     "suggestions": "Förslag",
     "suggestionsHint": "Klicka för att snabbt lägga till"

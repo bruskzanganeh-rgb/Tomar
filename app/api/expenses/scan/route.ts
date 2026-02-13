@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     if (isPdf) {
       // Hantera PDF - försök med text först (billigare)
-      console.log('Processing PDF receipt...')
+      // Processing PDF receipt
 
       try {
         // Steg 1: Försök extrahera text från PDF
@@ -76,11 +76,11 @@ export async function POST(request: NextRequest) {
         const MIN_TEXT_LENGTH = 50 // Minsta antal tecken för att anse texten användbar
 
         if (text && text.trim().length >= MIN_TEXT_LENGTH) {
-          console.log(`PDF text extracted (${text.length} chars), using text parsing`)
+          // PDF text extracted, using text parsing
           result = await parseReceiptWithText(text, user.id)
         } else {
           // Steg 2: För lite text, fallback till bildkonvertering
-          console.log('PDF text insufficient, falling back to image conversion')
+          // PDF text insufficient, falling back to image conversion
           const base64Image = await pdfToBase64Image(arrayBuffer)
           result = await parseReceiptWithVision(base64Image, 'image/png', user.id)
         }

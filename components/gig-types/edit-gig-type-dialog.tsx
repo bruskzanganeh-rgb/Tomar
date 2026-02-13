@@ -100,8 +100,9 @@ export function EditGigTypeDialog({
 
     if (error) {
       console.error('Error updating gig type:', error)
-      toast.error(t('updateError') + ': ' + error.message)
+      toast.error(t('updateError'))
     } else {
+      toast.success(t('updateSuccess'))
       onSuccess()
       onOpenChange(false)
     }

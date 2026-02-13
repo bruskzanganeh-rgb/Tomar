@@ -87,7 +87,9 @@
     "noUpcoming": "No upcoming gigs",
     "noUpcomingHint": "Click \"New gig\" to add one",
     "noHistory": "No history yet",
+    "noHistoryHint": "Completed and paid gigs will appear here",
     "noDeclined": "No declined gigs",
+    "noDeclinedHint": "Gigs you've declined will appear here",
     "days": "days",
     "notSpecified": "Not specified",
     "notSet": "Not set",
@@ -1033,6 +1035,8 @@
     "editGigType": "Edit gig type",
     "editGigTypeDescription": "Change name, VAT or color",
     "updateError": "Could not update gig type",
+    "createSuccess": "Gig type created",
+    "updateSuccess": "Gig type updated",
     "suggestions": "Suggestions",
     "suggestionsHint": "Click to quickly add"
   },
@@ -1051,6 +1055,8 @@
     "deleteError": "Could not delete role",
     "createError": "Could not create role",
     "updateError": "Could not update role",
+    "createSuccess": "Role created",
+    "updateSuccess": "Role updated",
     "saving": "Saving...",
     "suggestions": "Suggestions",
     "suggestionsHint": "Click to quickly add"

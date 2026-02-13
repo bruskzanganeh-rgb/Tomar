@@ -17,7 +17,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { GigAttachments } from '@/components/gigs/gig-attachments'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { GigDialog } from '@/components/gigs/gig-dialog'
@@ -175,6 +176,7 @@ export default function GigsPage() {
   const [editingGig, setEditingGig] = useState<Gig | null>(null)
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null)
   const [activeTab, setActiveTab] = useState('upcoming')
+  const [searchQuery, setSearchQuery] = useState('')
   const [upcomingSort, setUpcomingSort] = useState<SortConfig>({ column: 'date', direction: 'asc' })
   const [historySort, setHistorySort] = useState<SortConfig>({ column: 'date', direction: 'desc' })
   const [declinedSort, setDeclinedSort] = useState<SortConfig>({ column: 'date', direction: 'desc' })
@@ -373,19 +375,30 @@ export default function GigsPage() {
   const pastAccepted = pastNeedingAction.filter(g => g.status === 'accepted')
   const pastUnanswered = pastNeedingAction.filter(g => g.status === 'pending' || g.status === 'tentative')
 
+  const matchesSearch = (g: any) => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      (g.project_name || '').toLowerCase().includes(q) ||
+      (g.client?.name || '').toLowerCase().includes(q) ||
+      (g.venue || '').toLowerCase().includes(q) ||
+      (g.gig_type?.name || '').toLowerCase().includes(q)
+    )
+  }
+
   const sortedUpcoming = useMemo(() =>
-    sortGigs(gigs.filter(g => activeStatuses.has(g.status) && !gigHasPassed(g)), upcomingSort),
-    [gigs, upcomingSort]
+    sortGigs(gigs.filter(g => activeStatuses.has(g.status) && !gigHasPassed(g) && matchesSearch(g)), upcomingSort),
+    [gigs, upcomingSort, searchQuery]
   )
 
   const sortedHistory = useMemo(() =>
-    sortGigs(gigs.filter(g => historyStatuses.has(g.status)), historySort),
-    [gigs, historySort]
+    sortGigs(gigs.filter(g => historyStatuses.has(g.status) && matchesSearch(g)), historySort),
+    [gigs, historySort, searchQuery]
   )
 
   const sortedDeclined = useMemo(() =>
-    sortGigs(gigs.filter(g => g.status === 'declined'), declinedSort),
-    [gigs, declinedSort]
+    sortGigs(gigs.filter(g => g.status === 'declined' && matchesSearch(g)), declinedSort),
+    [gigs, declinedSort, searchQuery]
   )
 
   const pipelineCounts = useMemo(() => ({
@@ -541,6 +554,15 @@ export default function GigsPage() {
                   {t('declined')} ({sortedDeclined.length})
                 </TabsTrigger>
               </TabsList>
+              <div className="relative flex-1 min-w-[140px] max-w-[240px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder={tc('search') + '...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
               <Button onClick={() => setShowCreateDialog(true)} size="sm">
                 <Plus className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('newGig')}</span>
@@ -739,7 +761,11 @@ export default function GigsPage() {
             {/* History */}
             <TabsContent value="history" className="mt-0">
               {sortedHistory.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">{t('noHistory')}</p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>{t('noHistory')}</p>
+                  <p className="text-sm">{t('noHistoryHint')}</p>
+                </div>
               ) : (
                 <>
                 {/* Mobile card view */}
@@ -860,7 +886,11 @@ export default function GigsPage() {
             {/* Declined */}
             <TabsContent value="declined" className="mt-0">
               {sortedDeclined.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">{t('noDeclined')}</p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Ban className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>{t('noDeclined')}</p>
+                  <p className="text-sm">{t('noDeclinedHint')}</p>
+                </div>
               ) : (
                 <>
                 {/* Mobile card view */}

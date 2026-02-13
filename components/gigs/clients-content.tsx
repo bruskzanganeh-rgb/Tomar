@@ -13,7 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Building2, Mail, Phone, Edit, Trash2 } from 'lucide-react'
+import { Plus, Building2, Mail, Phone, Edit, Trash2, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { CreateClientDialog } from '@/components/clients/create-client-dialog'
@@ -46,6 +47,7 @@ export default function ClientsPage() {
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const supabase = createClient()
   const t = useTranslations('client')
   const tc = useTranslations('common')
@@ -91,9 +93,29 @@ export default function ClientsPage() {
     }
   }
 
+  const filteredClients = clients.filter(c => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.org_number || '').toLowerCase().includes(q) ||
+      (c.reference_person || '').toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <div className="relative flex-1 max-w-[280px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder={tc('search') + '...'}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9 text-sm"
+          />
+        </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {t('newClient')}
@@ -104,7 +126,7 @@ export default function ClientsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {t('allClients', { count: clients.length })}
+            {t('allClients', { count: filteredClients.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -120,7 +142,7 @@ export default function ClientsPage() {
             <>
             {/* Mobile card view */}
             <div className="md:hidden space-y-2">
-              {clients.map((client) => {
+              {filteredClients.map((client) => {
                 const invoiceCount = client.invoices?.length || 0
                 const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
                 return (
@@ -162,7 +184,7 @@ export default function ClientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => {
+                {filteredClients.map((client) => {
                   const invoiceCount = client.invoices?.length || 0
                   const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
 

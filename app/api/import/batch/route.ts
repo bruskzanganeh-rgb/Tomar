@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Starting batch import of ${metadata.length} files...`)
+    // Batch import started
 
     // Hämta klienter för matching (scoped to user)
     const { data: clients } = await supabase
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
           )
 
           if (duplicate && skipDuplicates) {
-            console.log(`Skipped duplicate expense: ${expenseData.supplier} (${expenseData.date})`)
+            // Skipped duplicate
             results.push({
               fileId: fileMeta.id,
               success: false,
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
             throw insertError
           }
 
-          console.log(`Imported expense: ${expenseData.supplier}`)
+          // Expense imported
 
           results.push({
             fileId: fileMeta.id,
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
               }
               clientId = newClient.id
               createdNewClient = true
-              console.log(`Created new client (user choice): ${invoiceData.clientName}`)
+              // Created new client (user choice)
             } else {
               // Användaren har valt en befintlig kund
               clientId = invoiceData.selectedClientId
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
               }
               clientId = newClient.id
               createdNewClient = true
-              console.log(`Created new client (auto): ${invoiceData.clientName}`)
+              // Created new client (auto)
             }
           }
 
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
             throw insertError
           }
 
-          console.log(`Imported invoice #${invoiceData.invoiceNumber} (client: ${invoiceData.clientName || 'unknown'}${createdNewClient ? ' - NEW' : ''})`)
+          // Invoice imported
 
           results.push({
             fileId: fileMeta.id,
@@ -351,10 +351,8 @@ export async function POST(request: NextRequest) {
     const skipped = results.filter(r => r.skippedAsDuplicate).length
     const createdClients = results.filter(r => r.createdClient).map(r => r.createdClient!)
 
-    console.log(`Batch import complete: ${succeeded} succeeded, ${failed} failed, ${skipped} skipped as duplicates`)
-    if (createdClients.length > 0) {
-      console.log(`Created ${createdClients.length} new clients: ${createdClients.join(', ')}`)
-    }
+    // Batch import complete
+    // createdClients info returned in response summary
 
     return NextResponse.json({
       results,

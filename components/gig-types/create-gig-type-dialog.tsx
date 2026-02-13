@@ -78,8 +78,9 @@ export function CreateGigTypeDialog({
 
     if (error) {
       console.error('Error creating gig type:', error)
-      toast.error(t('createError') + ': ' + error.message)
+      toast.error(t('createError'))
     } else {
+      toast.success(t('createSuccess'))
       setFormData({
         name: '',
         name_en: '',
