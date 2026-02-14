@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Mail, Send, Crown, Globe } from 'lucide-react'
+import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Mail, Send, Crown, Globe, Key } from 'lucide-react'
 import { SubscriptionSettings } from '@/components/settings/subscription-settings'
+import { ApiKeysSettings } from '@/components/settings/api-keys-settings'
 import { Switch } from '@/components/ui/switch'
 import {
   Select,
@@ -255,6 +256,10 @@ export default function SettingsPage() {
         <TabsTrigger value="calendar" className="gap-2">
           <Calendar className="h-4 w-4" />
           {t('tabCalendar')}
+        </TabsTrigger>
+        <TabsTrigger value="api" className="gap-2">
+          <Key className="h-4 w-4" />
+          API
         </TabsTrigger>
         <TabsTrigger value="subscription" className="gap-2">
           <Crown className="h-4 w-4" />
@@ -866,6 +871,11 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+      </TabsContent>
+
+      {/* API Tab */}
+      <TabsContent value="api">
+        <ApiKeysSettings />
       </TabsContent>
 
       {/* Subscription Tab */}
