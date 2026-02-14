@@ -76,16 +76,43 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params
     const supabase = createAdminClient()
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
 
-    if (!file) return apiError('No file uploaded. Send multipart/form-data with field "file".', 400)
+    let fileBuffer: Buffer
+    let fileType: string
+    let fileExt: string
 
-    if (!ALLOWED_RECEIPT_TYPES.includes(file.type as typeof ALLOWED_RECEIPT_TYPES[number])) {
-      return apiError('Invalid file type. Use PDF or image (JPEG, PNG, WebP, GIF).', 400)
+    const contentType = request.headers.get('content-type') || ''
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      const file = formData.get('file') as File | null
+
+      if (!file) return apiError('No file uploaded. Send multipart/form-data with field "file".', 400)
+
+      if (!ALLOWED_RECEIPT_TYPES.includes(file.type as typeof ALLOWED_RECEIPT_TYPES[number])) {
+        return apiError('Invalid file type. Use PDF or image (JPEG, PNG, WebP, GIF).', 400)
+      }
+
+      if (file.size > MAX_FILE_SIZE) return apiError('File too large. Max 10 MB.', 400)
+
+      fileBuffer = Buffer.from(await file.arrayBuffer())
+      fileType = file.type
+      fileExt = file.name.split('.').pop() || 'jpg'
+    } else {
+      const rawType = contentType.split(';')[0].trim()
+      if (!ALLOWED_RECEIPT_TYPES.includes(rawType as typeof ALLOWED_RECEIPT_TYPES[number])) {
+        return apiError('Invalid content type. Use multipart/form-data or raw binary with correct Content-Type.', 400)
+      }
+
+      const arrayBuffer = await request.arrayBuffer()
+      if (arrayBuffer.byteLength === 0) return apiError('Empty request body.', 400)
+      if (arrayBuffer.byteLength > MAX_FILE_SIZE) return apiError('File too large. Max 10 MB.', 400)
+
+      fileBuffer = Buffer.from(arrayBuffer)
+      fileType = rawType
+      const extMap: Record<string, string> = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }
+      fileExt = extMap[rawType] || 'jpg'
     }
-
-    if (file.size > MAX_FILE_SIZE) return apiError('File too large. Max 10 MB.', 400)
 
     // Verify ownership
     const { data: expense, error: fetchError } = await supabase
@@ -104,17 +131,13 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Upload new file
-    const fileExt = file.name.split('.').pop() || 'jpg'
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
     const year = new Date(expense.date).getFullYear()
     const filePath = `receipts/${year}/${fileName}`
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
     const { error: uploadError } = await supabase.storage
       .from('expenses')
-      .upload(filePath, buffer, { contentType: file.type, upsert: false })
+      .upload(filePath, fileBuffer, { contentType: fileType, upsert: false })
 
     if (uploadError) return apiError('Could not upload file', 500)
 

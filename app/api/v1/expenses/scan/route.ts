@@ -37,25 +37,53 @@ export async function POST(request: NextRequest) {
   if (!scopeCheck.success) return apiError(scopeCheck.error, scopeCheck.status)
 
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
+    let arrayBuffer: ArrayBuffer
+    let fileType: string
 
-    if (!file) {
-      return apiError('No file uploaded. Send multipart/form-data with field "file".', 400)
+    const contentType = request.headers.get('content-type') || ''
+
+    if (contentType.includes('multipart/form-data')) {
+      // Standard multipart upload
+      const formData = await request.formData()
+      const file = formData.get('file') as File | null
+
+      if (!file) {
+        return apiError('No file uploaded. Send multipart/form-data with field "file".', 400)
+      }
+
+      if (!ALLOWED_RECEIPT_TYPES.includes(file.type as typeof ALLOWED_RECEIPT_TYPES[number])) {
+        return apiError('Invalid file type. Use PDF or image (JPEG, PNG, WebP, GIF).', 400)
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        return apiError('File too large. Max 10 MB.', 400)
+      }
+
+      arrayBuffer = await file.arrayBuffer()
+      fileType = file.type
+    } else {
+      // Raw binary upload (Content-Type: application/pdf, image/jpeg, etc.)
+      const rawType = contentType.split(';')[0].trim()
+      if (!ALLOWED_RECEIPT_TYPES.includes(rawType as typeof ALLOWED_RECEIPT_TYPES[number])) {
+        return apiError('Invalid content type. Use multipart/form-data with field "file", or send raw binary with Content-Type: application/pdf, image/jpeg, image/png, image/webp, or image/gif.', 400)
+      }
+
+      arrayBuffer = await request.arrayBuffer()
+
+      if (arrayBuffer.byteLength === 0) {
+        return apiError('Empty request body.', 400)
+      }
+
+      if (arrayBuffer.byteLength > MAX_FILE_SIZE) {
+        return apiError('File too large. Max 10 MB.', 400)
+      }
+
+      fileType = rawType
     }
 
-    if (!ALLOWED_RECEIPT_TYPES.includes(file.type as typeof ALLOWED_RECEIPT_TYPES[number])) {
-      return apiError('Invalid file type. Use PDF or image (JPEG, PNG, WebP, GIF).', 400)
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return apiError('File too large. Max 10 MB.', 400)
-    }
-
-    const arrayBuffer = await file.arrayBuffer()
     let result
 
-    if (file.type === 'application/pdf') {
+    if (fileType === 'application/pdf') {
       try {
         const bufferCopy = arrayBuffer.slice(0)
         const { text: textArray } = await extractText(new Uint8Array(bufferCopy))
@@ -82,7 +110,7 @@ export async function POST(request: NextRequest) {
         binary += String.fromCharCode(bytes[i])
       }
       const base64 = Buffer.from(binary, 'binary').toString('base64')
-      const mimeType = file.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+      const mimeType = fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
 
       result = await parseReceiptWithVision(base64, mimeType, auth.userId)
     }
