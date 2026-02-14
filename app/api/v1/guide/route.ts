@@ -58,6 +58,29 @@ const guide = {
         },
       ],
     },
+    scan_receipt_and_create_expense: {
+      description: 'Scan a receipt with AI, create expense, and attach the receipt file',
+      steps: [
+        {
+          step: 1,
+          action: 'Scan receipt with AI',
+          call: `POST ${BASE}/expenses/scan`,
+          note: 'Send multipart/form-data with field "file" (image or PDF, max 10MB). Returns parsed data: date, supplier, amount, currency, category, notes, confidence (0-1). Rate limit: 10 req/min.',
+        },
+        {
+          step: 2,
+          action: 'Create expense with scanned data',
+          call: `POST ${BASE}/expenses`,
+          note: 'Use the parsed data from step 1. Optionally link to a gig with gig_id.',
+        },
+        {
+          step: 3,
+          action: 'Attach receipt file to the expense',
+          call: `POST ${BASE}/expenses/{id}/receipt`,
+          note: 'Upload the same file again to attach it as a receipt image. Send multipart/form-data with field "file".',
+        },
+      ],
+    },
   },
 
   status_flows: {
@@ -101,6 +124,15 @@ const guide = {
     { method: 'GET', path: `${BASE}/expenses/{id}`, scope: 'read:expenses', description: 'Get single expense' },
     { method: 'PATCH', path: `${BASE}/expenses/{id}`, scope: 'write:expenses', description: 'Update expense' },
     { method: 'DELETE', path: `${BASE}/expenses/{id}`, scope: 'write:expenses', description: 'Delete expense' },
+
+    { method: 'POST', path: `${BASE}/expenses/scan`, scope: 'write:expenses', description: 'AI-scan receipt image/PDF → returns { date, supplier, amount, currency, category, confidence }. Send multipart/form-data with field "file". Rate limit: 10/min.' },
+    { method: 'GET', path: `${BASE}/expenses/{id}/receipt`, scope: 'read:expenses', description: 'Get signed URL for receipt image (1h expiry)' },
+    { method: 'POST', path: `${BASE}/expenses/{id}/receipt`, scope: 'write:expenses', description: 'Upload receipt file (multipart/form-data, field "file"). Replaces existing receipt.' },
+    { method: 'DELETE', path: `${BASE}/expenses/{id}/receipt`, scope: 'write:expenses', description: 'Delete receipt attachment' },
+
+    { method: 'GET', path: `${BASE}/gigs/{id}/attachments`, scope: 'read:gigs', description: 'List gig attachments with signed URLs' },
+    { method: 'POST', path: `${BASE}/gigs/{id}/attachments`, scope: 'write:gigs', description: 'Upload PDF attachment (multipart/form-data, field "file", optional field "category": gig_info|invoice_doc)' },
+    { method: 'DELETE', path: `${BASE}/gigs/{id}/attachments/{attachmentId}`, scope: 'write:gigs', description: 'Delete gig attachment' },
   ],
 
   field_specs: {
@@ -170,6 +202,8 @@ const guide = {
     { prompt: 'Mark invoice 46 as paid', call: `PATCH ${BASE}/invoices/{id} with { status: "paid", paid_date: "..." }` },
     { prompt: 'How much have I invoiced this year?', call: `GET ${BASE}/summary → stats.total_invoiced` },
     { prompt: 'Add a travel expense for a gig', call: `POST ${BASE}/expenses with { gig_id: "..." }` },
+    { prompt: 'Scan a receipt and create expense', calls: [`POST ${BASE}/expenses/scan with receipt image → get parsed data`, `POST ${BASE}/expenses with parsed data`, `POST ${BASE}/expenses/{id}/receipt to attach the receipt file`] },
+    { prompt: 'Upload sheet music to a gig', call: `POST ${BASE}/gigs/{id}/attachments with PDF file` },
   ],
 
   response_format: {
