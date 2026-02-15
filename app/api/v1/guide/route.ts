@@ -3,13 +3,13 @@ import { NextResponse } from 'next/server'
 const BASE = '/api/v1'
 
 const guide = {
-  name: 'Babalisk Manager API',
+  name: 'Tomar API',
   version: '1.0',
   description: 'REST API for managing gigs, invoices, clients and expenses for freelance musicians.',
   authentication: {
     method: 'Bearer token',
     header: 'Authorization: Bearer ak_<your-api-key>',
-    how_to_get_key: 'Go to Settings > API in the Babalisk Manager app to generate an API key with specific scopes.',
+    how_to_get_key: 'Go to Settings > API in the Tomar app to generate an API key with specific scopes.',
   },
   rate_limit: '60 requests per minute per API key',
 
@@ -30,7 +30,7 @@ const guide = {
           step: 2,
           action: 'Create a gig',
           call: `POST ${BASE}/gigs`,
-          required_fields: { gig_type_id: 'UUID from gig-types', status: 'pending|accepted|tentative', currency: 'SEK|EUR|USD|...', dates: ['YYYY-MM-DD'] },
+          required_fields: { gig_type_id: 'UUID from gig-types', status: 'tentative|pending|accepted — ask the user', currency: 'SEK|EUR|USD|...', dates: ['YYYY-MM-DD'] },
           optional_fields: { client_id: 'UUID', position_id: 'UUID', fee: 5000, travel_expense: 500, venue: 'string', project_name: 'string', notes: 'string', invoice_notes: 'string' },
         },
         {
@@ -85,8 +85,17 @@ const guide = {
 
   status_flows: {
     gig: {
-      statuses: ['tentative', 'pending', 'accepted', 'declined', 'completed', 'invoiced', 'paid'],
+      statuses: {
+        tentative: 'Musician has been asked but hasn\'t decided yet — awaiting more details',
+        pending: 'Musician intends to accept but is waiting for confirmation from the client/orchestra',
+        accepted: 'Musician has confirmed and committed to the gig',
+        declined: 'Musician has turned down the gig',
+        completed: 'Gig is done, ready for invoicing',
+        invoiced: 'Invoice has been created and sent',
+        paid: 'Payment received',
+      },
       transitions: 'tentative→pending→accepted→completed→invoiced→paid (or →declined at any point)',
+      ai_hint: 'When creating a gig, always ask the user which status to set. Common options: tentative (not sure yet), accepted (confirmed), pending (waiting for confirmation). Do not assume a status.',
     },
     invoice: {
       statuses: ['draft', 'sent', 'overdue', 'paid'],
@@ -139,7 +148,7 @@ const guide = {
     create_gig: {
       required: {
         gig_type_id: 'UUID — get via GET /api/v1/gig-types',
-        status: 'tentative | pending | accepted | declined | completed',
+        status: 'tentative (not decided yet) | pending (waiting for confirmation) | accepted (confirmed) | declined (turned down) | completed (gig is done) — always ask the user',
         currency: 'SEK | EUR | USD | GBP | NOK | DKK',
         dates: 'string[] — at least 1 date in YYYY-MM-DD format',
       },
