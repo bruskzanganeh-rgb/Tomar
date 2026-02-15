@@ -203,7 +203,8 @@ export function GigDialog({
       return
     }
 
-    if (formData.status !== 'tentative' && (!formData.client_id || formData.client_id === 'none')) {
+    const needsClient = ['completed', 'invoiced', 'paid'].includes(formData.status)
+    if (needsClient && (!formData.client_id || formData.client_id === 'none')) {
       toast.warning(t('clientRequired'))
       return
     }
@@ -361,7 +362,7 @@ export function GigDialog({
               <div className="px-8 py-6 space-y-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">
-                    {t('client')} {formData.status !== 'tentative' && <span className="text-destructive">*</span>}
+                    {t('client')} {['completed', 'invoiced', 'paid'].includes(formData.status) && <span className="text-destructive">*</span>}
                   </Label>
                   <Select
                     value={formData.client_id || 'none'}
