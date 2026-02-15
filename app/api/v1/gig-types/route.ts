@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('gig_types')
-      .select('id, name, name_en, vat_rate, sort_order')
+      .select('id, name, name_en, vat_rate')
       .eq('user_id', auth.userId)
-      .order('sort_order')
+      .order('name')
 
     if (error) throw error
 
