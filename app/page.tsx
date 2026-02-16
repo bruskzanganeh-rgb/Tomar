@@ -40,19 +40,19 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0B1E3A]">
       {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-[#1a3a5c] bg-[#0B1E3A]/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Music className="h-5 w-5 text-blue-600" />
-            <span className="text-lg font-semibold tracking-tight">Amida</span>
+            <Music className="h-5 w-5 text-[#2DD4BF]" />
+            <span className="text-lg font-semibold tracking-tight text-white">Amida</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-gray-600" asChild>
+            <Button variant="ghost" size="sm" className="text-[#C7D2FE] hover:text-white hover:bg-white/10" asChild>
               <Link href="/login">Log in</Link>
             </Button>
-            <Button size="sm" asChild>
+            <Button size="sm" className="bg-[#2DD4BF] text-[#0B1E3A] hover:bg-[#2DD4BF]/90 font-medium" asChild>
               <Link href="/signup">Get started</Link>
             </Button>
           </div>
@@ -68,24 +68,24 @@ export default function LandingPage() {
       >
         <motion.p
           variants={fadeIn}
-          className="text-sm font-medium text-blue-600 tracking-wide uppercase mb-4"
+          className="text-sm font-medium text-[#2DD4BF] tracking-wide uppercase mb-4"
         >
           Built for freelance musicians
         </motion.p>
         <motion.h1
           variants={fadeIn}
-          className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 max-w-2xl leading-[1.1]"
+          className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white max-w-2xl leading-[1.1]"
         >
           Gigs, invoices and finances — all in one place.
         </motion.h1>
         <motion.p
           variants={fadeIn}
-          className="mt-6 text-lg text-gray-500 max-w-xl leading-relaxed"
+          className="mt-6 text-lg text-[#C7D2FE] max-w-xl leading-relaxed"
         >
           Stop juggling spreadsheets. Amida gives you everything you need to manage your music career — so you can focus on playing.
         </motion.p>
         <motion.div variants={fadeIn} className="mt-10 flex gap-3">
-          <Button size="lg" asChild>
+          <Button size="lg" className="bg-[#2DD4BF] text-[#0B1E3A] hover:bg-[#2DD4BF]/90 font-semibold" asChild>
             <Link href="/signup" className="gap-2">
               Start for free <ArrowRight className="h-4 w-4" />
             </Link>
@@ -99,13 +99,13 @@ export default function LandingPage() {
         whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
         variants={stagger}
-        className="border-t border-gray-100 bg-gray-50/50"
+        className="border-t border-[#1a3a5c] bg-[#102544]"
       >
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <motion.p variants={fadeIn} className="text-sm font-medium text-blue-600 tracking-wide uppercase mb-3">
+          <motion.p variants={fadeIn} className="text-sm font-medium text-[#2DD4BF] tracking-wide uppercase mb-3">
             Features
           </motion.p>
-          <motion.h2 variants={fadeIn} className="text-3xl font-bold tracking-tight text-gray-900 mb-14">
+          <motion.h2 variants={fadeIn} className="text-3xl font-bold tracking-tight text-white mb-14">
             Everything you need, nothing you don&apos;t.
           </motion.h2>
           <div className="grid sm:grid-cols-2 gap-8">
@@ -116,12 +116,12 @@ export default function LandingPage() {
                 className="group"
               >
                 <div className="flex items-start gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-blue-600/10 flex items-center justify-center shrink-0">
-                    <feature.icon className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 rounded-xl bg-[#2DD4BF]/10 flex items-center justify-center shrink-0">
+                    <feature.icon className="h-5 w-5 text-[#2DD4BF]" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{feature.title}</h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">{feature.desc}</p>
+                    <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
+                    <p className="text-sm text-[#C7D2FE]/70 leading-relaxed">{feature.desc}</p>
                   </div>
                 </div>
               </motion.div>
@@ -138,10 +138,10 @@ export default function LandingPage() {
         variants={stagger}
       >
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <motion.p variants={fadeIn} className="text-sm font-medium text-blue-600 tracking-wide uppercase mb-3">
+          <motion.p variants={fadeIn} className="text-sm font-medium text-[#2DD4BF] tracking-wide uppercase mb-3">
             Pricing
           </motion.p>
-          <motion.h2 variants={fadeIn} className="text-3xl font-bold tracking-tight text-gray-900 mb-14">
+          <motion.h2 variants={fadeIn} className="text-3xl font-bold tracking-tight text-white mb-14">
             Simple, transparent pricing.
           </motion.h2>
 
@@ -149,22 +149,22 @@ export default function LandingPage() {
             {/* Free */}
             <motion.div
               variants={fadeIn}
-              className="rounded-2xl border border-gray-200 p-6"
+              className="rounded-2xl border border-[#1a3a5c] bg-[#102544] p-6"
             >
-              <p className="text-sm font-medium text-gray-500 mb-1">Free</p>
+              <p className="text-sm font-medium text-[#C7D2FE]/70 mb-1">Free</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-bold text-gray-900">$0</span>
-                <span className="text-sm text-gray-400">/mo</span>
+                <span className="text-4xl font-bold text-white">$0</span>
+                <span className="text-sm text-[#C7D2FE]/50">/mo</span>
               </div>
               <div className="space-y-3 mb-8">
                 {['Unlimited gigs', 'Basic invoicing', 'Calendar view'].map((f) => (
-                  <div key={f} className="flex items-center gap-2.5 text-sm text-gray-700">
-                    <Check className="h-4 w-4 text-gray-400 shrink-0" />
+                  <div key={f} className="flex items-center gap-2.5 text-sm text-[#C7D2FE]">
+                    <Check className="h-4 w-4 text-[#C7D2FE]/50 shrink-0" />
                     {f}
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full" asChild>
+              <Button variant="outline" className="w-full border-[#1a3a5c] text-[#C7D2FE] hover:bg-white/5 hover:text-white" asChild>
                 <Link href="/signup">Get started</Link>
               </Button>
             </motion.div>
@@ -172,15 +172,15 @@ export default function LandingPage() {
             {/* Pro */}
             <motion.div
               variants={fadeIn}
-              className="rounded-2xl border-2 border-blue-600 p-6 relative"
+              className="rounded-2xl border-2 border-[#2DD4BF] bg-[#102544] p-6 relative"
             >
-              <div className="absolute -top-3 left-6 bg-blue-600 text-white text-xs font-medium px-3 py-1 rounded-full">
+              <div className="absolute -top-3 left-6 bg-[#2DD4BF] text-[#0B1E3A] text-xs font-semibold px-3 py-1 rounded-full">
                 Most popular
               </div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Pro</p>
+              <p className="text-sm font-medium text-[#C7D2FE]/70 mb-1">Pro</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-bold text-gray-900">$5.99</span>
-                <span className="text-sm text-gray-400">/mo</span>
+                <span className="text-4xl font-bold text-white">$5.99</span>
+                <span className="text-sm text-[#C7D2FE]/50">/mo</span>
               </div>
               <div className="space-y-3 mb-8">
                 {[
@@ -191,13 +191,13 @@ export default function LandingPage() {
                   'Send invoices via email',
                   'No Amida branding on invoices',
                 ].map((f) => (
-                  <div key={f} className="flex items-center gap-2.5 text-sm text-gray-700">
-                    <Check className="h-4 w-4 text-blue-600 shrink-0" />
+                  <div key={f} className="flex items-center gap-2.5 text-sm text-[#C7D2FE]">
+                    <Check className="h-4 w-4 text-[#2DD4BF] shrink-0" />
                     {f}
                   </div>
                 ))}
               </div>
-              <Button className="w-full" asChild>
+              <Button className="w-full bg-[#2DD4BF] text-[#0B1E3A] hover:bg-[#2DD4BF]/90 font-medium" asChild>
                 <Link href="/signup">Start free trial</Link>
               </Button>
             </motion.div>
@@ -211,20 +211,20 @@ export default function LandingPage() {
         whileInView="visible"
         viewport={{ once: true }}
         variants={stagger}
-        className="border-t border-gray-100 bg-gray-50/50"
+        className="border-t border-[#1a3a5c] bg-[#102544]"
       >
         <div className="mx-auto max-w-5xl px-6 py-24 text-center">
           <motion.h2
             variants={fadeIn}
-            className="text-3xl font-bold tracking-tight text-gray-900 mb-4"
+            className="text-3xl font-bold tracking-tight text-white mb-4"
           >
             Ready to simplify your music business?
           </motion.h2>
-          <motion.p variants={fadeIn} className="text-gray-500 mb-8 max-w-md mx-auto">
+          <motion.p variants={fadeIn} className="text-[#C7D2FE] mb-8 max-w-md mx-auto">
             Join musicians who use Amida to spend less time on admin and more time making music.
           </motion.p>
           <motion.div variants={fadeIn}>
-            <Button size="lg" asChild>
+            <Button size="lg" className="bg-[#2DD4BF] text-[#0B1E3A] hover:bg-[#2DD4BF]/90 font-semibold" asChild>
               <Link href="/signup" className="gap-2">
                 Get started for free <ArrowRight className="h-4 w-4" />
               </Link>
@@ -234,8 +234,8 @@ export default function LandingPage() {
       </motion.section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8">
-        <div className="mx-auto max-w-5xl px-6 flex items-center justify-between text-sm text-gray-400">
+      <footer className="border-t border-[#1a3a5c] py-8">
+        <div className="mx-auto max-w-5xl px-6 flex items-center justify-between text-sm text-[#C7D2FE]/50">
           <div className="flex items-center gap-2">
             <Music className="h-4 w-4" />
             <span>Amida</span>

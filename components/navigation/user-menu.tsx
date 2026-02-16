@@ -62,7 +62,7 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button
           className="header-nav-link flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium"
-          style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}
+          style={{ color: '#C7D2FE', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           <span className="max-w-[180px] truncate">
             {companyName || userEmail}

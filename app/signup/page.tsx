@@ -80,11 +80,11 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-[#0B1E3A] p-4">
+        <Card className="w-full max-w-md bg-[#102544] border-[#1a3a5c]">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
-              <Music className="h-7 w-7 text-green-600" />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#22C55E]/10">
+              <Music className="h-7 w-7 text-[#22C55E]" />
             </div>
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
@@ -104,11 +104,11 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-[#0B1E3A] p-4">
+      <Card className="w-full max-w-md bg-[#102544] border-[#1a3a5c]">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Music className="h-7 w-7 text-primary" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#2DD4BF]/10">
+            <Music className="h-7 w-7 text-[#2DD4BF]" />
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Get started with Amida — it&apos;s free</CardDescription>

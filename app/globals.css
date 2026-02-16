@@ -56,8 +56,8 @@
   --popover: #ffffff;           /* white */
   --popover-foreground: #0f172a;
 
-  /* Primary - blue accent (same as dark) */
-  --primary: #3b82f6;           /* blue-500 */
+  /* Primary - Amida blue */
+  --primary: #2F80ED;           /* Amida blue */
   --primary-foreground: #ffffff;
 
   /* Secondary */
@@ -72,10 +72,10 @@
   /* Borders - subtle */
   --border: #e2e8f0;            /* slate-200 */
   --input: #e2e8f0;             /* slate-200 */
-  --ring: #3b82f6;              /* blue-500 */
+  --ring: #2F80ED;              /* Amida blue */
 
-  /* Chart colors (same as dark) */
-  --chart-1: #3b82f6;           /* blue-500 */
+  /* Chart colors */
+  --chart-1: #2F80ED;           /* Amida blue */
   --chart-2: #10b981;           /* emerald-500 */
   --chart-3: #8b5cf6;           /* violet-500 */
   --chart-4: #f59e0b;           /* amber-500 */
@@ -84,59 +84,59 @@
   /* Sidebar - light */
   --sidebar: #ffffff;           /* white */
   --sidebar-foreground: #0f172a;
-  --sidebar-primary: #3b82f6;
+  --sidebar-primary: #2F80ED;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;    /* slate-100 */
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #e2e8f0;    /* slate-200 */
-  --sidebar-ring: #3b82f6;
+  --sidebar-ring: #2F80ED;
 }
 
-/* ===== DARK MODE ===== */
+/* ===== DARK MODE (Amida brand) ===== */
 .dark {
-  --background: #0f172a;        /* slate-900 */
-  --foreground: #f8fafc;        /* slate-50 */
+  --background: #0B1E3A;        /* Deep Navy */
+  --foreground: #f8fafc;
 
-  /* Cards - solid, no transparency */
-  --card: #1e293b;              /* slate-800 */
+  /* Cards */
+  --card: #102544;              /* Card Navy */
   --card-foreground: #f8fafc;
-  --popover: #1e293b;
+  --popover: #102544;
   --popover-foreground: #f8fafc;
 
-  /* Primary - blue accent */
-  --primary: #3b82f6;           /* blue-500 */
+  /* Primary - Amida blue */
+  --primary: #2F80ED;
   --primary-foreground: #ffffff;
 
   /* Secondary */
-  --secondary: #334155;         /* slate-700 */
+  --secondary: #1a3a5c;
   --secondary-foreground: #f1f5f9;
-  --muted: #334155;
-  --muted-foreground: #94a3b8;  /* slate-400 */
-  --accent: #334155;
+  --muted: #1a3a5c;
+  --muted-foreground: #C7D2FE;  /* Logo secondary text */
+  --accent: #1a3a5c;
   --accent-foreground: #f8fafc;
   --destructive: #ef4444;
 
-  /* Borders - subtle */
-  --border: #334155;            /* slate-700 */
-  --input: #334155;
-  --ring: #3b82f6;
+  /* Borders */
+  --border: #1a3a5c;
+  --input: #1a3a5c;
+  --ring: #2F80ED;
 
   /* Chart colors */
-  --chart-1: #3b82f6;
-  --chart-2: #10b981;
-  --chart-3: #8b5cf6;
+  --chart-1: #2F80ED;           /* Blue */
+  --chart-2: #2DD4BF;           /* Teal */
+  --chart-3: #56CCF2;           /* Light Blue */
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
 
   /* Sidebar */
-  --sidebar: #0f172a;
+  --sidebar: #0B1E3A;
   --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #3b82f6;
+  --sidebar-primary: #2F80ED;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
+  --sidebar-accent: #102544;
   --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
+  --sidebar-border: #1a3a5c;
+  --sidebar-ring: #2F80ED;
 }
 
 @layer base {
