@@ -46,7 +46,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-[#1a3a5c] bg-[#0B1E3A]/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Amida" width={24} height={24} className="rounded" />
+            <Image src="/logo.png" alt="Amida" width={32} height={32} />
             <span className="text-lg font-semibold tracking-tight text-white">Amida</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -165,7 +165,7 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full border-[#1a3a5c] text-[#C7D2FE] hover:bg-white/5 hover:text-white" asChild>
+              <Button variant="outline" className="w-full bg-transparent border-[#1a3a5c] text-[#C7D2FE] hover:bg-white/5 hover:text-white" asChild>
                 <Link href="/signup">Get started</Link>
               </Button>
             </motion.div>
@@ -238,7 +238,7 @@ export default function LandingPage() {
       <footer className="border-t border-[#1a3a5c] py-8">
         <div className="mx-auto max-w-5xl px-6 flex items-center justify-between text-sm text-[#C7D2FE]/50">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Amida" width={18} height={18} className="rounded-sm" />
+            <Image src="/logo.png" alt="Amida" width={24} height={24} />
             <span>Amida</span>
           </div>
           <span>&copy; {new Date().getFullYear()} Amida. Built for musicians.</span>

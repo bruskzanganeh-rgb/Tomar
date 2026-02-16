@@ -54,9 +54,9 @@ function LoginForm() {
           <Image
             src="/logo.png"
             alt="Amida"
-            width={40}
-            height={40}
-            className="mx-auto mb-4 rounded-md"
+            width={64}
+            height={64}
+            className="mx-auto mb-4"
           />
           <CardTitle className="text-2xl">Amida</CardTitle>
           <CardDescription>Log in to manage your gigs and invoices</CardDescription>

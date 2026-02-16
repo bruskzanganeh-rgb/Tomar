@@ -36,9 +36,8 @@ export function Header() {
           <Image
             src="/logo.png"
             alt="Amida"
-            width={28}
-            height={28}
-            className="rounded-md"
+            width={32}
+            height={32}
           />
           <span className="text-xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
             Amida
