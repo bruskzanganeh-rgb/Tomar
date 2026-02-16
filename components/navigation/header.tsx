@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Menu } from 'lucide-react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { navigationItems } from './nav-items'
 import { UserMenu } from './user-menu'
@@ -31,7 +32,14 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b" style={{ backgroundColor: '#0B1E3A', borderColor: '#102544' }}>
       <div className="container mx-auto flex h-14 items-center gap-4 px-4">
         {/* Logo */}
-        <Link href="/dashboard" className="mr-4 flex items-center shrink-0">
+        <Link href="/dashboard" className="mr-4 flex items-center gap-2 shrink-0">
+          <Image
+            src="/logo.png"
+            alt="Amida"
+            width={28}
+            height={28}
+            className="rounded-md"
+          />
           <span className="text-xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
             Amida
           </span>
@@ -53,14 +61,14 @@ export function Header() {
               >
                 <item.icon
                   className="h-4 w-4 shrink-0"
-                  style={{ color: isActive ? '#2DD4BF' : undefined }}
+                  style={{ color: isActive ? '#818CF8' : undefined }}
                 />
                 <span className="hidden lg:inline">{t(item.nameKey)}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeHeaderNav"
                     className="absolute inset-x-1 -bottom-[calc(0.5rem+1px)] h-0.5 rounded-full"
-                    style={{ backgroundColor: '#2DD4BF' }}
+                    style={{ backgroundColor: '#818CF8' }}
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                   />
                 )}

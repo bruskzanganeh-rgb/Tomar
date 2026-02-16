@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Music, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function SignupPage() {
@@ -80,12 +81,16 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B1E3A] p-4">
+      <div className="dark min-h-screen flex items-center justify-center bg-[#0B1E3A] p-4">
         <Card className="w-full max-w-md bg-[#102544] border-[#1a3a5c]">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#22C55E]/10">
-              <Music className="h-7 w-7 text-[#22C55E]" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Amida"
+              width={64}
+              height={64}
+              className="mx-auto mb-4 rounded-xl"
+            />
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
               We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.
@@ -104,19 +109,23 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B1E3A] p-4">
+    <div className="dark min-h-screen flex items-center justify-center bg-[#0B1E3A] p-4">
       <Card className="w-full max-w-md bg-[#102544] border-[#1a3a5c]">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#2DD4BF]/10">
-            <Music className="h-7 w-7 text-[#2DD4BF]" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="Amida"
+            width={64}
+            height={64}
+            className="mx-auto mb-4 rounded-xl"
+          />
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Get started with Amida — it&apos;s free</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+              <div className="p-3 text-sm text-red-400 bg-red-950/50 rounded-lg">
                 {error}
               </div>
             )}
