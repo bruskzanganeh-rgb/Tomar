@@ -115,9 +115,9 @@ export default function SignupPage() {
           <Image
             src="/logo.png"
             alt="Amida"
-            width={64}
-            height={64}
-            className="mx-auto mb-4 rounded-xl"
+            width={40}
+            height={40}
+            className="mx-auto mb-4 rounded-md"
           />
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Get started with Amida — it&apos;s free</CardDescription>

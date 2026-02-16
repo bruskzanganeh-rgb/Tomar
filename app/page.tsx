@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Music, Calendar, FileText, Receipt, CalendarDays, Check, ArrowRight } from 'lucide-react'
+import { Calendar, FileText, Receipt, CalendarDays, Check, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
 import { motion, type Variants } from 'framer-motion'
 
 const fadeIn: Variants = {
@@ -45,7 +46,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-[#1a3a5c] bg-[#0B1E3A]/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Music className="h-5 w-5 text-[#F59E0B]" />
+            <Image src="/logo.png" alt="Amida" width={24} height={24} className="rounded" />
             <span className="text-lg font-semibold tracking-tight text-white">Amida</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -237,7 +238,7 @@ export default function LandingPage() {
       <footer className="border-t border-[#1a3a5c] py-8">
         <div className="mx-auto max-w-5xl px-6 flex items-center justify-between text-sm text-[#C7D2FE]/50">
           <div className="flex items-center gap-2">
-            <Music className="h-4 w-4" />
+            <Image src="/logo.png" alt="Amida" width={18} height={18} className="rounded-sm" />
             <span>Amida</span>
           </div>
           <span>&copy; {new Date().getFullYear()} Amida. Built for musicians.</span>
