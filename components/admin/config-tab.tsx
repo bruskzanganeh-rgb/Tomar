@@ -45,9 +45,9 @@ export function ConfigTab({ configValues, setConfigValues, savingConfig, onSave 
         <div className="space-y-2 pt-4 border-t">
           <Label>{t('brandingName')}</Label>
           <Input
-            value={configValues['branding_name'] || 'Tomar'}
+            value={configValues['branding_name'] || 'Amida'}
             onChange={e => setConfigValues(prev => ({ ...prev, branding_name: e.target.value }))}
-            placeholder="Tomar"
+            placeholder="Amida"
           />
           <p className="text-xs text-muted-foreground">{t('brandingNameHint')}</p>
         </div>

@@ -33,7 +33,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/dashboard" className="mr-4 flex items-center shrink-0">
           <span className="text-xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
-            Tomar
+            Amida
           </span>
         </Link>
 
@@ -87,7 +87,7 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-72 p-0">
               <SheetHeader className="px-6 py-4 border-b">
-                <SheetTitle className="text-left">Tomar</SheetTitle>
+                <SheetTitle className="text-left">Amida</SheetTitle>
               </SheetHeader>
 
               <nav className="flex-1 space-y-1 px-3 py-4">

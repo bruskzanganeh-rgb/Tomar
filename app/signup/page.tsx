@@ -111,7 +111,7 @@ export default function SignupPage() {
             <Music className="h-7 w-7 text-primary" />
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Get started with Tomar — it&apos;s free</CardDescription>
+          <CardDescription>Get started with Amida — it&apos;s free</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">

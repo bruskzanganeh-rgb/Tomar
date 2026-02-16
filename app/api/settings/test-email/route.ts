@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
       const fromEmail = config.resend_from_email || 'noreply@babalisk.com'
 
       await resend.emails.send({
-        from: `Tomar <${fromEmail}>`,
+        from: `Amida <${fromEmail}>`,
         to: [to_email],
         subject: 'Test av e-postinställningar',
-        text: 'Detta är ett testmail från Tomar.',
+        text: 'Detta är ett testmail från Amida.',
         html: `
           <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #111827;">E-posttest lyckades!</h2>
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
               Detta mail bekräftar att plattformens e-post fungerar korrekt.
             </p>
             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            <p style="color: #9ca3af; font-size: 12px;">Skickat från Tomar</p>
+            <p style="color: #9ca3af; font-size: 12px;">Skickat från Amida</p>
           </div>
         `,
       })
@@ -88,18 +88,18 @@ export async function POST(request: NextRequest) {
       from: fromAddress,
       to: to_email,
       subject: 'Test av SMTP-inställningar',
-      text: 'Detta är ett testmail från Tomar för att verifiera att SMTP-inställningarna fungerar korrekt.',
+      text: 'Detta är ett testmail från Amida för att verifiera att SMTP-inställningarna fungerar korrekt.',
       html: `
         <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #111827;">SMTP-test lyckades!</h2>
           <p style="color: #6b7280;">
-            Detta mail bekräftar att dina SMTP-inställningar i Tomar är korrekt konfigurerade.
+            Detta mail bekräftar att dina SMTP-inställningar i Amida är korrekt konfigurerade.
           </p>
           <p style="color: #6b7280;">
             Du kan nu skicka fakturor via e-post direkt från systemet.
           </p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-          <p style="color: #9ca3af; font-size: 12px;">Skickat från Tomar</p>
+          <p style="color: #9ca3af; font-size: 12px;">Skickat från Amida</p>
         </div>
       `,
     })

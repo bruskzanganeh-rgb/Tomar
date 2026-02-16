@@ -46,7 +46,7 @@ export default function LandingPage() {
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
             <Music className="h-5 w-5 text-blue-600" />
-            <span className="text-lg font-semibold tracking-tight">Tomar</span>
+            <span className="text-lg font-semibold tracking-tight">Amida</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" className="text-gray-600" asChild>
@@ -82,7 +82,7 @@ export default function LandingPage() {
           variants={fadeIn}
           className="mt-6 text-lg text-gray-500 max-w-xl leading-relaxed"
         >
-          Stop juggling spreadsheets. Tomar gives you everything you need to manage your music career — so you can focus on playing.
+          Stop juggling spreadsheets. Amida gives you everything you need to manage your music career — so you can focus on playing.
         </motion.p>
         <motion.div variants={fadeIn} className="mt-10 flex gap-3">
           <Button size="lg" asChild>
@@ -189,7 +189,7 @@ export default function LandingPage() {
                   'Advanced analytics',
                   'Calendar sync (iCal)',
                   'Send invoices via email',
-                  'No Tomar branding on invoices',
+                  'No Amida branding on invoices',
                 ].map((f) => (
                   <div key={f} className="flex items-center gap-2.5 text-sm text-gray-700">
                     <Check className="h-4 w-4 text-blue-600 shrink-0" />
@@ -221,7 +221,7 @@ export default function LandingPage() {
             Ready to simplify your music business?
           </motion.h2>
           <motion.p variants={fadeIn} className="text-gray-500 mb-8 max-w-md mx-auto">
-            Join musicians who use Tomar to spend less time on admin and more time making music.
+            Join musicians who use Amida to spend less time on admin and more time making music.
           </motion.p>
           <motion.div variants={fadeIn}>
             <Button size="lg" asChild>
@@ -238,9 +238,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-5xl px-6 flex items-center justify-between text-sm text-gray-400">
           <div className="flex items-center gap-2">
             <Music className="h-4 w-4" />
-            <span>Tomar</span>
+            <span>Amida</span>
           </div>
-          <span>&copy; {new Date().getFullYear()} Tomar. Built for musicians.</span>
+          <span>&copy; {new Date().getFullYear()} Amida. Built for musicians.</span>
         </div>
       </footer>
     </div>

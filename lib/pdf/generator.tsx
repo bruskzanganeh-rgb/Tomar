@@ -482,7 +482,7 @@ function formatDate(dateStr: string): string {
 }
 
 // PDF Document Component
-function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBranding = false, sponsor, locale = 'sv', brandingName = 'Tomar' }: GeneratePdfParams) {
+function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBranding = false, sponsor, locale = 'sv', brandingName = 'Amida' }: GeneratePdfParams) {
   const fmt = (amount: number) => formatCurrencyPdf(amount, currency)
   const l = getLabels(locale)
   const invoiceLines = lines && lines.length > 0

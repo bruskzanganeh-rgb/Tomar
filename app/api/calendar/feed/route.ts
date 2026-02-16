@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
         const endFormatted = formatNextDay(gd.date)
 
         return `BEGIN:VEVENT
-UID:${gig.id}-${idx}@tomar.babalisk.com
+UID:${gig.id}-${idx}@amida.babalisk.com
 DTSTAMP:${dtstamp}
 DTSTART;VALUE=DATE:${dateFormatted}
 DTEND;VALUE=DATE:${endFormatted}
@@ -110,8 +110,8 @@ END:VEVENT`
 
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Tomar//SE
-X-WR-CALNAME:Tomar Gigs
+PRODID:-//Amida//SE
+X-WR-CALNAME:Amida Gigs
 X-WR-TIMEZONE:Europe/Stockholm
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
@@ -121,7 +121,7 @@ END:VCALENDAR`
     return new NextResponse(icsContent, {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': 'inline; filename="tomar-gigs.ics"',
+        'Content-Disposition': 'inline; filename="amida-gigs.ics"',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     })

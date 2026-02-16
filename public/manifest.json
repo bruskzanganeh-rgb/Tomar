@@ -1,6 +1,6 @@
 {
-  "name": "Tomar",
-  "short_name": "Tomar",
+  "name": "Amida",
+  "short_name": "Amida",
   "description": "Gig and invoice management for musicians",
   "start_url": "/dashboard",
   "display": "standalone",

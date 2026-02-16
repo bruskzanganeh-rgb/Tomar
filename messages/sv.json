@@ -572,7 +572,7 @@
     "emailProvider": "E-postleverantör",
     "platformEmail": "Appens e-post",
     "ownSmtp": "Egen SMTP",
-    "platformEmailInfo": "Fakturor skickas via Tomar. Inga ytterligare inställningar behövs.",
+    "platformEmailInfo": "Fakturor skickas via Amida. Inga ytterligare inställningar behövs.",
     "emailRequiresPro": "E-postutskick kräver Pro-plan",
     "logoTooLarge": "Logotypen är för stor",
     "onlyImages": "Endast bildfiler tillåtna",
@@ -679,7 +679,7 @@
     "createAccount": "Skapa konto",
     "wrongCredentials": "Fel e-post eller lösenord",
     "signup": "Skapa konto",
-    "signupSubtitle": "Kom igång med Tomar",
+    "signupSubtitle": "Kom igång med Amida",
     "companyName": "Företagsnamn",
     "minChars": "Minst 6 tecken",
     "hasAccount": "Har redan konto?",
@@ -697,7 +697,7 @@
     "instruments": "Instrument",
     "gigTypes": "Uppdragstyper",
     "roles": "Roller",
-    "welcome": "Välkommen till Tomar!",
+    "welcome": "Välkommen till Amida!",
     "setupDescription": "Låt oss konfigurera din profil",
     "selectInstruments": "Vilka instrument spelar du?",
     "addGigType": "Lägg till uppdragstyp",
@@ -1176,6 +1176,6 @@
     "proFeature4": "Prioriterad support",
     "currentPlan": "Nuvarande",
     "choosePlan": "Välj plan",
-    "footer": "Tomar. Byggt för musiker."
+    "footer": "Amida. Byggt för musiker."
   }
 }

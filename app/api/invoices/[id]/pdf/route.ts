@@ -156,7 +156,7 @@ export async function GET(
       showBranding,
       sponsor,
       locale: clientData.invoice_language || 'sv',
-      brandingName: brandingConfig?.value || 'Tomar',
+      brandingName: brandingConfig?.value || 'Amida',
     })
 
     // Log activity

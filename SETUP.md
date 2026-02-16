@@ -1,6 +1,6 @@
-# Tomar - Setup Guide
+# Amida - Setup Guide
 
-Följ dessa steg för att få igång Tomar.
+Följ dessa steg för att få igång Amida.
 
 ## Steg 1: Skapa Supabase-projekt
 
@@ -78,7 +78,7 @@ npm run dev
 ## Steg 7: Testa i webbläsaren
 
 1. Öppna [http://localhost:3000](http://localhost:3000)
-2. Du ska se Tomar dashboard
+2. Du ska se Amida dashboard
 3. Navigationen till vänster ska fungera
 4. Om allt ser bra ut är du redo att börja använda systemet!
 

@@ -1,4 +1,4 @@
-# Tomar — Idéer & Roadmap
+# Amida — Idéer & Roadmap
 
 ## Grund (klart)
 

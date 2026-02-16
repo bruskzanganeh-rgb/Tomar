@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       currency: invoice.currency || 'SEK',
       showBranding: !isPro,
       locale: clientData.invoice_language || 'sv',
-      brandingName: brandingConfig?.value || 'Tomar',
+      brandingName: brandingConfig?.value || 'Amida',
     })
 
     const fileAttachments = [
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
       const resend = new Resend(config.resend_api_key)
       const fromEmail = config.resend_from_email || 'noreply@babalisk.com'
-      const fromName = company.company_name || 'Tomar'
+      const fromName = company.company_name || 'Amida'
       const fromAddress = `${fromName} <${fromEmail}>`
 
       await resend.emails.send({

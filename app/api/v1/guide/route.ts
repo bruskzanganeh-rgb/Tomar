@@ -3,13 +3,13 @@ import { NextResponse } from 'next/server'
 const BASE = '/api/v1'
 
 const guide = {
-  name: 'Tomar API',
+  name: 'Amida API',
   version: '1.0',
   description: 'REST API for managing gigs, invoices, clients and expenses for freelance musicians.',
   authentication: {
     method: 'Bearer token',
     header: 'Authorization: Bearer ak_<your-api-key>',
-    how_to_get_key: 'Go to Settings > API in the Tomar app to generate an API key with specific scopes.',
+    how_to_get_key: 'Go to Settings > API in the Amida app to generate an API key with specific scopes.',
   },
   rate_limit: '60 requests per minute per API key',
 

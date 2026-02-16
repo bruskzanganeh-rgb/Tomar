@@ -1,4 +1,4 @@
-# Tomar
+# Amida
 
 Ett komplett gig- och fakturahanteringssystem för musiker, byggt med Next.js och Supabase.
 

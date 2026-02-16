@@ -1,4 +1,4 @@
-# Tomar - Claude Instructions
+# Amida - Claude Instructions
 
 ## Database Connection
 
@@ -35,7 +35,7 @@ PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "postgresql://$SUPABASE_DB_USER@$SUPABAS
 
 ## Projekt
 
-Tomar är en app för att hantera gigs/uppdrag för frilansmusiker. Domän: tomar.babalisk.com
+Amida är en app för att hantera gigs/uppdrag för frilansmusiker. Domän: amida.babalisk.com
 
 ### Viktiga tabeller
 - `gigs` - uppdrag med datum, arvode, status

@@ -572,7 +572,7 @@
     "emailProvider": "Email provider",
     "platformEmail": "Platform email",
     "ownSmtp": "Own SMTP",
-    "platformEmailInfo": "Invoices are sent via Tomar. No additional settings needed.",
+    "platformEmailInfo": "Invoices are sent via Amida. No additional settings needed.",
     "emailRequiresPro": "Email sending requires Pro plan",
     "logoTooLarge": "Logo is too large",
     "onlyImages": "Only image files allowed",
@@ -679,7 +679,7 @@
     "createAccount": "Create account",
     "wrongCredentials": "Wrong email or password",
     "signup": "Create account",
-    "signupSubtitle": "Get started with Tomar",
+    "signupSubtitle": "Get started with Amida",
     "companyName": "Company name",
     "minChars": "At least 6 characters",
     "hasAccount": "Already have an account?",
@@ -697,7 +697,7 @@
     "instruments": "Instruments",
     "gigTypes": "Gig types",
     "roles": "Roles",
-    "welcome": "Welcome to Tomar!",
+    "welcome": "Welcome to Amida!",
     "setupDescription": "Let's set up your profile",
     "selectInstruments": "What instruments do you play?",
     "addGigType": "Add gig type",
@@ -1176,6 +1176,6 @@
     "proFeature4": "Priority support",
     "currentPlan": "Current",
     "choosePlan": "Choose plan",
-    "footer": "Tomar. Built for musicians."
+    "footer": "Amida. Built for musicians."
   }
 }

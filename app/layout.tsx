@@ -22,27 +22,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tomar",
+  title: "Amida",
   description: "Gig and invoice management for musicians",
-  metadataBase: new URL('https://tomar.babalisk.com'),
+  metadataBase: new URL('https://amida.babalisk.com'),
   openGraph: {
-    title: 'Tomar',
+    title: 'Amida',
     description: 'Gig and invoice management for freelance musicians',
-    url: 'https://tomar.babalisk.com',
-    siteName: 'Tomar',
+    url: 'https://amida.babalisk.com',
+    siteName: 'Amida',
     locale: 'sv_SE',
     type: 'website',
   },
   twitter: {
     card: 'summary',
-    title: 'Tomar',
+    title: 'Amida',
     description: 'Gig and invoice management for freelance musicians',
   },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Tomar',
+    title: 'Amida',
   },
   icons: {
     icon: '/icon-192.png',
