@@ -61,14 +61,14 @@ export function Header() {
               >
                 <item.icon
                   className="h-4 w-4 shrink-0"
-                  style={{ color: isActive ? '#818CF8' : undefined }}
+                  style={{ color: isActive ? '#F59E0B' : undefined }}
                 />
                 <span className="hidden lg:inline">{t(item.nameKey)}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeHeaderNav"
                     className="absolute inset-x-1 -bottom-[calc(0.5rem+1px)] h-0.5 rounded-full"
-                    style={{ backgroundColor: '#818CF8' }}
+                    style={{ backgroundColor: '#F59E0B' }}
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                   />
                 )}

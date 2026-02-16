@@ -45,14 +45,14 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-[#1a3a5c] bg-[#0B1E3A]/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <Music className="h-5 w-5 text-[#818CF8]" />
+            <Music className="h-5 w-5 text-[#F59E0B]" />
             <span className="text-lg font-semibold tracking-tight text-white">Amida</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" className="text-[#C7D2FE] hover:text-white hover:bg-white/10" asChild>
               <Link href="/login">Log in</Link>
             </Button>
-            <Button size="sm" className="bg-[#818CF8] text-white hover:bg-[#818CF8]/90 font-medium" asChild>
+            <Button size="sm" className="bg-[#F59E0B] text-[#0B1E3A] hover:bg-[#F59E0B]/90 font-medium" asChild>
               <Link href="/signup">Get started</Link>
             </Button>
           </div>
@@ -68,7 +68,7 @@ export default function LandingPage() {
       >
         <motion.p
           variants={fadeIn}
-          className="text-sm font-medium text-[#818CF8] tracking-wide uppercase mb-4"
+          className="text-sm font-medium text-[#F59E0B] tracking-wide uppercase mb-4"
         >
           Built for freelance musicians
         </motion.p>
@@ -85,7 +85,7 @@ export default function LandingPage() {
           Stop juggling spreadsheets. Amida gives you everything you need to manage your music career — so you can focus on playing.
         </motion.p>
         <motion.div variants={fadeIn} className="mt-10 flex gap-3">
-          <Button size="lg" className="bg-[#818CF8] text-white hover:bg-[#818CF8]/90 font-semibold" asChild>
+          <Button size="lg" className="bg-[#F59E0B] text-[#0B1E3A] hover:bg-[#F59E0B]/90 font-semibold" asChild>
             <Link href="/signup" className="gap-2">
               Start for free <ArrowRight className="h-4 w-4" />
             </Link>
@@ -102,7 +102,7 @@ export default function LandingPage() {
         className="border-t border-[#1a3a5c] bg-[#102544]"
       >
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <motion.p variants={fadeIn} className="text-sm font-medium text-[#818CF8] tracking-wide uppercase mb-3">
+          <motion.p variants={fadeIn} className="text-sm font-medium text-[#F59E0B] tracking-wide uppercase mb-3">
             Features
           </motion.p>
           <motion.h2 variants={fadeIn} className="text-3xl font-bold tracking-tight text-white mb-14">
@@ -116,8 +116,8 @@ export default function LandingPage() {
                 className="group"
               >
                 <div className="flex items-start gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-[#818CF8]/10 flex items-center justify-center shrink-0">
-                    <feature.icon className="h-5 w-5 text-[#818CF8]" />
+                  <div className="h-10 w-10 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center shrink-0">
+                    <feature.icon className="h-5 w-5 text-[#F59E0B]" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
@@ -138,7 +138,7 @@ export default function LandingPage() {
         variants={stagger}
       >
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <motion.p variants={fadeIn} className="text-sm font-medium text-[#818CF8] tracking-wide uppercase mb-3">
+          <motion.p variants={fadeIn} className="text-sm font-medium text-[#F59E0B] tracking-wide uppercase mb-3">
             Pricing
           </motion.p>
           <motion.h2 variants={fadeIn} className="text-3xl font-bold tracking-tight text-white mb-14">
@@ -172,9 +172,9 @@ export default function LandingPage() {
             {/* Pro */}
             <motion.div
               variants={fadeIn}
-              className="rounded-2xl border-2 border-[#818CF8] bg-[#102544] p-6 relative"
+              className="rounded-2xl border-2 border-[#F59E0B] bg-[#102544] p-6 relative"
             >
-              <div className="absolute -top-3 left-6 bg-[#818CF8] text-white text-xs font-semibold px-3 py-1 rounded-full">
+              <div className="absolute -top-3 left-6 bg-[#F59E0B] text-[#0B1E3A] text-xs font-semibold px-3 py-1 rounded-full">
                 Most popular
               </div>
               <p className="text-sm font-medium text-[#C7D2FE]/70 mb-1">Pro</p>
@@ -192,12 +192,12 @@ export default function LandingPage() {
                   'No Amida branding on invoices',
                 ].map((f) => (
                   <div key={f} className="flex items-center gap-2.5 text-sm text-[#C7D2FE]">
-                    <Check className="h-4 w-4 text-[#818CF8] shrink-0" />
+                    <Check className="h-4 w-4 text-[#F59E0B] shrink-0" />
                     {f}
                   </div>
                 ))}
               </div>
-              <Button className="w-full bg-[#818CF8] text-white hover:bg-[#818CF8]/90 font-medium" asChild>
+              <Button className="w-full bg-[#F59E0B] text-[#0B1E3A] hover:bg-[#F59E0B]/90 font-medium" asChild>
                 <Link href="/signup">Start free trial</Link>
               </Button>
             </motion.div>
@@ -224,7 +224,7 @@ export default function LandingPage() {
             Join musicians who use Amida to spend less time on admin and more time making music.
           </motion.p>
           <motion.div variants={fadeIn}>
-            <Button size="lg" className="bg-[#818CF8] text-white hover:bg-[#818CF8]/90 font-semibold" asChild>
+            <Button size="lg" className="bg-[#F59E0B] text-[#0B1E3A] hover:bg-[#F59E0B]/90 font-semibold" asChild>
               <Link href="/signup" className="gap-2">
                 Get started for free <ArrowRight className="h-4 w-4" />
               </Link>
