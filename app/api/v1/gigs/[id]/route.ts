@@ -70,33 +70,47 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const supabase = createAdminClient()
     const { dates, ...updateData } = parsed.data
 
-    const { data, error } = await supabase
+    // Verify the gig exists and belongs to this user
+    const { data: existing, error: existError } = await supabase
       .from('gigs')
-      .update(updateData)
+      .select('id')
       .eq('id', id)
       .eq('user_id', auth.userId)
-      .select(`
-        *,
-        client:clients(id, name),
-        gig_type:gig_types(id, name),
-        position:positions(id, name),
-        gig_dates(date)
-      `)
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') return apiError('Gig not found', 404)
-      throw error
+    if (existError) {
+      if (existError.code === 'PGRST116') return apiError('Gig not found', 404)
+      throw existError
+    }
+
+    // Update gig fields if any were provided (excluding dates)
+    if (Object.keys(updateData).length > 0) {
+      const { error: updateError } = await supabase
+        .from('gigs')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', auth.userId)
+
+      if (updateError) throw updateError
     }
 
     // Update dates if provided
     if (dates && dates.length > 0) {
-      await supabase.from('gig_dates').delete().eq('gig_id', id)
-      await supabase.from('gig_dates').insert(
-        dates.map((date) => ({ gig_id: id, date, user_id: auth.userId }))
-      )
+      const { error: deleteError } = await supabase
+        .from('gig_dates')
+        .delete()
+        .eq('gig_id', id)
+
+      if (deleteError) throw deleteError
+
+      const { error: insertError } = await supabase
+        .from('gig_dates')
+        .insert(dates.map((date) => ({ gig_id: id, date, user_id: auth.userId })))
+
+      if (insertError) throw insertError
+
       // Update date fields on gig
-      await supabase
+      const { error: dateUpdateError } = await supabase
         .from('gigs')
         .update({
           date: dates[0],
@@ -105,7 +119,24 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           total_days: dates.length,
         })
         .eq('id', id)
+
+      if (dateUpdateError) throw dateUpdateError
     }
+
+    // Re-fetch the gig with all relations to return fresh data
+    const { data, error } = await supabase
+      .from('gigs')
+      .select(`
+        *,
+        client:clients(id, name),
+        gig_type:gig_types(id, name),
+        position:positions(id, name),
+        gig_dates(date)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
 
     return apiSuccess(data)
   } catch (error) {
