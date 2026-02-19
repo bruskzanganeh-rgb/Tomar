@@ -506,7 +506,7 @@ export function UploadReceiptDialog({
             )}
 
             {/* Form fields */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">{t('date')}</Label>
                 <Input
@@ -555,7 +555,7 @@ export function UploadReceiptDialog({
                 </Select>
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="category">{t('category')}</Label>
                 <Select
                   value={formData.category}
@@ -572,7 +572,7 @@ export function UploadReceiptDialog({
                 </Select>
               </div>
 
-              <div className="col-span-2 space-y-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
                 <Label htmlFor="notes">{t('notes')}</Label>
                 <Input
                   id="notes"
@@ -584,7 +584,7 @@ export function UploadReceiptDialog({
 
               {/* Visa uppdragsval om inte redan kopplat via prop */}
               {!gigId && (
-                <div className="col-span-2 space-y-2">
+                <div className="col-span-1 sm:col-span-2 space-y-2">
                   <Label>{t('linkToGig')}</Label>
                   <GigCombobox
                     gigs={gigs}
