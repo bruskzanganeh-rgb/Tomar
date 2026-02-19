@@ -31,6 +31,45 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b" style={{ backgroundColor: '#0B1E3A', borderColor: '#102544' }}>
       <div className="container mx-auto flex h-14 items-center gap-4 px-4">
+        {/* Mobile: hamburger (left) */}
+        <div className="md:hidden">
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="hover:bg-white/10" style={{ color: '#ffffff' }}>
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">{t('menu')}</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <SheetHeader className="px-6 py-4 border-b">
+                <SheetTitle className="text-left">Amida</SheetTitle>
+              </SheetHeader>
+
+              <nav className="flex-1 space-y-1 px-3 py-4">
+                {navigationItems.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                  return (
+                    <Link
+                      key={item.nameKey}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-accent text-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                      )}
+                    >
+                      <item.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+                      {t(item.nameKey)}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
+
         {/* Logo */}
         <Link href="/dashboard" className="mr-4 flex items-center gap-2 shrink-0">
           <Image
@@ -76,50 +115,10 @@ export function Header() {
           })}
         </nav>
 
-        {/* Desktop right side */}
-        <div className="hidden md:flex items-center gap-2 shrink-0">
-          <UserMenu />
-        </div>
-
-        {/* Mobile: spacer + hamburger */}
+        {/* Right side */}
         <div className="flex-1 md:hidden" />
-        <div className="md:hidden flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <UserMenu />
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-white/10" style={{ color: '#ffffff' }}>
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">{t('menu')}</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 p-0">
-              <SheetHeader className="px-6 py-4 border-b">
-                <SheetTitle className="text-left">Amida</SheetTitle>
-              </SheetHeader>
-
-              <nav className="flex-1 space-y-1 px-3 py-4">
-                {navigationItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                  return (
-                    <Link
-                      key={item.nameKey}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                        isActive
-                          ? 'bg-accent text-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                      )}
-                    >
-                      <item.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
-                      {t(item.nameKey)}
-                    </Link>
-                  )
-                })}
-              </nav>
-            </SheetContent>
-          </Sheet>
         </div>
       </div>
     </header>
