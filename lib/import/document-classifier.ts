@@ -228,7 +228,7 @@ export async function classifyImageDocument(
   originalFilename: string
 ): Promise<ClassifiedDocument> {
   try {
-    const model = 'claude-haiku-4-5-latest'
+    const model = 'claude-haiku-4-5-20251001'
     const message = await anthropic.messages.create({
       model,
       max_tokens: 1024,

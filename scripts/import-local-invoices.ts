@@ -93,7 +93,7 @@ async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
 // Parse invoice with AI
 async function parseInvoiceWithAI(extractedText: string) {
   const message = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-latest',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
     temperature: 0,
     system: SYSTEM_PROMPT,
