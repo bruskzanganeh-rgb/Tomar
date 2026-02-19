@@ -1,9 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Anthropic pricing per 1M tokens (December 2024)
+// Anthropic pricing per 1M tokens
 const PRICING: Record<string, { input: number; output: number }> = {
-  'claude-3-5-haiku-20241022': { input: 0.80, output: 4.00 },
-  'claude-3-haiku-20240307': { input: 0.25, output: 1.25 },
+  'claude-haiku-4-5-latest': { input: 0.80, output: 4.00 },
 }
 
 export type UsageType =

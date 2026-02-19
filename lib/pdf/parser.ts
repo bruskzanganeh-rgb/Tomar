@@ -54,7 +54,7 @@ export async function parseInvoiceWithAI(
   extractedText: string
 ): Promise<ParsedInvoiceData> {
   try {
-    const model = 'claude-3-haiku-20240307'
+    const model = 'claude-haiku-4-5-latest'
     const message = await anthropic.messages.create({
       model,
       max_tokens: 1024,

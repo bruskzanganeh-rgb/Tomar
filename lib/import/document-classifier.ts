@@ -166,7 +166,7 @@ async function classifyWithText(
   text: string,
   originalFilename: string
 ): Promise<ClassifiedDocument> {
-  const model = 'claude-3-haiku-20240307'
+  const model = 'claude-haiku-4-5-latest'
   const message = await anthropic.messages.create({
     model,
     max_tokens: 1024,
@@ -228,7 +228,7 @@ export async function classifyImageDocument(
   originalFilename: string
 ): Promise<ClassifiedDocument> {
   try {
-    const model = 'claude-3-5-haiku-20241022'
+    const model = 'claude-haiku-4-5-latest'
     const message = await anthropic.messages.create({
       model,
       max_tokens: 1024,
