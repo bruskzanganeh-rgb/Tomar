@@ -384,7 +384,7 @@ export function GigDialog({
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       {t('type')} <span className="text-destructive">*</span>
@@ -435,7 +435,7 @@ export function GigDialog({
 
               {/* Grupp 2: Var */}
               <div className="px-8 py-6 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('projectName')}</Label>
                     <Input
@@ -461,7 +461,7 @@ export function GigDialog({
 
               {/* Grupp 3: Ekonomi & Status */}
               <div className="px-8 py-6 border-t border-gray-100 space-y-4">
-                <div className="grid grid-cols-[1fr_1fr_auto] gap-4">
+                <div className="grid grid-cols-[1fr_auto] gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('fee')}</Label>
                     <Input
@@ -472,19 +472,6 @@ export function GigDialog({
                       value={formData.fee}
                       onChange={(e) =>
                         setFormData({ ...formData, fee: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('travelExpense')}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      value={formData.travel_expense}
-                      onChange={(e) =>
-                        setFormData({ ...formData, travel_expense: e.target.value })
                       }
                     />
                   </div>
@@ -508,7 +495,7 @@ export function GigDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('status')}</Label>
                     <Select
