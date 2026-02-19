@@ -68,7 +68,7 @@ export async function parseReceiptWithVision(
   userId?: string
 ): Promise<ParsedReceiptData> {
   try {
-    const model = 'claude-3-5-haiku-20241022'
+    const model = 'claude-haiku-4-5-20251001'
     const message = await anthropic.messages.create({
       model,
       max_tokens: 1024,
@@ -142,7 +142,7 @@ export async function parseReceiptWithVision(
  */
 export async function parseReceiptWithText(text: string, userId?: string): Promise<ParsedReceiptData> {
   try {
-    const model = 'claude-3-5-haiku-20241022'
+    const model = 'claude-haiku-4-5-20251001'
     const message = await anthropic.messages.create({
       model,
       max_tokens: 1024,
