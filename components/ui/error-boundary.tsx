@@ -3,6 +3,7 @@
 import React from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
@@ -11,6 +12,24 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean
+}
+
+function ErrorFallback({ onReset }: { onReset: () => void }) {
+  const t = useTranslations('errors')
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+      <AlertTriangle className="h-8 w-8 mb-2 opacity-50" />
+      <p className="text-sm mb-3">{t('somethingWentWrong')}</p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onReset}
+      >
+        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+        {t('tryAgain')}
+      </Button>
+    </div>
+  )
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -34,18 +53,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-          <AlertTriangle className="h-8 w-8 mb-2 opacity-50" />
-          <p className="text-sm mb-3">Something went wrong</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => this.setState({ hasError: false })}
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Try again
-          </Button>
-        </div>
+        <ErrorFallback onReset={() => this.setState({ hasError: false })} />
       )
     }
 

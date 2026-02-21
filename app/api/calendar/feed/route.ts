@@ -60,16 +60,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User and token parameters required' }, { status: 400 })
     }
 
-    // Verify token matches the user's stored calendar_token
+    // Verify token and get locale
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('calendar_token')
+      .select('calendar_token, locale')
       .eq('user_id', userId)
       .single()
 
     if (!settings || settings.calendar_token !== token) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 403 })
     }
+
+    const locale = settings.locale || 'sv'
+    const labels = getLabels(locale)
 
     // Fetch gigs with their individual dates and sessions
     const { data: gigs, error } = await supabase
@@ -99,16 +102,16 @@ export async function GET(request: NextRequest) {
 
     // Build ICS events
     const events = (gigs || []).flatMap((gig: any) => {
-      const clientName = gig.client?.name || 'Okänd kund'
+      const clientName = gig.client?.name || labels.unknownClient
       const baseSummary = gig.project_name
         ? `${gig.project_name} (${clientName})`
         : `${gig.gig_type?.name || 'Gig'} (${clientName})`
 
       const descParts: string[] = []
-      descParts.push(`Kund: ${clientName}`)
-      descParts.push(`Typ: ${gig.gig_type?.name || '-'}`)
-      if (gig.fee) descParts.push(`Arvode: ${gig.fee.toLocaleString('sv-SE')} kr`)
-      descParts.push(`Status: ${getStatusLabel(gig.status)}`)
+      descParts.push(`${labels.client}: ${clientName}`)
+      descParts.push(`${labels.type}: ${gig.gig_type?.name || '-'}`)
+      if (gig.fee) descParts.push(`${labels.fee}: ${gig.fee.toLocaleString(locale === 'sv' ? 'sv-SE' : 'en-US')} kr`)
+      descParts.push(`${labels.statusLabel}: ${getStatusLabel(gig.status, locale)}`)
       if (gig.notes) descParts.push(`\n${gig.notes}`)
 
       const description = escapeICSText(descParts.join('\n'))
@@ -194,8 +197,8 @@ END:VCALENDAR`
   }
 }
 
-function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
+function getStatusLabel(status: string, locale: string): string {
+  const sv: Record<string, string> = {
     tentative: 'Ej bekräftat',
     pending: 'Väntar på svar',
     accepted: 'Accepterat',
@@ -204,5 +207,34 @@ function getStatusLabel(status: string): string {
     invoiced: 'Fakturerat',
     paid: 'Betalt',
   }
+  const en: Record<string, string> = {
+    tentative: 'Tentative',
+    pending: 'Pending response',
+    accepted: 'Accepted',
+    declined: 'Declined',
+    completed: 'Completed',
+    invoiced: 'Invoiced',
+    paid: 'Paid',
+  }
+  const labels = locale === 'en' ? en : sv
   return labels[status] || status
+}
+
+function getLabels(locale: string) {
+  if (locale === 'en') {
+    return {
+      unknownClient: 'Unknown client',
+      client: 'Client',
+      type: 'Type',
+      fee: 'Fee',
+      statusLabel: 'Status',
+    }
+  }
+  return {
+    unknownClient: 'Okänd kund',
+    client: 'Kund',
+    type: 'Typ',
+    fee: 'Arvode',
+    statusLabel: 'Status',
+  }
 }

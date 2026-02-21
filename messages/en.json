@@ -158,7 +158,8 @@
     "invoiceNow": "Invoice now",
     "notesError": "Could not save notes",
     "statusUpdateError": "Could not update status",
-    "viewReceipt": "View receipt"
+    "viewReceipt": "View receipt",
+    "duplicateGig": "Duplicate"
   },
   "invoice": {
     "invoice": "Invoice",
@@ -690,7 +691,25 @@
     "invitationCode": "Invitation code",
     "invitationCodeRequired": "Invitation code is required",
     "invalidCode": "Invalid invitation code",
-    "codeExpired": "Invitation code has expired"
+    "codeExpired": "Invitation code has expired",
+    "forgotPassword": "Forgot password?",
+    "loginDescription": "Log in to manage your gigs and invoices",
+    "createOne": "Create one",
+    "signupFree": "Get started with Amida — it's free",
+    "resetPassword": "Reset your password",
+    "resetPasswordSubtitle": "Enter your email and we'll send you a reset link",
+    "sendResetLink": "Send reset link",
+    "rememberPassword": "Remember your password?",
+    "resetLinkSent": "If an account exists for <strong>{email}</strong>, we sent a password reset link.",
+    "setNewPassword": "Set new password",
+    "setNewPasswordSubtitle": "Choose a new password for your account",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordsNoMatch": "Passwords do not match",
+    "updatePassword": "Update password",
+    "linkExpired": "Link expired?",
+    "requestNewLink": "Request a new one",
+    "repeatPassword": "Repeat your password"
   },
   "onboarding": {
     "companyInfo": "Company info",
@@ -1154,6 +1173,14 @@
     "totalRevenue": "Total revenue",
     "topClients": "Top 5 clients"
   },
+  "errors": {
+    "somethingWentWrong": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "tryAgain": "Try again",
+    "pageNotFound": "Page not found",
+    "pageNotFoundDesc": "The page you are looking for does not exist.",
+    "goHome": "Go home"
+  },
   "landing": {
     "heroTitle": "Everything you need as a freelance musician",
     "heroSubtitle": "Gigs, invoices, receipts and calendar — in one app built for musicians.",
@@ -1173,7 +1200,7 @@
     "pro": "Pro",
     "perMonth": "/mo",
     "freePrice": "0 kr",
-    "proPrice": "99 kr",
+    "proPrice": "49 kr",
     "freeFeature1": "Unlimited gigs",
     "freeFeature2": "Basic invoicing",
     "freeFeature3": "Calendar view",

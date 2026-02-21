@@ -98,6 +98,8 @@ export default function CalendarPage() {
   const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [preselectedDate, setPreselectedDate] = useState<Date | undefined>(undefined)
   const supabase = createClient()
 
   useEffect(() => {
@@ -421,10 +423,15 @@ export default function CalendarPage() {
                   <div
                     key={day}
                     className={cn(
-                      'min-h-20 border rounded-lg p-1 transition-colors',
+                      'min-h-20 border rounded-lg p-1 transition-colors cursor-pointer',
                       today ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50',
-                      dayGigs.length > 0 && 'cursor-pointer'
                     )}
+                    onClick={() => {
+                      if (dayGigs.length === 0) {
+                        setPreselectedDate(date)
+                        setShowCreateDialog(true)
+                      }
+                    }}
                   >
                     <div className={cn(
                       'text-xs font-medium mb-0.5',
@@ -469,6 +476,18 @@ export default function CalendarPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create gig dialog (from empty day click) */}
+      <GigDialog
+        gig={null}
+        open={showCreateDialog}
+        onOpenChange={(open) => {
+          setShowCreateDialog(open)
+          if (!open) setPreselectedDate(undefined)
+        }}
+        onSuccess={loadGigs}
+        initialDate={preselectedDate}
+      />
 
       {/* Edit gig dialog */}
       <GigDialog

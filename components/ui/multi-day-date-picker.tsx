@@ -64,19 +64,19 @@ export function MultiDayDatePicker({
     }
   }, [selectedDates])
 
-  // Auto-open times section if scheduleTexts has values (edit mode)
-  const timesInitialized = useRef(false)
+  // Auto-open times section if scheduleTexts has values (edit mode or after import)
+  const prevScheduleTextsCount = useRef(0)
   useEffect(() => {
-    if (scheduleTexts && !timesInitialized.current) {
-      const hasTexts = Object.values(scheduleTexts).some(t => t.trim())
-      if (hasTexts) {
-        timesInitialized.current = true
+    if (scheduleTexts) {
+      const texts = Object.values(scheduleTexts).filter(t => t.trim())
+      const hasTexts = texts.length > 0
+      if (hasTexts && (!showTimes || texts.length !== prevScheduleTextsCount.current)) {
+        prevScheduleTextsCount.current = texts.length
         setShowTimes(true)
         // Check if all texts are the same
-        const texts = Object.values(scheduleTexts).filter(t => t.trim())
-        const allSame = texts.length > 0 && texts.every(t => t === texts[0])
+        const allSame = texts.every(t => t === texts[0])
         setAllSameText(allSame)
-        if (allSame && texts.length > 0) {
+        if (allSame) {
           setSharedText(texts[0])
         }
       }
@@ -271,6 +271,19 @@ export function MultiDayDatePicker({
           )}
         </div>
       </div>
+
+      {/* Import schedule - always visible when onScanSchedule exists */}
+      {onScanSchedule && !showTimes && (
+        <button
+          type="button"
+          className="w-full text-sm text-primary hover:underline underline-offset-2 flex items-center justify-center gap-1.5 py-1"
+          onClick={onScanSchedule}
+          disabled={disabled}
+        >
+          <Upload className="h-3.5 w-3.5" />
+          {t('importSchedule')}
+        </button>
+      )}
 
       {/* Schedule times section */}
       {showTimes && selectedDates.length > 0 && onScheduleTextsChange && (

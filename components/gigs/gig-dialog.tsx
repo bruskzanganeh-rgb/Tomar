@@ -56,12 +56,24 @@ type Client = { id: string; name: string }
 type GigType = { id: string; name: string; vat_rate: number }
 type Position = { id: string; name: string }
 
+type InitialValues = {
+  client_id?: string
+  gig_type_id?: string
+  position_id?: string
+  fee?: string
+  currency?: string
+  venue?: string
+  project_name?: string
+}
+
 type GigDialogProps = {
   gig: Gig | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
   onCreated?: (gigId: string) => void
+  initialDate?: Date
+  initialValues?: InitialValues
 }
 
 const defaultFormData = {
@@ -85,6 +97,8 @@ export function GigDialog({
   onOpenChange,
   onSuccess,
   onCreated,
+  initialDate,
+  initialValues,
 }: GigDialogProps) {
   const t = useTranslations('gig')
   const tc = useTranslations('common')
@@ -114,8 +128,19 @@ export function GigDialog({
 
       // Reset form for create mode
       if (!gig) {
-        setFormData({ ...defaultFormData })
-        setSelectedDates([])
+        setFormData({
+          ...defaultFormData,
+          ...(initialValues ? {
+            client_id: initialValues.client_id || '',
+            gig_type_id: initialValues.gig_type_id || '',
+            position_id: initialValues.position_id || '',
+            fee: initialValues.fee || '',
+            currency: initialValues.currency || 'SEK',
+            venue: initialValues.venue || '',
+            project_name: initialValues.project_name || '',
+          } : {}),
+        })
+        setSelectedDates(initialDate ? [initialDate] : [])
         setScheduleTexts({})
       }
     }

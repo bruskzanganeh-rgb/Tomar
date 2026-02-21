@@ -17,7 +17,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, FileText, Download, Mail, Check, Trash2, ClipboardList, ChevronDown, Bell } from 'lucide-react'
+import { Plus, FileText, Download, Mail, Check, Trash2, ClipboardList, ChevronDown, Bell, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { CreateInvoiceDialog } from '@/components/invoices/create-invoice-dialog'
 import { SendInvoiceDialog } from '@/components/invoices/send-invoice-dialog'
 import { SendReminderDialog } from '@/components/invoices/send-reminder-dialog'
@@ -99,6 +100,7 @@ export default function InvoicesTab() {
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
 
+  const [searchQuery, setSearchQuery] = useState('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showSendDialog, setShowSendDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -154,8 +156,19 @@ export default function InvoicesTab() {
     { revalidateOnFocus: false, dedupingInterval: 10_000 }
   )
 
-  const invoices = invoiceData?.invoices ?? []
+  const allInvoices = invoiceData?.invoices ?? []
   const reminderCounts = invoiceData?.reminderCounts ?? {}
+
+  // Filter invoices by search query
+  const invoices = searchQuery.trim()
+    ? allInvoices.filter(inv => {
+        const q = searchQuery.toLowerCase()
+        return (
+          String(inv.invoice_number).includes(q) ||
+          inv.client.name.toLowerCase().includes(q)
+        )
+      })
+    : allInvoices
 
   // SWR: Clients
   const { data: clients = [] } = useSWR<Client[]>(
@@ -346,7 +359,16 @@ export default function InvoicesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={`${tc('search')}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {t('newInvoice')}
@@ -356,14 +378,14 @@ export default function InvoicesTab() {
       {/* Stats */}
       {(() => {
         const currentYear = new Date().getFullYear()
-        const yearInvoices = invoices.filter(i =>
+        const yearInvoices = allInvoices.filter(i =>
           new Date(i.invoice_date).getFullYear() === currentYear && i.status !== 'draft'
         )
         const invoicedThisYear = yearInvoices.reduce((sum, i) => sum + (i.total_base || i.total), 0)
         const paidThisYear = yearInvoices
           .filter(i => i.status === 'paid')
           .reduce((sum, i) => sum + (i.total_base || i.total), 0)
-        const unpaidTotal = invoices
+        const unpaidTotal = allInvoices
           .filter(i => i.status === 'sent' || i.status === 'overdue')
           .reduce((sum, i) => sum + (i.total_base || i.total), 0)
 
@@ -543,6 +565,10 @@ export default function InvoicesTab() {
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>{t('noInvoices')}</p>
               <p className="text-sm">{t('noInvoicesHint')}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                {t('newInvoice')}
+              </Button>
             </div>
           ) : (
             <>

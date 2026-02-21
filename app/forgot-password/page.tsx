@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Music, Loader2, Mail } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('auth')
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
@@ -36,15 +38,18 @@ export default function ForgotPasswordPage() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
               <Mail className="h-7 w-7 text-green-600" />
             </div>
-            <CardTitle>Check your email</CardTitle>
+            <CardTitle>{t('checkEmail')}</CardTitle>
             <CardDescription>
-              If an account exists for <strong>{email}</strong>, we sent a password reset link.
+              {t.rich('resetLinkSent', {
+                email,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/login">
               <Button variant="outline" className="w-full">
-                Back to login
+                {t('backToLogin')}
               </Button>
             </Link>
           </CardContent>
@@ -60,13 +65,13 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Reset your password</CardTitle>
-          <CardDescription>Enter your email and we&apos;ll send you a reset link</CardDescription>
+          <CardTitle className="text-2xl">{t('resetPassword')}</CardTitle>
+          <CardDescription>{t('resetPasswordSubtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -79,13 +84,13 @@ export default function ForgotPasswordPage() {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send reset link
+              {t('sendResetLink')}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Remember your password?{' '}
+            {t('rememberPassword')}{' '}
             <Link href="/login" className="text-primary hover:underline">
-              Log in
+              {t('login')}
             </Link>
           </p>
         </CardContent>

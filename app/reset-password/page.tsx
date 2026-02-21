@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Music, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 export default function ResetPasswordPage() {
+  const t = useTranslations('auth')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,7 +25,7 @@ export default function ResetPasswordPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('passwordsNoMatch'))
       return
     }
 
@@ -48,8 +50,8 @@ export default function ResetPasswordPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Set new password</CardTitle>
-          <CardDescription>Choose a new password for your account</CardDescription>
+          <CardTitle className="text-2xl">{t('setNewPassword')}</CardTitle>
+          <CardDescription>{t('setNewPasswordSubtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -59,39 +61,39 @@ export default function ResetPasswordPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="password">New password</Label>
+              <Label htmlFor="password">{t('newPassword')}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 characters"
+                placeholder={t('minChars')}
                 required
                 minLength={6}
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat your password"
+                placeholder={t('repeatPassword')}
                 required
                 minLength={6}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update password
+              {t('updatePassword')}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Link expired?{' '}
+            {t('linkExpired')}{' '}
             <Link href="/forgot-password" className="text-primary hover:underline">
-              Request a new one
+              {t('requestNewLink')}
             </Link>
           </p>
         </CardContent>

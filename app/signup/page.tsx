@@ -10,8 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 export default function SignupPage() {
+  const t = useTranslations('auth')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -29,7 +31,7 @@ export default function SignupPage() {
 
     // Validate invitation code
     if (!invitationCode.trim()) {
-      setError('Invitation code is required')
+      setError(t('invitationCodeRequired'))
       setLoading(false)
       return
     }
@@ -42,7 +44,7 @@ export default function SignupPage() {
     const codeData = await codeRes.json()
 
     if (!codeData.valid) {
-      setError(codeData.reason === 'expired' ? 'This code has expired' : 'Invalid invitation code')
+      setError(codeData.reason === 'expired' ? t('codeExpired') : t('invalidCode'))
       setLoading(false)
       return
     }
@@ -91,15 +93,18 @@ export default function SignupPage() {
               height={64}
               className="mx-auto mb-4 rounded-xl"
             />
-            <CardTitle>Check your email</CardTitle>
+            <CardTitle>{t('checkEmail')}</CardTitle>
             <CardDescription>
-              We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account.
+              {t.rich('confirmationSent', {
+                email,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/login">
               <Button variant="outline" className="w-full">
-                Back to login
+                {t('backToLogin')}
               </Button>
             </Link>
           </CardContent>
@@ -119,8 +124,8 @@ export default function SignupPage() {
             height={64}
             className="mx-auto mb-4"
           />
-          <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Get started with Amida — it&apos;s free</CardDescription>
+          <CardTitle className="text-2xl">{t('signup')}</CardTitle>
+          <CardDescription>{t('signupFree')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
@@ -130,7 +135,7 @@ export default function SignupPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="invitationCode">Invitation code</Label>
+              <Label htmlFor="invitationCode">{t('invitationCode')}</Label>
               <Input
                 id="invitationCode"
                 value={invitationCode}
@@ -141,7 +146,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="companyName">Company name</Label>
+              <Label htmlFor="companyName">{t('companyName')}</Label>
               <Input
                 id="companyName"
                 value={companyName}
@@ -150,7 +155,7 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -162,26 +167,26 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 characters"
+                placeholder={t('minChars')}
                 required
                 minLength={6}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create account
+              {t('createAccount')}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('hasAccount')}{' '}
             <Link href="/login" className="text-primary hover:underline">
-              Log in
+              {t('login')}
             </Link>
           </p>
         </CardContent>

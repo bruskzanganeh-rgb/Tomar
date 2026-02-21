@@ -317,6 +317,10 @@ export default function ExpensesTab() {
                   <p className="text-sm">
                     {t('uploadOrImportHint')}
                   </p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setShowUploadDialog(true)}>
+                    <Upload className="h-4 w-4 mr-1" />
+                    {t('uploadReceipt')}
+                  </Button>
                 </>
               ) : (
                 <p>{t('noExpensesMatchFilter')}</p>

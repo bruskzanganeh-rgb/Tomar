@@ -158,7 +158,8 @@
     "invoiceNow": "Fakturera nu",
     "notesError": "Kunde inte spara anteckningar",
     "statusUpdateError": "Kunde inte uppdatera status",
-    "viewReceipt": "Visa kvitto"
+    "viewReceipt": "Visa kvitto",
+    "duplicateGig": "Duplicera"
   },
   "invoice": {
     "invoice": "Faktura",
@@ -690,7 +691,25 @@
     "invitationCode": "Inbjudningskod",
     "invitationCodeRequired": "Inbjudningskod krävs",
     "invalidCode": "Ogiltig inbjudningskod",
-    "codeExpired": "Inbjudningskoden har gått ut"
+    "codeExpired": "Inbjudningskoden har gått ut",
+    "forgotPassword": "Glömt lösenord?",
+    "loginDescription": "Logga in för att hantera dina uppdrag och fakturor",
+    "createOne": "Skapa ett",
+    "signupFree": "Kom igång med Amida — det är gratis",
+    "resetPassword": "Återställ ditt lösenord",
+    "resetPasswordSubtitle": "Ange din e-post så skickar vi en återställningslänk",
+    "sendResetLink": "Skicka återställningslänk",
+    "rememberPassword": "Kommer du ihåg lösenordet?",
+    "resetLinkSent": "Om det finns ett konto för <strong>{email}</strong> har vi skickat en återställningslänk.",
+    "setNewPassword": "Ange nytt lösenord",
+    "setNewPasswordSubtitle": "Välj ett nytt lösenord för ditt konto",
+    "newPassword": "Nytt lösenord",
+    "confirmPassword": "Bekräfta lösenord",
+    "passwordsNoMatch": "Lösenorden matchar inte",
+    "updatePassword": "Uppdatera lösenord",
+    "linkExpired": "Länken utgången?",
+    "requestNewLink": "Begär en ny",
+    "repeatPassword": "Upprepa ditt lösenord"
   },
   "onboarding": {
     "companyInfo": "Företagsinfo",
@@ -1154,6 +1173,14 @@
     "totalRevenue": "Total intäkt",
     "topClients": "Topp 5 uppdragsgivare"
   },
+  "errors": {
+    "somethingWentWrong": "Något gick fel",
+    "unexpectedError": "Ett oväntat fel uppstod. Försök igen.",
+    "tryAgain": "Försök igen",
+    "pageNotFound": "Sidan hittades inte",
+    "pageNotFoundDesc": "Sidan du letar efter finns inte.",
+    "goHome": "Gå till startsidan"
+  },
   "landing": {
     "heroTitle": "Allt du behöver som frilansmusiker",
     "heroSubtitle": "Gigs, fakturor, kvitton och kalender — i en app byggd för musiker.",
@@ -1173,7 +1200,7 @@
     "pro": "Pro",
     "perMonth": "/mån",
     "freePrice": "0 kr",
-    "proPrice": "99 kr",
+    "proPrice": "49 kr",
     "freeFeature1": "Obegränsat antal gig",
     "freeFeature2": "Grundläggande fakturering",
     "freeFeature3": "Kalendervy",

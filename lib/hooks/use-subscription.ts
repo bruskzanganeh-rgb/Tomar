@@ -18,7 +18,12 @@ type Usage = {
   receipt_scan_count: number
 }
 
-const FREE_LIMITS = {
+type FreeLimits = {
+  invoices: number
+  receiptScans: number
+}
+
+const DEFAULT_LIMITS: FreeLimits = {
   invoices: 5,
   receiptScans: 3,
 }
@@ -26,12 +31,26 @@ const FREE_LIMITS = {
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [usage, setUsage] = useState<Usage | null>(null)
+  const [freeLimits, setFreeLimits] = useState<FreeLimits>(DEFAULT_LIMITS)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     loadSubscription()
+    loadFreeLimits()
   }, [])
+
+  async function loadFreeLimits() {
+    try {
+      const res = await fetch('/api/config/limits')
+      if (res.ok) {
+        const data = await res.json()
+        setFreeLimits(data)
+      }
+    } catch {
+      // Use defaults on failure
+    }
+  }
 
   async function loadSubscription() {
     const { data: sub } = await supabase
@@ -75,8 +94,8 @@ export function useSubscription() {
   const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
 
   const limits = {
-    invoices: isPro ? Infinity : FREE_LIMITS.invoices,
-    receiptScans: isPro ? Infinity : FREE_LIMITS.receiptScans,
+    invoices: isPro ? Infinity : freeLimits.invoices,
+    receiptScans: isPro ? Infinity : freeLimits.receiptScans,
   }
 
   const canCreateInvoice = isPro || (usage?.invoice_count || 0) < limits.invoices

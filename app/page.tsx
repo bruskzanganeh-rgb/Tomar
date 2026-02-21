@@ -154,8 +154,8 @@ export default function LandingPage() {
             >
               <p className="text-sm font-medium text-[#C7D2FE]/70 mb-1">Free</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-bold text-white">$0</span>
-                <span className="text-sm text-[#C7D2FE]/50">/mo</span>
+                <span className="text-4xl font-bold text-white">0 kr</span>
+                <span className="text-sm text-[#C7D2FE]/50">/mån</span>
               </div>
               <div className="space-y-3 mb-8">
                 {['Unlimited gigs', 'Basic invoicing', 'Calendar view'].map((f) => (
@@ -180,8 +180,8 @@ export default function LandingPage() {
               </div>
               <p className="text-sm font-medium text-[#C7D2FE]/70 mb-1">Pro</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-bold text-white">$5.99</span>
-                <span className="text-sm text-[#C7D2FE]/50">/mo</span>
+                <span className="text-4xl font-bold text-white">49 kr</span>
+                <span className="text-sm text-[#C7D2FE]/50">/mån</span>
               </div>
               <div className="space-y-3 mb-8">
                 {[

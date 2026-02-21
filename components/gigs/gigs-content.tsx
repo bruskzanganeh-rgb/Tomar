@@ -18,7 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react'
+import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown, Search, Copy } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { GigAttachments } from '@/components/gigs/gig-attachments'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
@@ -182,6 +182,10 @@ export default function GigsPage() {
   const [editingNotes, setEditingNotes] = useState(false)
   const [notesText, setNotesText] = useState('')
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
+  const [duplicateValues, setDuplicateValues] = useState<{
+    client_id?: string; gig_type_id?: string; position_id?: string
+    fee?: string; currency?: string; venue?: string; project_name?: string
+  } | undefined>(undefined)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
   const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
@@ -608,6 +612,10 @@ export default function GigsPage() {
                   <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>{t('noUpcoming')}</p>
                   <p className="text-sm">{t('noUpcomingHint')}</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setShowCreateDialog(true)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t('newGig')}
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -1010,8 +1018,12 @@ export default function GigsPage() {
       <GigDialog
         gig={null}
         open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
+        onOpenChange={(open) => {
+          setShowCreateDialog(open)
+          if (!open) setDuplicateValues(undefined)
+        }}
         onSuccess={loadGigs}
+        initialValues={duplicateValues}
         onCreated={(gigId) => {
           toast.success(tToast('gigCreated'), {
             description: tToast('gigCreatedHint'),
@@ -1344,6 +1356,26 @@ export default function GigsPage() {
                 >
                   <Receipt className="h-3.5 w-3.5 mr-1.5" />
                   {t('addReceipt')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
+                  onClick={() => {
+                    setDuplicateValues({
+                      client_id: selectedGig.client_id || undefined,
+                      gig_type_id: selectedGig.gig_type_id,
+                      position_id: selectedGig.position_id || undefined,
+                      fee: selectedGig.fee?.toString() || undefined,
+                      currency: selectedGig.currency || undefined,
+                      venue: selectedGig.venue || undefined,
+                      project_name: selectedGig.project_name || undefined,
+                    })
+                    setSelectedGig(null)
+                    setShowCreateDialog(true)
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                  {t('duplicateGig')}
                 </Button>
                 <div className="flex-1" />
                 <Button
