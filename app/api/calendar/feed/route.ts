@@ -16,6 +16,11 @@ function formatNextDay(dateStr: string): string {
   return `${year}${month}${day}`
 }
 
+function formatDateTime(dateStr: string, timeStr: string): string {
+  // "2026-03-03" + "10:00" → "20260303T100000"
+  return `${dateStr.replace(/-/g, '')}T${timeStr.replace(':', '')}00`
+}
+
 function escapeICSText(text: string): string {
   return text
     .replace(/\\/g, '\\\\')
@@ -23,6 +28,27 @@ function escapeICSText(text: string): string {
     .replace(/,/g, '\\,')
     .replace(/\n/g, '\\n')
 }
+
+// VTIMEZONE for Europe/Stockholm (CET/CEST)
+const VTIMEZONE = `BEGIN:VTIMEZONE
+TZID:Europe/Stockholm
+BEGIN:DAYLIGHT
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+TZNAME:CEST
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+TZNAME:CET
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
+END:STANDARD
+END:VTIMEZONE`
+
+type Session = { start: string; end: string | null; label?: string }
 
 export async function GET(request: NextRequest) {
   try {
@@ -45,7 +71,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 403 })
     }
 
-    // Fetch gigs with their individual dates
+    // Fetch gigs with their individual dates and sessions
     const { data: gigs, error } = await supabase
       .from('gigs')
       .select(`
@@ -57,7 +83,7 @@ export async function GET(request: NextRequest) {
         notes,
         client:clients(name),
         gig_type:gig_types(name),
-        gig_dates(date)
+        gig_dates(date, sessions)
       `)
       .eq('user_id', userId)
       .neq('status', 'declined')
@@ -71,10 +97,10 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const dtstamp = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}T${String(now.getUTCHours()).padStart(2, '0')}${String(now.getUTCMinutes()).padStart(2, '0')}${String(now.getUTCSeconds()).padStart(2, '0')}Z`
 
-    // Build ICS events — one all-day event per gig_date
+    // Build ICS events
     const events = (gigs || []).flatMap((gig: any) => {
       const clientName = gig.client?.name || 'Okänd kund'
-      const summary = gig.project_name
+      const baseSummary = gig.project_name
         ? `${gig.project_name} (${clientName})`
         : `${gig.gig_type?.name || 'Gig'} (${clientName})`
 
@@ -87,24 +113,60 @@ export async function GET(request: NextRequest) {
 
       const description = escapeICSText(descParts.join('\n'))
       const location = gig.venue ? escapeICSText(gig.venue) : ''
+      const icsStatus = gig.status === 'accepted' ? 'CONFIRMED' : 'TENTATIVE'
 
-      const dates: { date: string }[] = gig.gig_dates || []
+      const dates: { date: string; sessions: Session[] | null }[] = gig.gig_dates || []
       if (dates.length === 0) return []
 
-      return dates.map((gd, idx) => {
-        const dateFormatted = formatDateOnly(gd.date)
-        const endFormatted = formatNextDay(gd.date)
+      return dates.flatMap((gd, dateIdx) => {
+        const sessions: Session[] = Array.isArray(gd.sessions) ? gd.sessions : []
 
-        return `BEGIN:VEVENT
-UID:${gig.id}-${idx}@amida.babalisk.com
+        if (sessions.length > 0) {
+          // Emit one VEVENT per session (timed events)
+          return sessions.map((session, sessionIdx) => {
+            const summary = session.label
+              ? `${session.label}: ${baseSummary}`
+              : baseSummary
+
+            const dtStart = formatDateTime(gd.date, session.start)
+
+            // If no end time, default to start + 2 hours
+            let dtEnd: string
+            if (session.end) {
+              dtEnd = formatDateTime(gd.date, session.end)
+            } else {
+              const [h, m] = session.start.split(':').map(Number)
+              const endH = String(Math.min(h + 2, 23)).padStart(2, '0')
+              dtEnd = formatDateTime(gd.date, `${endH}:${String(m).padStart(2, '0')}`)
+            }
+
+            return `BEGIN:VEVENT
+UID:${gig.id}-${dateIdx}-${sessionIdx}@amida.babalisk.com
 DTSTAMP:${dtstamp}
-DTSTART;VALUE=DATE:${dateFormatted}
-DTEND;VALUE=DATE:${endFormatted}
+DTSTART;TZID=Europe/Stockholm:${dtStart}
+DTEND;TZID=Europe/Stockholm:${dtEnd}
 SUMMARY:${escapeICSText(summary)}
 LOCATION:${location}
 DESCRIPTION:${description}
-STATUS:${gig.status === 'accepted' ? 'CONFIRMED' : 'TENTATIVE'}
+STATUS:${icsStatus}
 END:VEVENT`
+          })
+        } else {
+          // All-day event (existing behaviour)
+          const dateFormatted = formatDateOnly(gd.date)
+          const endFormatted = formatNextDay(gd.date)
+
+          return [`BEGIN:VEVENT
+UID:${gig.id}-${dateIdx}@amida.babalisk.com
+DTSTAMP:${dtstamp}
+DTSTART;VALUE=DATE:${dateFormatted}
+DTEND;VALUE=DATE:${endFormatted}
+SUMMARY:${escapeICSText(baseSummary)}
+LOCATION:${location}
+DESCRIPTION:${description}
+STATUS:${icsStatus}
+END:VEVENT`]
+        }
       })
     }).join('\n')
 
@@ -115,6 +177,7 @@ X-WR-CALNAME:Amida Gigs
 X-WR-TIMEZONE:Europe/Stockholm
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
+${VTIMEZONE}
 ${events}
 END:VCALENDAR`
 

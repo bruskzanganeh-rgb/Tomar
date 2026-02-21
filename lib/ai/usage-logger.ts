@@ -11,6 +11,8 @@ export type UsageType =
   | 'document_classify_text'
   | 'document_classify_vision'
   | 'invoice_parse'
+  | 'schedule_parse'
+  | 'schedule_scan'
 
 export type LogAiUsageParams = {
   usageType: UsageType
@@ -78,6 +80,8 @@ export function getUsageTypeLabel(usageType: UsageType): string {
     document_classify_text: 'Dokumentklassning (text)',
     document_classify_vision: 'Dokumentklassning (bild)',
     invoice_parse: 'Fakturaläsning',
+    schedule_parse: 'Schematolkning',
+    schedule_scan: 'Schemaskanning',
   }
   return labels[usageType] || usageType
 }

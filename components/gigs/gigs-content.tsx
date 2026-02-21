@@ -101,7 +101,7 @@ type Gig = {
   client: { name: string; payment_terms: number } | null
   gig_type: { name: string; vat_rate: number; color: string | null }
   position: { name: string } | null
-  gig_dates: { date: string }[]
+  gig_dates: { date: string; schedule_text: string | null; sessions: { start: string; end: string | null; label?: string }[] | null }[]
 }
 
 type GigExpense = {
@@ -201,7 +201,7 @@ export default function GigsPage() {
           client:clients(name, payment_terms),
           gig_type:gig_types(name, vat_rate, color),
           position:positions(name),
-          gig_dates(date)
+          gig_dates(date, schedule_text, sessions)
         `)
         .order('date', { ascending: false })
         .limit(500)
@@ -292,7 +292,7 @@ export default function GigsPage() {
         client:clients(name, payment_terms),
         gig_type:gig_types(name, vat_rate, color),
         position:positions(name),
-        gig_dates(date)
+        gig_dates(date, schedule_text, sessions)
       `)
       .eq('id', gigId)
       .single()
@@ -1162,25 +1162,54 @@ export default function GigsPage() {
                         {t('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
                       </p>
                       {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {selectedGig.gig_dates
-                            .sort((a, b) => a.date.localeCompare(b.date))
-                            .map((gd, i) => {
-                              const date = new Date(gd.date + 'T12:00:00')
-                              const dayName = format(date, 'EEE', { locale: dateLocale })
-                              const dayNum = format(date, 'd', { locale: dateLocale })
-                              const month = format(date, 'MMM', { locale: dateLocale })
-                              return (
-                                <div
-                                  key={i}
-                                  className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]"
-                                >
-                                  <span className="text-[8px] font-medium text-gray-400 uppercase">{dayName}</span>
-                                  <span className="text-sm font-bold text-gray-900">{dayNum}</span>
-                                  <span className="text-[8px] font-medium text-gray-500">{month}</span>
-                                </div>
-                              )
-                            })}
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap gap-1">
+                            {selectedGig.gig_dates
+                              .sort((a, b) => a.date.localeCompare(b.date))
+                              .map((gd, i) => {
+                                const date = new Date(gd.date + 'T12:00:00')
+                                const dayName = format(date, 'EEE', { locale: dateLocale })
+                                const dayNum = format(date, 'd', { locale: dateLocale })
+                                const month = format(date, 'MMM', { locale: dateLocale })
+                                return (
+                                  <div
+                                    key={i}
+                                    className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]"
+                                  >
+                                    <span className="text-[8px] font-medium text-gray-400 uppercase">{dayName}</span>
+                                    <span className="text-sm font-bold text-gray-900">{dayNum}</span>
+                                    <span className="text-[8px] font-medium text-gray-500">{month}</span>
+                                  </div>
+                                )
+                              })}
+                          </div>
+                          {/* Sessions per day */}
+                          {selectedGig.gig_dates.some(gd => gd.sessions && gd.sessions.length > 0) && (
+                            <div className="space-y-0.5 pt-1">
+                              {selectedGig.gig_dates
+                                .sort((a, b) => a.date.localeCompare(b.date))
+                                .filter(gd => gd.sessions && gd.sessions.length > 0)
+                                .map((gd, i) => {
+                                  const date = new Date(gd.date + 'T12:00:00')
+                                  return (
+                                    <div key={i} className="flex items-baseline gap-1.5 text-[11px]">
+                                      <span className="text-gray-400 w-[60px] shrink-0">
+                                        {format(date, 'EEE d MMM', { locale: dateLocale })}
+                                      </span>
+                                      <span className="text-gray-600">
+                                        {gd.sessions!.map((s, j) => (
+                                          <span key={j}>
+                                            {j > 0 && <span className="text-gray-300 mx-1">&middot;</span>}
+                                            {s.label && <span className="font-medium">{s.label} </span>}
+                                            {s.start}{s.end && `\u2013${s.end}`}
+                                          </span>
+                                        ))}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm font-semibold text-gray-900">

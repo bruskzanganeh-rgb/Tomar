@@ -1,0 +1,290 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { z } from 'zod'
+import { logAiUsage } from '@/lib/ai/usage-logger'
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+})
+
+// Schema for a single session within a day
+export const SessionSchema = z.object({
+  start: z.string().regex(/^\d{2}:\d{2}$/),
+  end: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+  label: z.string().optional(),
+})
+
+export type Session = z.infer<typeof SessionSchema>
+
+// Schema for parsed schedule (text parsing)
+const ParsedScheduleSchema = z.object({
+  dates: z.record(z.string(), z.array(SessionSchema)),
+})
+
+// Schema for scanned schedule (PDF/image)
+const ScannedScheduleSchema = z.object({
+  dates: z.record(z.string(), z.array(SessionSchema)),
+  project_name: z.string().optional(),
+  venue: z.string().optional(),
+  confidence: z.number().min(0).max(1),
+})
+
+export type ScannedScheduleData = z.infer<typeof ScannedScheduleSchema>
+
+const PARSE_PROMPT = `Du parsar schematext för en frilansmusiker.
+
+Input: en lista av datum med fritext som beskriver dagens schema.
+Output: strukturerade sessions per datum.
+
+Regler:
+- "10-12" → { "start": "10:00", "end": "12:00" }
+- "rep 10-12" → { "start": "10:00", "end": "12:00", "label": "Rep" }
+- "konsert 19" utan sluttid → { "start": "19:00", "end": null }
+- "10-12, 15-17" → två sessions
+- "10.00-12.00" → { "start": "10:00", "end": "12:00" }
+- Normalisera label: "rep"/"repetition"→"Rep", "konsert"/"concert"/"spelning"→"Konsert", "gp"/"genrep"/"generalrep"→"Generalrep", "scenrep"→"Scenrep"
+- Om ingen label anges, utelämna fältet
+
+Returnera ENDAST JSON:
+{
+  "dates": {
+    "2026-03-03": [{ "start": "10:00", "end": "12:00", "label": "Rep" }]
+  }
+}
+
+VIKTIGT: Returnera BARA JSON, inget annat.`
+
+const SCAN_PROMPT = `Du läser ett repetitions- eller konsertschema för en frilansmusiker.
+Extrahera alla datum med tider och typ av aktivitet.
+
+Typer (normalisera till dessa):
+- Rep: Repetition, instudering, genomspelning
+- Generalrep: Generalrepetition, GP, scenrep
+- Konsert: Konsert, föreställning, spelning
+- (utelämna label om okänt)
+
+Returnera ENDAST JSON:
+{
+  "dates": {
+    "2026-03-03": [
+      { "start": "10:00", "end": "12:00", "label": "Rep" },
+      { "start": "15:00", "end": "17:00", "label": "Rep" }
+    ],
+    "2026-03-06": [
+      { "start": "19:00", "end": "21:30", "label": "Konsert" }
+    ]
+  },
+  "project_name": "Beethoven 9",
+  "venue": "Konserthuset",
+  "confidence": 0.95
+}
+
+Regler:
+- Datum i ISO-format (YYYY-MM-DD)
+- Tider i HH:MM-format
+- Om sluttid saknas, sätt end till null
+- project_name och venue kan vara null om otydliga
+- confidence: 0-1, din säkerhet
+
+VIKTIGT: Returnera BARA JSON, inget annat.`
+
+function cleanJsonResponse(text: string): string {
+  let jsonText = text.trim()
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\n?/, '').replace(/\n?```$/, '')
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\n?/, '').replace(/\n?```$/, '')
+  }
+  return jsonText
+}
+
+/**
+ * Parse free-text schedule entries into structured sessions.
+ * One AI call for all dates (batch).
+ */
+export async function parseScheduleTexts(
+  entries: { date: string; text: string }[],
+  userId?: string
+): Promise<Record<string, Session[]>> {
+  if (entries.length === 0) return {}
+
+  try {
+    const model = 'claude-haiku-4-5-20251001'
+
+    const userContent = entries
+      .map(e => `${e.date}: ${e.text}`)
+      .join('\n')
+
+    const message = await anthropic.messages.create({
+      model,
+      max_tokens: 1024,
+      temperature: 0,
+      system: PARSE_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `Parsa dessa schematexter:\n\n${userContent}`,
+        },
+      ],
+    })
+
+    await logAiUsage({
+      usageType: 'schedule_parse',
+      model,
+      inputTokens: message.usage.input_tokens,
+      outputTokens: message.usage.output_tokens,
+      userId,
+    })
+
+    const responseText = message.content[0]?.type === 'text'
+      ? message.content[0].text
+      : null
+
+    if (!responseText) {
+      throw new Error('Inget svar från Claude')
+    }
+
+    const parsed = JSON.parse(cleanJsonResponse(responseText))
+    const validated = ParsedScheduleSchema.parse(parsed)
+
+    return validated.dates
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(`Ogiltigt AI-svar: ${error.message}`)
+    }
+    throw new Error(
+      `Kunde inte tolka schema: ${error instanceof Error ? error.message : 'Okänt fel'}`
+    )
+  }
+}
+
+/**
+ * Scan a schedule PDF/image and extract dates, times, and metadata.
+ */
+export async function parseScheduleWithVision(
+  imageBase64: string,
+  mimeType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+  userId?: string
+): Promise<ScannedScheduleData> {
+  try {
+    const model = 'claude-haiku-4-5-20251001'
+    const message = await anthropic.messages.create({
+      model,
+      max_tokens: 2048,
+      temperature: 0,
+      system: SCAN_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mimeType,
+                data: imageBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: 'Läs detta schema och extrahera datum, tider och typ.',
+            },
+          ],
+        },
+      ],
+    })
+
+    await logAiUsage({
+      usageType: 'schedule_scan',
+      model,
+      inputTokens: message.usage.input_tokens,
+      outputTokens: message.usage.output_tokens,
+      userId,
+    })
+
+    const responseText = message.content[0]?.type === 'text'
+      ? message.content[0].text
+      : null
+
+    if (!responseText) {
+      throw new Error('Inget svar från Claude')
+    }
+
+    const parsed = JSON.parse(cleanJsonResponse(responseText))
+    const validated = ScannedScheduleSchema.parse(parsed)
+
+    return validated
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(`Ogiltigt AI-svar: ${error.message}`)
+    }
+    throw new Error(
+      `Kunde inte läsa schema: ${error instanceof Error ? error.message : 'Okänt fel'}`
+    )
+  }
+}
+
+/**
+ * Scan a schedule from extracted PDF text (cheaper than vision).
+ */
+export async function parseScheduleWithText(
+  text: string,
+  userId?: string
+): Promise<ScannedScheduleData> {
+  try {
+    const model = 'claude-haiku-4-5-20251001'
+    const message = await anthropic.messages.create({
+      model,
+      max_tokens: 2048,
+      temperature: 0,
+      system: SCAN_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `Läs denna schematext och extrahera datum, tider och typ:\n\n${text}`,
+        },
+      ],
+    })
+
+    await logAiUsage({
+      usageType: 'schedule_scan',
+      model,
+      inputTokens: message.usage.input_tokens,
+      outputTokens: message.usage.output_tokens,
+      userId,
+    })
+
+    const responseText = message.content[0]?.type === 'text'
+      ? message.content[0].text
+      : null
+
+    if (!responseText) {
+      throw new Error('Inget svar från Claude')
+    }
+
+    const parsed = JSON.parse(cleanJsonResponse(responseText))
+    const validated = ScannedScheduleSchema.parse(parsed)
+
+    return validated
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(`Ogiltigt AI-svar: ${error.message}`)
+    }
+    throw new Error(
+      `Kunde inte läsa schema: ${error instanceof Error ? error.message : 'Okänt fel'}`
+    )
+  }
+}
+
+/**
+ * Convert structured sessions back to human-readable text.
+ * Used when AI-scanning a PDF to populate the text fields.
+ */
+export function sessionsToText(sessions: Session[]): string {
+  return sessions
+    .map(s => {
+      const label = s.label ? `${s.label.toLowerCase()} ` : ''
+      const time = s.end ? `${s.start}-${s.end}` : s.start
+      return `${label}${time}`
+    })
+    .join(', ')
+}

@@ -1083,7 +1083,14 @@
     "clickToToggle": "Klicka på en dag för att välja eller avvälja den",
     "selectedDays": "Valda dagar:",
     "noDaysSelected": "Inga dagar valda",
-    "daysCount": "dagar"
+    "daysCount": "dagar",
+    "addTimes": "Lägg till tider",
+    "hideTimes": "Dölj tider",
+    "allDaysSameSchedule": "Alla dagar samma schema",
+    "importSchedule": "Importera schema",
+    "schedulePlaceholder": "t.ex. rep 10-12, konsert 19",
+    "scanning": "Skannar...",
+    "parsing": "Tolkar schema..."
   },
   "mobile": {
     "addGig": "Lägg till uppdrag",

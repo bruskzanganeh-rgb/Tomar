@@ -35,7 +35,7 @@ type Gig = {
   client: { name: string; payment_terms: number } | null
   gig_type: { name: string; color: string | null; vat_rate: number } | null
   position: { name: string } | null
-  gig_dates: { date: string }[]
+  gig_dates: { date: string; sessions: { start: string; end: string | null; label?: string }[] | null }[]
 }
 
 type GigExpense = {
@@ -121,7 +121,7 @@ export default function CalendarPage() {
         client:clients(name, payment_terms),
         gig_type:gig_types(name, color, vat_rate),
         position:positions(name),
-        gig_dates(date)
+        gig_dates(date, sessions)
       `)
       .order('date', { ascending: true })
 
@@ -433,22 +433,29 @@ export default function CalendarPage() {
                       {day}
                     </div>
                     <div className="space-y-0.5">
-                      {dayGigs.slice(0, 3).map(gig => (
-                        <div
-                          key={gig.id}
-                          className={cn(
-                            'text-[11px] px-1 py-0.5 rounded truncate cursor-pointer text-white',
-                            statusColors[gig.status]
-                          )}
-                          onClick={() => {
-                            setSelectedGig(gig)
-                            setEditingNotes(false)
-                          }}
-                          title={`${gig.client ? gig.client.name : tGig('clientNotSpecified')} - ${gig.project_name || (gig.gig_type ? gig.gig_type.name : '')}`}
-                        >
-                          {gig.project_name || (gig.client ? gig.client.name : tGig('clientNotSpecified'))}
-                        </div>
-                      ))}
+                      {dayGigs.slice(0, 3).map(gig => {
+                        const dateStr = formatDateLocal(date)
+                        const dayData = gig.gig_dates?.find(gd => gd.date === dateStr)
+                        const firstSession = dayData?.sessions?.[0]
+                        const timePrefix = firstSession?.start ? `${firstSession.start} ` : ''
+                        const label = gig.project_name || (gig.client ? gig.client.name : tGig('clientNotSpecified'))
+                        return (
+                          <div
+                            key={gig.id}
+                            className={cn(
+                              'text-[11px] px-1 py-0.5 rounded truncate cursor-pointer text-white',
+                              statusColors[gig.status]
+                            )}
+                            onClick={() => {
+                              setSelectedGig(gig)
+                              setEditingNotes(false)
+                            }}
+                            title={`${gig.client ? gig.client.name : tGig('clientNotSpecified')} - ${gig.project_name || (gig.gig_type ? gig.gig_type.name : '')}`}
+                          >
+                            {timePrefix}{label}
+                          </div>
+                        )
+                      })}
                       {dayGigs.length > 3 && (
                         <div className="text-[10px] text-muted-foreground">
                           +{dayGigs.length - 3} {tc('more')}

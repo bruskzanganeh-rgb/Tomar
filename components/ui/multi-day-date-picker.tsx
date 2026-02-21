@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import {
   format,
@@ -18,18 +20,24 @@ import {
 } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { enUS } from 'date-fns/locale/en-US'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Upload } from 'lucide-react'
 
 type MultiDayDatePickerProps = {
   selectedDates: Date[]
   onDatesChange: (dates: Date[]) => void
   disabled?: boolean
+  scheduleTexts?: Record<string, string>
+  onScheduleTextsChange?: (texts: Record<string, string>) => void
+  onScanSchedule?: () => void
 }
 
 export function MultiDayDatePicker({
   selectedDates,
   onDatesChange,
   disabled = false,
+  scheduleTexts,
+  onScheduleTextsChange,
+  onScanSchedule,
 }: MultiDayDatePickerProps) {
   const t = useTranslations('datePicker')
   const appLocale = useLocale()
@@ -37,6 +45,9 @@ export function MultiDayDatePicker({
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const initialized = useRef(false)
+  const [showTimes, setShowTimes] = useState(false)
+  const [allSameText, setAllSameText] = useState(true)
+  const [sharedText, setSharedText] = useState('')
 
   // Set current month from selectedDates prop (for editing existing gigs)
   useEffect(() => {
@@ -53,17 +64,90 @@ export function MultiDayDatePicker({
     }
   }, [selectedDates])
 
+  // Auto-open times section if scheduleTexts has values (edit mode)
+  const timesInitialized = useRef(false)
+  useEffect(() => {
+    if (scheduleTexts && !timesInitialized.current) {
+      const hasTexts = Object.values(scheduleTexts).some(t => t.trim())
+      if (hasTexts) {
+        timesInitialized.current = true
+        setShowTimes(true)
+        // Check if all texts are the same
+        const texts = Object.values(scheduleTexts).filter(t => t.trim())
+        const allSame = texts.length > 0 && texts.every(t => t === texts[0])
+        setAllSameText(allSame)
+        if (allSame && texts.length > 0) {
+          setSharedText(texts[0])
+        }
+      }
+    }
+  }, [scheduleTexts])
+
   function toggleDate(date: Date) {
     if (disabled) return
 
     const isSelected = selectedDates.some(d => isSameDay(d, date))
+    const key = format(date, 'yyyy-MM-dd')
 
     if (isSelected) {
       const newDates = selectedDates.filter(d => !isSameDay(d, date))
       onDatesChange(newDates)
+      // Clean up schedule text for removed date
+      if (onScheduleTextsChange && scheduleTexts && scheduleTexts[key]) {
+        const newTexts = { ...scheduleTexts }
+        delete newTexts[key]
+        onScheduleTextsChange(newTexts)
+      }
     } else {
       const newDates = [...selectedDates, date].sort((a, b) => a.getTime() - b.getTime())
       onDatesChange(newDates)
+      // If "all same" is on, populate new date with shared text
+      if (onScheduleTextsChange && allSameText && sharedText && showTimes) {
+        onScheduleTextsChange({ ...(scheduleTexts || {}), [key]: sharedText })
+      }
+    }
+  }
+
+  function handleSharedTextChange(text: string) {
+    setSharedText(text)
+    if (onScheduleTextsChange) {
+      const newTexts: Record<string, string> = {}
+      const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime())
+      for (const date of sortedDates) {
+        newTexts[format(date, 'yyyy-MM-dd')] = text
+      }
+      onScheduleTextsChange(newTexts)
+    }
+  }
+
+  function handlePerDayTextChange(key: string, text: string) {
+    if (onScheduleTextsChange) {
+      onScheduleTextsChange({ ...(scheduleTexts || {}), [key]: text })
+    }
+  }
+
+  function handleAllSameToggle(checked: boolean) {
+    setAllSameText(checked)
+    if (checked && onScheduleTextsChange) {
+      // Copy first day's text to shared text
+      const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime())
+      const firstKey = sortedDates.length > 0 ? format(sortedDates[0], 'yyyy-MM-dd') : ''
+      const firstText = scheduleTexts?.[firstKey] || ''
+      setSharedText(firstText)
+      // Apply to all dates
+      const newTexts: Record<string, string> = {}
+      for (const date of sortedDates) {
+        newTexts[format(date, 'yyyy-MM-dd')] = firstText
+      }
+      onScheduleTextsChange(newTexts)
+    } else if (!checked && onScheduleTextsChange) {
+      // Copy shared text to all dates
+      const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime())
+      const newTexts: Record<string, string> = {}
+      for (const date of sortedDates) {
+        newTexts[format(date, 'yyyy-MM-dd')] = sharedText
+      }
+      onScheduleTextsChange(newTexts)
     }
   }
 
@@ -78,6 +162,8 @@ export function MultiDayDatePicker({
     const d = new Date(2024, 0, i + 1) // Mon Jan 1 2024
     return format(d, 'EEE', { locale: dateLocale })
   })
+
+  const sortedDates = [...selectedDates].sort((a, b) => a.getTime() - b.getTime())
 
   return (
     <div className="space-y-4">
@@ -161,18 +247,90 @@ export function MultiDayDatePicker({
       {/* Summary */}
       <div className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
         <span className="text-muted-foreground">{t('selectedDays')}</span>
-        <span className="font-medium">
-          {selectedDates.length === 0 && t('noDaysSelected')}
-          {selectedDates.length === 1 && format(selectedDates[0], 'd MMMM yyyy', { locale: dateLocale })}
-          {selectedDates.length > 1 && (
-            <>
-              {format(selectedDates[0], 'd', { locale: dateLocale })}-
-              {format(selectedDates[selectedDates.length - 1], 'd MMMM yyyy', { locale: dateLocale })}
-              {` (${selectedDates.length} ${t('daysCount')})`}
-            </>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">
+            {selectedDates.length === 0 && t('noDaysSelected')}
+            {selectedDates.length === 1 && format(selectedDates[0], 'd MMMM yyyy', { locale: dateLocale })}
+            {selectedDates.length > 1 && (
+              <>
+                {format(selectedDates[0], 'd', { locale: dateLocale })}-
+                {format(selectedDates[selectedDates.length - 1], 'd MMMM yyyy', { locale: dateLocale })}
+                {` (${selectedDates.length} ${t('daysCount')})`}
+              </>
+            )}
+          </span>
+          {selectedDates.length > 0 && onScheduleTextsChange && (
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline underline-offset-2 flex items-center gap-1"
+              onClick={() => setShowTimes(v => !v)}
+            >
+              <Clock className="h-3 w-3" />
+              {showTimes ? t('hideTimes') : t('addTimes')}
+            </button>
           )}
-        </span>
+        </div>
       </div>
+
+      {/* Schedule times section */}
+      {showTimes && selectedDates.length > 0 && onScheduleTextsChange && (
+        <div className="space-y-3 bg-muted/30 rounded-lg p-3">
+          {/* Top row: toggle + import */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={allSameText}
+                onCheckedChange={(checked) => handleAllSameToggle(checked === true)}
+                disabled={disabled}
+              />
+              <span className="text-muted-foreground">{t('allDaysSameSchedule')}</span>
+            </label>
+            {onScanSchedule && (
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline underline-offset-2 flex items-center gap-1"
+                onClick={onScanSchedule}
+                disabled={disabled}
+              >
+                <Upload className="h-3 w-3" />
+                {t('importSchedule')}
+              </button>
+            )}
+          </div>
+
+          {allSameText ? (
+            /* Single input for all days */
+            <Input
+              value={sharedText}
+              onChange={e => handleSharedTextChange(e.target.value)}
+              placeholder={t('schedulePlaceholder')}
+              className="text-sm h-9"
+              disabled={disabled}
+            />
+          ) : (
+            /* Per-day inputs */
+            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+              {sortedDates.map(date => {
+                const key = format(date, 'yyyy-MM-dd')
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="w-[75px] text-xs text-muted-foreground shrink-0">
+                      {format(date, 'EEE d MMM', { locale: dateLocale })}
+                    </span>
+                    <Input
+                      value={scheduleTexts?.[key] ?? ''}
+                      onChange={e => handlePerDayTextChange(key, e.target.value)}
+                      placeholder={t('schedulePlaceholder')}
+                      className="text-sm h-8"
+                      disabled={disabled}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

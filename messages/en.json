@@ -1083,7 +1083,14 @@
     "clickToToggle": "Click on a day to select or deselect it",
     "selectedDays": "Selected days:",
     "noDaysSelected": "No days selected",
-    "daysCount": "days"
+    "daysCount": "days",
+    "addTimes": "Add times",
+    "hideTimes": "Hide times",
+    "allDaysSameSchedule": "All days same schedule",
+    "importSchedule": "Import schedule",
+    "schedulePlaceholder": "e.g. rehearsal 10-12, concert 19",
+    "scanning": "Scanning...",
+    "parsing": "Parsing schedule..."
   },
   "mobile": {
     "addGig": "Add gig",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { GigAttachments } from './gig-attachments'
@@ -98,6 +98,9 @@ export function GigDialog({
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [formData, setFormData] = useState({ ...defaultFormData })
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('SEK')
+  const [scheduleTexts, setScheduleTexts] = useState<Record<string, string>>({})
+  const [scanningSchedule, setScanningSchedule] = useState(false)
+  const scheduleFileRef = useRef<HTMLInputElement>(null)
 
   const supabase = createClient()
 
@@ -113,6 +116,7 @@ export function GigDialog({
       if (!gig) {
         setFormData({ ...defaultFormData })
         setSelectedDates([])
+        setScheduleTexts({})
       }
     }
   }, [open])
@@ -180,18 +184,26 @@ export function GigDialog({
   async function loadGigDates(gigId: string) {
     const { data } = await supabase
       .from('gig_dates')
-      .select('date')
+      .select('date, schedule_text, sessions')
       .eq('gig_id', gigId)
       .order('date')
 
     if (data && data.length > 0) {
       const dates = data.map(d => new Date(d.date + 'T12:00:00'))
       setSelectedDates(dates)
+
+      // Load schedule texts
+      const texts: Record<string, string> = {}
+      data.forEach(d => {
+        if (d.schedule_text) texts[d.date] = d.schedule_text
+      })
+      setScheduleTexts(texts)
     } else {
       // Fallback to start_date if no gig_dates
       if (gig?.start_date) {
         setSelectedDates([new Date(gig.start_date + 'T12:00:00')])
       }
+      setScheduleTexts({})
     }
   }
 
@@ -266,6 +278,42 @@ export function GigDialog({
       response_deadline: formData.response_deadline || null,
     }
 
+    // Parse schedule texts with AI if any exist
+    let parsedSessions: Record<string, unknown[]> = {}
+    const scheduleEntries = Object.entries(scheduleTexts)
+      .filter(([_, text]) => text.trim())
+      .map(([date, text]) => ({ date, text }))
+
+    if (scheduleEntries.length > 0) {
+      try {
+        const res = await fetch('/api/gigs/parse-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entries: scheduleEntries }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          parsedSessions = data.sessions || {}
+        }
+      } catch (err) {
+        console.error('Schedule parse error:', err)
+        // Continue saving without parsed sessions
+      }
+    }
+
+    // Build gig_dates with schedule data
+    function buildGigDates(gigId: string) {
+      return sortedDates.map(date => {
+        const key = format(date, 'yyyy-MM-dd')
+        return {
+          gig_id: gigId,
+          date: key,
+          schedule_text: scheduleTexts[key] || null,
+          sessions: parsedSessions[key] || [],
+        }
+      })
+    }
+
     if (isEditing) {
       // Update existing gig
       const { error } = await supabase
@@ -283,11 +331,7 @@ export function GigDialog({
       // Delete old gig_dates and insert new ones
       await supabase.from('gig_dates').delete().eq('gig_id', gig.id)
 
-      const gigDates = sortedDates.map(date => ({
-        gig_id: gig.id,
-        date: format(date, 'yyyy-MM-dd'),
-      }))
-
+      const gigDates = buildGigDates(gig.id)
       const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
       if (datesError) {
         console.error('Error updating gig dates:', datesError)
@@ -308,11 +352,7 @@ export function GigDialog({
       }
 
       // Insert gig_dates
-      const gigDates = sortedDates.map(date => ({
-        gig_id: newGig.id,
-        date: format(date, 'yyyy-MM-dd'),
-      }))
-
+      const gigDates = buildGigDates(newGig.id)
       const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
       if (datesError) {
         console.error('Error inserting gig dates:', datesError)
@@ -325,6 +365,64 @@ export function GigDialog({
     setLoading(false)
     onSuccess()
     onOpenChange(false)
+  }
+
+  async function handleScanSchedule() {
+    scheduleFileRef.current?.click()
+  }
+
+  async function handleScheduleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setScanningSchedule(true)
+    try {
+      const formDataUpload = new FormData()
+      formDataUpload.append('file', file)
+
+      const res = await fetch('/api/gigs/scan-schedule', {
+        method: 'POST',
+        body: formDataUpload,
+      })
+
+      if (!res.ok) {
+        throw new Error('Scan failed')
+      }
+
+      const result = await res.json()
+
+      // Set dates from scan result
+      if (result.dates) {
+        const dates = Object.keys(result.dates)
+          .sort()
+          .map(d => new Date(d + 'T12:00:00'))
+        setSelectedDates(dates)
+      }
+
+      // Set schedule texts
+      if (result.scheduleTexts) {
+        setScheduleTexts(result.scheduleTexts)
+      }
+
+      // Pre-fill project name and venue if empty
+      if (result.projectName && !formData.project_name) {
+        setFormData(f => ({ ...f, project_name: result.projectName }))
+      }
+      if (result.venue && !formData.venue) {
+        setFormData(f => ({ ...f, venue: result.venue }))
+      }
+
+      toast.success(tToast('scheduleScanned') || 'Schema importerat')
+    } catch (err) {
+      console.error('Schedule scan error:', err)
+      toast.error(tToast('scheduleScanError') || 'Kunde inte läsa schemat')
+    } finally {
+      setScanningSchedule(false)
+      // Reset file input
+      if (scheduleFileRef.current) {
+        scheduleFileRef.current.value = ''
+      }
+    }
   }
 
   const statusOptions = [
@@ -538,7 +636,18 @@ export function GigDialog({
               <MultiDayDatePicker
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
-                disabled={loading}
+                disabled={loading || scanningSchedule}
+                scheduleTexts={scheduleTexts}
+                onScheduleTextsChange={setScheduleTexts}
+                onScanSchedule={handleScanSchedule}
+              />
+              {/* Hidden file input for schedule scan */}
+              <input
+                ref={scheduleFileRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
+                className="hidden"
+                onChange={handleScheduleFileSelected}
               />
             </div>
           </div>
