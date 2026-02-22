@@ -297,7 +297,7 @@ export function EditExpenseDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1100px]">
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[1100px]">
           <DialogHeader>
             <DialogTitle>{t('editExpense')}</DialogTitle>
             <DialogDescription>
@@ -305,14 +305,14 @@ export function EditExpenseDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {/* 3-kolumns layout */}
-          <div className="flex gap-6">
+          {/* Responsive layout: stacked on mobile, 3 columns on desktop */}
+          <div className="flex flex-col md:flex-row gap-6">
             {/* Vänster kolumn: Kvittobild */}
-            <div className="w-40 shrink-0 space-y-3">
+            <div className="w-full md:w-40 md:shrink-0 space-y-3">
               <Label className="text-sm font-medium">{t('receiptImage')}</Label>
 
               {attachmentLoading ? (
-                <div className="flex flex-col items-center justify-center h-56 text-sm text-gray-500">
+                <div className="flex flex-col items-center justify-center h-40 md:h-56 text-sm text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mb-2" />
                   {tc('loading')}
                 </div>
@@ -322,7 +322,7 @@ export function EditExpenseDialog({
                     <img
                       src={attachmentUrl}
                       alt={t('receipt')}
-                      className="w-full h-56 object-cover rounded-lg border shadow-sm hover:opacity-90 transition-opacity"
+                      className="w-full h-40 md:h-56 object-cover rounded-lg border shadow-sm hover:opacity-90 transition-opacity"
                     />
                   </a>
                   <div className="flex gap-1">
@@ -355,7 +355,7 @@ export function EditExpenseDialog({
                 </div>
               ) : hasAttachment && !attachmentUrl ? (
                 <div className="space-y-2">
-                  <div className="w-full h-56 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 flex items-center justify-center">
+                  <div className="w-full h-40 md:h-56 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50 flex items-center justify-center">
                     <p className="text-xs text-amber-600 text-center px-2">{t('couldNotLoad')}</p>
                   </div>
                   <Button
@@ -378,7 +378,7 @@ export function EditExpenseDialog({
               ) : (
                 <div className="space-y-2">
                   <div
-                    className="w-full h-56 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                    className="w-full h-40 md:h-56 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Image className="h-8 w-8 text-gray-300 mb-2" />
@@ -413,7 +413,7 @@ export function EditExpenseDialog({
             </div>
 
             {/* Mitten kolumn: Formulärfält */}
-            <div className="w-64 shrink-0 space-y-3">
+            <div className="w-full md:w-64 md:shrink-0 space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="date">{t('date')}</Label>
                 <Input

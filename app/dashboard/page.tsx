@@ -164,7 +164,7 @@ export default function DashboardPage() {
             <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
               <Plus className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-[11px] font-medium">{t('newGig')}</span>
+            <span className="text-xs font-medium">{t('newGig')}</span>
           </button>
           <button
             onClick={() => setShowReceiptDialog(true)}
@@ -173,7 +173,7 @@ export default function DashboardPage() {
             <div className="h-9 w-9 rounded-full bg-emerald-500/10 flex items-center justify-center">
               <Receipt className="h-4 w-4 text-emerald-500" />
             </div>
-            <span className="text-[11px] font-medium">{t('uploadReceipt')}</span>
+            <span className="text-xs font-medium">{t('uploadReceipt')}</span>
           </button>
           <Link
             href="/calendar"
@@ -182,7 +182,7 @@ export default function DashboardPage() {
             <div className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center">
               <CalendarDays className="h-4 w-4 text-blue-500" />
             </div>
-            <span className="text-[11px] font-medium">{t('viewCalendar')}</span>
+            <span className="text-xs font-medium">{t('viewCalendar')}</span>
           </Link>
         </div>
       </motion.div>

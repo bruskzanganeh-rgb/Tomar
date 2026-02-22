@@ -512,7 +512,7 @@ export default function GigsPage() {
                             <div className="text-sm text-muted-foreground truncate max-w-[200px]">{gig.project_name}</div>
                           )}
                           {isSharedMode && gig.user_id !== currentUserId && (
-                            <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                            <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</div>
                           )}
                         </div>
                       </TableCell>
@@ -679,13 +679,13 @@ export default function GigsPage() {
                             <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
                             {gig.project_name && <p className="text-xs text-muted-foreground truncate">{gig.project_name}</p>}
                             {isSharedMode && gig.user_id !== currentUserId && (
-                              <p className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</p>
+                              <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</p>
                             )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
                             <div className="mt-0.5">
-                              <Badge className={`text-[10px] ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                              <Badge className={`text-xs ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
                                 {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
                                 {tStatus(gig.status)}
                               </Badge>
@@ -700,11 +700,11 @@ export default function GigsPage() {
                           <div className="flex items-center gap-1">
                             {gig.status === 'pending' && (
                               <>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-3.5 w-3.5 text-green-600" /></Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateStatus(gig.id, 'declined')}><X className="h-3.5 w-3.5 text-red-600" /></Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-3.5 w-3.5 text-green-600" /></Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => updateStatus(gig.id, 'declined')}><X className="h-3.5 w-3.5 text-red-600" /></Button>
                               </>
                             )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
                       </div>
@@ -748,7 +748,7 @@ export default function GigsPage() {
                                 {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
                                 {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
                                 {isSharedMode && gig.user_id !== currentUserId && (
-                                  <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</div>
                                 )}
                               </div>
                             </TableCell>
@@ -837,13 +837,13 @@ export default function GigsPage() {
                             <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
                             <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
                             {isSharedMode && gig.user_id !== currentUserId && (
-                              <p className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</p>
+                              <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</p>
                             )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
                             <div className="mt-0.5">
-                              <Badge className={`text-[10px] ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                              <Badge className={`text-xs ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
                                 {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
                                 {tStatus(gig.status)}
                               </Badge>
@@ -856,7 +856,7 @@ export default function GigsPage() {
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
                       </div>
@@ -900,7 +900,7 @@ export default function GigsPage() {
                                 {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
                                 {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
                                 {isSharedMode && gig.user_id !== currentUserId && (
-                                  <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</div>
                                 )}
                               </div>
                             </TableCell>
@@ -968,13 +968,13 @@ export default function GigsPage() {
                             <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
                             <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
                             {isSharedMode && gig.user_id !== currentUserId && (
-                              <p className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</p>
+                              <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</p>
                             )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
                             <div className="mt-0.5">
-                              <Badge className={`text-[10px] ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                              <Badge className={`text-xs ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
                                 {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
                                 {tStatus(gig.status)}
                               </Badge>
@@ -987,7 +987,7 @@ export default function GigsPage() {
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
                       </div>
@@ -1031,7 +1031,7 @@ export default function GigsPage() {
                                 {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
                                 {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
                                 {isSharedMode && gig.user_id !== currentUserId && (
-                                  <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                                  <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</div>
                                 )}
                               </div>
                             </TableCell>
@@ -1080,6 +1080,14 @@ export default function GigsPage() {
           </CardContent>
         </Tabs>
       </Card>
+
+      {/* Mobile FAB */}
+      <Button
+        className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg md:hidden"
+        onClick={() => setShowCreateDialog(true)}
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
 
       <GigDialog
         gig={null}
@@ -1186,7 +1194,7 @@ export default function GigsPage() {
                         {selectedGig.position && ` • ${selectedGig.position.name}`}
                       </span>
                       {isSharedMode && selectedGig.user_id !== currentUserId && (
-                        <span className="text-xs text-blue-600">{getMemberLabel(selectedGig.user_id)}</span>
+                        <span className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(selectedGig.user_id)}</span>
                       )}
                     </div>
                   </div>
@@ -1309,7 +1317,7 @@ export default function GigsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
+                            className="h-8 w-8 p-0"
                             onClick={() => {
                               setNotesText(selectedGig.notes || '')
                               setEditingNotes(true)

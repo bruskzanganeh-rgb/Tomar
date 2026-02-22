@@ -344,6 +344,70 @@ export default function ExpensesTab() {
               )}
             </div>
           ) : (
+            <>
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+              {filteredExpenses.map((expense) => (
+                <div
+                  key={expense.id}
+                  className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => setSelectedExpense(expense)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{expense.supplier}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(expense.date), 'd MMM yyyy', { locale: dateLocale })}
+                        </span>
+                        {expense.category && (
+                          <Badge variant="outline" className="text-xs">{expense.category}</Badge>
+                        )}
+                      </div>
+                      {expense.gig && (
+                        <Badge variant="secondary" className="text-xs mt-1">
+                          {expense.gig.client?.name || expense.gig.project_name || format(new Date(expense.gig.date), 'd MMM', { locale: dateLocale })}
+                        </Badge>
+                      )}
+                      {isSharedMode && expense.user_id !== currentUserId && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(expense.user_id)}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-semibold text-sm">
+                        {expense.currency && expense.currency !== 'SEK'
+                          ? `${expense.amount.toLocaleString(formatLocale)} ${expense.currency === 'EUR' ? '\u20AC' : '$'}`
+                          : `${expense.amount.toLocaleString(formatLocale)} ${tc('kr')}`}
+                      </span>
+                      {expense.currency && expense.currency !== 'SEK' && expense.amount_base && (
+                        <p className="text-xs text-muted-foreground">
+                          {expense.amount_base.toLocaleString(formatLocale)} {tc('kr')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {(expense.notes || expense.attachment_url) && (
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      {expense.notes ? (
+                        <p className="text-xs text-muted-foreground truncate flex-1">{expense.notes}</p>
+                      ) : <div />}
+                      {expense.attachment_url && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openPreview(expense.id) }}
+                          className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
+                          title={t('showReceiptImage')}
+                        >
+                          <Image className="h-5 w-5 text-blue-500" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -370,7 +434,7 @@ export default function ExpensesTab() {
                       <div>
                         {expense.supplier}
                         {isSharedMode && expense.user_id !== currentUserId && (
-                          <div className="text-xs text-blue-600">{getMemberLabel(expense.user_id)}</div>
+                          <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(expense.user_id)}</div>
                         )}
                       </div>
                     </TableCell>
@@ -411,10 +475,10 @@ export default function ExpensesTab() {
                       {expense.attachment_url && (
                         <button
                           onClick={() => openPreview(expense.id)}
-                          className="p-1 hover:bg-blue-50 rounded transition-colors"
+                          className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
                           title={t('showReceiptImage')}
                         >
-                          <Image className="h-4 w-4 text-blue-500" />
+                          <Image className="h-5 w-5 text-blue-500" />
                         </button>
                       )}
                     </TableCell>
@@ -422,6 +486,8 @@ export default function ExpensesTab() {
                 ))}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

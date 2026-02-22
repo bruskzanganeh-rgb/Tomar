@@ -407,7 +407,7 @@ export default function InvoicesTab() {
           .reduce((sum, i) => sum + (i.total_base || i.total), 0)
 
         return (
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -605,14 +605,14 @@ export default function InvoicesTab() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">#{invoice.invoice_number}</span>
                         <Badge
-                          className={`text-[10px] ${statusConfig[invoice.status as keyof typeof statusConfig]?.color}`}
+                          className={`text-xs ${statusConfig[invoice.status as keyof typeof statusConfig]?.color}`}
                         >
                           {t(`status.${invoice.status}`)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate mt-0.5">{invoice.client.name}</p>
                       {isSharedMode && invoice.user_id !== currentUserId && (
-                        <p className="text-xs text-blue-600">{getMemberLabel(invoice.user_id)}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(invoice.user_id)}</p>
                       )}
                     </div>
                     <span className="font-semibold text-sm whitespace-nowrap">
@@ -630,18 +630,18 @@ export default function InvoicesTab() {
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {invoice.status !== 'paid' && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markAsPaid(invoice.id)}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => markAsPaid(invoice.id)}>
                           <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(`/api/invoices/${invoice.id}/pdf`, '_blank')}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => window.open(`/api/invoices/${invoice.id}/pdf`, '_blank')}>
                         <Download className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setSelectedInvoice(invoice); setShowSendDialog(true) }}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setSelectedInvoice(invoice); setShowSendDialog(true) }}>
                         <Mail className="h-3.5 w-3.5" />
                       </Button>
                       {invoice.status === 'overdue' && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" onClick={() => { setSelectedInvoice(invoice); setShowReminderDialog(true) }}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-600" onClick={() => { setSelectedInvoice(invoice); setShowReminderDialog(true) }}>
                           <Bell className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -695,7 +695,7 @@ export default function InvoicesTab() {
                           <div>
                             {invoice.client.name}
                             {isSharedMode && invoice.user_id !== currentUserId && (
-                              <div className="text-xs text-blue-600">{getMemberLabel(invoice.user_id)}</div>
+                              <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(invoice.user_id)}</div>
                             )}
                           </div>
                         </TableCell>
