@@ -640,12 +640,13 @@ export default function InvoicesTab() {
                       <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => window.open(`/api/invoices/${invoice.id}/pdf`, '_blank')}>
                         <Download className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setSelectedInvoice(invoice); setShowSendDialog(true) }}>
-                        <Mail className="h-3.5 w-3.5" />
-                      </Button>
-                      {invoice.status === 'overdue' && (
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-600" onClick={() => { setSelectedInvoice(invoice); setShowReminderDialog(true) }}>
+                      {invoice.status === 'overdue' ? (
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-600" onClick={() => { setSelectedInvoice(invoice); setShowReminderDialog(true) }} title={t('reminder.sendReminder')}>
                           <Bell className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => { setSelectedInvoice(invoice); setShowSendDialog(true) }}>
+                          <Mail className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
@@ -757,18 +758,7 @@ export default function InvoicesTab() {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedInvoice(invoice)
-                                setShowSendDialog(true)
-                              }}
-                              title={t('sendViaEmail')}
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                            {invoice.status === 'overdue' && (
+                            {invoice.status === 'overdue' ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -780,6 +770,18 @@ export default function InvoicesTab() {
                                 className="text-amber-600 hover:text-amber-700"
                               >
                                 <Bell className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedInvoice(invoice)
+                                  setShowSendDialog(true)
+                                }}
+                                title={t('sendViaEmail')}
+                              >
+                                <Mail className="h-4 w-4" />
                               </Button>
                             )}
                             <Button

@@ -727,8 +727,8 @@ export default function GigsPage() {
                         <SortableHead column="type" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[14%]">{t('type')}</SortableHead>
                         <SortableHead column="venue" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[12%]">{t('venue')}</SortableHead>
                         <SortableHead column="fee" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[10%]">{t('fee')}</SortableHead>
-                        <SortableHead column="status" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[6%]">{t('status')}</SortableHead>
-                        <TableHead className="w-[22%] text-right">{t('actions')}</TableHead>
+                        <SortableHead column="status" sort={upcomingSort} onSort={(c) => toggleSort(setUpcomingSort, upcomingSort, c)} className="w-[12%]">{t('status')}</SortableHead>
+                        <TableHead className="w-[16%] text-right">{t('actions')}</TableHead>
                       </TableRow>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">
@@ -770,9 +770,9 @@ export default function GigsPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1">
-                                <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color} title={tStatus(gig.status)}>
-                                  {StatusIcon && <StatusIcon className="h-3 w-3 xl:mr-1" />}
-                                  <span className="hidden xl:inline">{tStatus(gig.status)}</span>
+                                <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                                  {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                  {tStatus(gig.status)}
                                 </Badge>
                                 {(gig.status === 'pending' || gig.status === 'tentative') && gig.response_deadline && (() => {
                                   const deadlineInfo = getDeadlineStatus(gig.response_deadline, dateLocale)
@@ -795,9 +795,8 @@ export default function GigsPage() {
                                   </>
                                 )}
                                 {gig.status === 'accepted' && (
-                                  <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'completed')} title={t('markCompleted')}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateStatus(gig.id, 'completed')} title={t('markCompleted')}>
                                     <Check className="h-4 w-4 text-blue-600" />
-                                    <span className="hidden xl:inline ml-1">{t('markCompleted')}</span>
                                   </Button>
                                 )}
                                 <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
@@ -882,8 +881,8 @@ export default function GigsPage() {
                         <SortableHead column="type" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[16%]">{t('type')}</SortableHead>
                         <SortableHead column="venue" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[14%]">{t('venue')}</SortableHead>
                         <SortableHead column="fee" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[12%]">{t('fee')}</SortableHead>
-                        <SortableHead column="status" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[6%]">{t('status')}</SortableHead>
-                        <TableHead className="w-[16%] text-right">{t('actions')}</TableHead>
+                        <SortableHead column="status" sort={historySort} onSort={(c) => toggleSort(setHistorySort, historySort, c)} className="w-[10%]">{t('status')}</SortableHead>
+                        <TableHead className="w-[12%] text-right">{t('actions')}</TableHead>
                       </TableRow>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">
@@ -924,9 +923,9 @@ export default function GigsPage() {
                               {gig.fee !== null ? fmtFee(gig.fee, gig.currency) : <span className="text-muted-foreground italic">{t('notSet')}</span>}
                             </TableCell>
                             <TableCell>
-                              <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color} title={tStatus(gig.status)}>
-                                {StatusIcon && <StatusIcon className="h-3 w-3 xl:mr-1" />}
-                                <span className="hidden xl:inline">{tStatus(gig.status)}</span>
+                              <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                {tStatus(gig.status)}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -1013,8 +1012,8 @@ export default function GigsPage() {
                         <SortableHead column="type" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[16%]">{t('type')}</SortableHead>
                         <SortableHead column="venue" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[14%]">{t('venue')}</SortableHead>
                         <SortableHead column="fee" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[12%]">{t('fee')}</SortableHead>
-                        <SortableHead column="status" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[6%]">{t('status')}</SortableHead>
-                        <TableHead className="w-[16%] text-right">{t('actions')}</TableHead>
+                        <SortableHead column="status" sort={declinedSort} onSort={(c) => toggleSort(setDeclinedSort, declinedSort, c)} className="w-[10%]">{t('status')}</SortableHead>
+                        <TableHead className="w-[12%] text-right">{t('actions')}</TableHead>
                       </TableRow>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">
@@ -1055,9 +1054,9 @@ export default function GigsPage() {
                               {gig.fee !== null ? fmtFee(gig.fee, gig.currency) : <span className="text-muted-foreground italic">{t('notSet')}</span>}
                             </TableCell>
                             <TableCell>
-                              <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color} title={tStatus(gig.status)}>
-                                {StatusIcon && <StatusIcon className="h-3 w-3 xl:mr-1" />}
-                                <span className="hidden xl:inline">{tStatus(gig.status)}</span>
+                              <Badge className={statusConfig[gig.status as keyof typeof statusConfig]?.color}>
+                                {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                {tStatus(gig.status)}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
