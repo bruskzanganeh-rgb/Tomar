@@ -240,8 +240,8 @@ export function SubscriptionSettings() {
         onConfirm={handleCancel}
       />
 
-      {/* Pro upgrade cards (shown when not Pro) */}
-      {!isPro && (
+      {/* Pro upgrade cards (shown when not Pro, only if price IDs are configured) */}
+      {!isPro && process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID && (
         <div className="grid md:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-3">
@@ -317,8 +317,8 @@ export function SubscriptionSettings() {
         </div>
       )}
 
-      {/* Team upgrade cards (shown to owners who are not on Team plan) */}
-      {isOwner && !isTeam && (
+      {/* Team upgrade cards (shown to owners who are not on Team plan, only if price IDs are configured) */}
+      {isOwner && !isTeam && process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('teamPlanTitle')}</h3>
           <div className="grid md:grid-cols-2 gap-4">
