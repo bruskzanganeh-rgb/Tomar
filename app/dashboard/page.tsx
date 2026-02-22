@@ -206,7 +206,9 @@ export default function DashboardPage() {
           gridTemplateColumns: gridHeight
             ? (isDesktop ? '2.618fr 1.618fr 1fr' : '1.618fr 1fr')
             : undefined,
-          gridTemplateRows: gridHeight ? 'minmax(0, 1fr)' : undefined,
+          gridTemplateRows: gridHeight
+            ? (isDesktop ? 'minmax(0, 1fr)' : 'minmax(0, 3fr) minmax(0, 2fr)')
+            : undefined,
         }}
       >
 
@@ -327,10 +329,12 @@ export default function DashboardPage() {
           </ErrorBoundary>
         </div>
 
-        {/* Column 3: Availability */}
-        <ErrorBoundary>
-          <AvailableWeeks />
-        </ErrorBoundary>
+        {/* Column 3: Availability — spans both columns on tablet (2-col grid), single column on desktop (3-col grid) */}
+        <div className="md:col-span-2 xl:col-span-1 min-h-0">
+          <ErrorBoundary>
+            <AvailableWeeks />
+          </ErrorBoundary>
+        </div>
       </motion.div>
 
       {/* Quick Action Dialogs */}

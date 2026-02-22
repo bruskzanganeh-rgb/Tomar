@@ -197,10 +197,10 @@ export function AvailableWeeks() {
               </div>
             </div>
 
-            <div className="xl:flex-1 relative min-h-0">
+            <div className="md:flex-1 relative min-h-0">
               <div
                 ref={scrollContainerRef}
-                className="max-h-[300px] overflow-y-auto xl:max-h-none xl:absolute xl:inset-0 space-y-1 pr-1"
+                className="max-h-[300px] overflow-y-auto md:max-h-none md:absolute md:inset-0 space-y-1 pr-1"
               >
                 {weeks.map((week, index) => {
                   const style = getStatusStyle(week.status)
