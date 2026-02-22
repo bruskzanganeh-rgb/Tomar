@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -129,6 +129,7 @@ export function CreateInvoiceDialog({
   ])
   const [selectedGigIds, setSelectedGigIds] = useState<Set<string>>(new Set())
   const [clientGigs, setClientGigs] = useState<InitialGig[]>([])
+  const initializedRef = useRef(false)
 
   const supabase = createClient()
 
@@ -174,6 +175,7 @@ export function CreateInvoiceDialog({
 
   useEffect(() => {
     if (open) {
+      initializedRef.current = false
       loadClients()
       loadCompletedGigs()
       loadGigTypes()
@@ -182,9 +184,9 @@ export function CreateInvoiceDialog({
     }
   }, [open])
 
-  // Auto-populate form when initialGig or initialGigs are provided
+  // Auto-populate form when initialGig or initialGigs are provided (once per dialog open)
   useEffect(() => {
-    if (!open || gigTypes.length === 0) return
+    if (!open || gigTypes.length === 0 || initializedRef.current) return
 
     const gigs = initialGigs || (initialGig ? [initialGig] : null)
     if (!gigs || gigs.length === 0) return
@@ -204,6 +206,7 @@ export function CreateInvoiceDialog({
     setSelectedGigIds(new Set(gigs.map(g => g.id)))
     setClientGigs(gigs)
     setLines(buildLinesFromGigs(gigs))
+    initializedRef.current = true
   }, [open, initialGig, initialGigs, gigTypes, clients])
 
   async function loadClients() {
@@ -597,6 +600,7 @@ export function CreateInvoiceDialog({
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => toggleGig(gig)}
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <div className="flex-1 min-w-0">
                               <span className="font-medium">
