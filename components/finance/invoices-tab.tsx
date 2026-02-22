@@ -117,6 +117,7 @@ export default function InvoicesTab() {
   const [showReminderDialog, setShowReminderDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
+  const [confirmPaidInvoice, setConfirmPaidInvoice] = useState<string | null>(null)
   const supabase = createClient()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollHint, setShowScrollHint] = useState(true)
@@ -633,7 +634,7 @@ export default function InvoicesTab() {
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {invoice.status !== 'paid' && (
-                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => markAsPaid(invoice.id)}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setConfirmPaidInvoice(invoice.id)}>
                           <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -742,10 +743,10 @@ export default function InvoicesTab() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => markAsPaid(invoice.id)}
+                                onClick={() => setConfirmPaidInvoice(invoice.id)}
+                                title={t('markPaid')}
                               >
-                                <Check className="h-4 w-4 mr-1" />
-                                {t('markPaid')}
+                                <Check className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
@@ -893,6 +894,18 @@ export default function InvoicesTab() {
           }
           setDeleteConfirmOpen(false)
           setInvoiceToDelete(null)
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!confirmPaidInvoice}
+        onOpenChange={(open) => { if (!open) setConfirmPaidInvoice(null) }}
+        title={t('markPaidConfirmTitle')}
+        description={t('markPaidConfirmDescription')}
+        confirmLabel={t('markPaid')}
+        onConfirm={() => {
+          if (confirmPaidInvoice) markAsPaid(confirmPaidInvoice)
+          setConfirmPaidInvoice(null)
         }}
       />
     </div>

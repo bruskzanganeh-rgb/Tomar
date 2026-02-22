@@ -194,6 +194,8 @@ export default function GigsPage() {
   } | undefined>(undefined)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
+  const [confirmDeclineGig, setConfirmDeclineGig] = useState<string | null>(null)
+  const [confirmBatchComplete, setConfirmBatchComplete] = useState(false)
   const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
   const [showScrollHint, setShowScrollHint] = useState(true)
   const [memberFilter, setMemberFilter] = useState<string>('all')
@@ -464,7 +466,7 @@ export default function GigsPage() {
               {pastAccepted.length > 1 && (
                 <Button
                   size="sm"
-                  onClick={() => batchMarkCompleted(pastAccepted.map(g => g.id))}
+                  onClick={() => setConfirmBatchComplete(true)}
                 >
                   <Check className="h-4 w-4 mr-1" />
                   {t('markAllCompleted', { count: pastAccepted.length })}
@@ -545,7 +547,7 @@ export default function GigsPage() {
                             <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'accepted')}>
                               <Check className="h-4 w-4 text-green-600" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'declined')}>
+                            <Button variant="ghost" size="sm" onClick={() => setConfirmDeclineGig(gig.id)}>
                               <X className="h-4 w-4 text-red-600" />
                             </Button>
                           </div>
@@ -705,7 +707,7 @@ export default function GigsPage() {
                             {gig.status === 'pending' && (
                               <>
                                 <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-3.5 w-3.5 text-green-600" /></Button>
-                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => updateStatus(gig.id, 'declined')}><X className="h-3.5 w-3.5 text-red-600" /></Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setConfirmDeclineGig(gig.id)}><X className="h-3.5 w-3.5 text-red-600" /></Button>
                               </>
                             )}
                             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
@@ -791,7 +793,7 @@ export default function GigsPage() {
                                 {gig.status === 'pending' && (
                                   <>
                                     <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-4 w-4 text-green-600" /></Button>
-                                    <Button variant="ghost" size="sm" onClick={() => updateStatus(gig.id, 'declined')}><X className="h-4 w-4 text-red-600" /></Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setConfirmDeclineGig(gig.id)}><X className="h-4 w-4 text-red-600" /></Button>
                                   </>
                                 )}
                                 {gig.status === 'accepted' && (
@@ -1494,6 +1496,31 @@ export default function GigsPage() {
           }
           setDeleteConfirmOpen(false)
           setGigToDelete(null)
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeclineGig}
+        onOpenChange={(open) => { if (!open) setConfirmDeclineGig(null) }}
+        title={t('declineConfirmTitle')}
+        description={t('declineConfirmDescription')}
+        confirmLabel={t('decline')}
+        variant="destructive"
+        onConfirm={() => {
+          if (confirmDeclineGig) updateStatus(confirmDeclineGig, 'declined')
+          setConfirmDeclineGig(null)
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmBatchComplete}
+        onOpenChange={setConfirmBatchComplete}
+        title={t('batchCompleteConfirmTitle')}
+        description={t('batchCompleteConfirmDescription', { count: pastAccepted.length })}
+        confirmLabel={t('markAllCompleted')}
+        onConfirm={() => {
+          batchMarkCompleted(pastAccepted.map(g => g.id))
+          setConfirmBatchComplete(false)
         }}
       />
     </div>
