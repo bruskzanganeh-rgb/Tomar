@@ -226,7 +226,7 @@ export function EditInvoiceDialog({
           {/* 2-column layout: PDF | Form */}
           <div className="flex gap-6">
             {/* Left column: PDF preview */}
-            <div className="w-64 shrink-0 space-y-3">
+            <div className="hidden md:block w-64 shrink-0 space-y-3">
               <Label className="text-sm font-medium">{t('originalPdf')}</Label>
 
               {pdfLoading ? (
@@ -265,7 +265,7 @@ export function EditInvoiceDialog({
             </div>
 
             {/* Right column: Form fields */}
-            <div className="flex-1 grid grid-cols-2 gap-4">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="invoice_number">{t('invoiceNumber')}</Label>
                 <Input

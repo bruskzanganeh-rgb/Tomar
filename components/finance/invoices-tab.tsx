@@ -498,16 +498,16 @@ export default function InvoicesTab() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10"></TableHead>
-                    <TableHead>{tGig('date')}</TableHead>
-                    <TableHead>{tGig('client')}</TableHead>
-                    <TableHead>{tGig('project')}</TableHead>
-                    <TableHead>{tGig('type')}</TableHead>
-                    <TableHead>{tGig('fee')}</TableHead>
-                    <TableHead className="text-right">{tGig('action')}</TableHead>
+                    <TableHead className="w-8"></TableHead>
+                    <TableHead className="w-[18%]">{tGig('date')}</TableHead>
+                    <TableHead className="w-[22%]">{tGig('client')}</TableHead>
+                    <TableHead className="w-[20%]">{tGig('project')}</TableHead>
+                    <TableHead className="w-[10%]">{tGig('type')}</TableHead>
+                    <TableHead className="w-[12%]">{tGig('fee')}</TableHead>
+                    <TableHead className="w-[14%] text-right">{tGig('action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -533,7 +533,7 @@ export default function InvoicesTab() {
                           : format(new Date(gig.date), 'PPP', { locale: dateLocale })}
                       </TableCell>
                       <TableCell className="font-medium">{gig.client_name}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground truncate" title={gig.project_name || undefined}>
                         {gig.project_name || '-'}
                       </TableCell>
                       <TableCell>
@@ -555,9 +555,10 @@ export default function InvoicesTab() {
                             setSelectedPendingGigIds(new Set())
                             setShowCreateDialog(true)
                           }}
+                          title={t('createInvoice')}
                         >
-                          <FileText className="h-4 w-4 mr-1" />
-                          {t('createInvoice')}
+                          <FileText className="h-4 w-4 xl:mr-1" />
+                          <span className="hidden xl:inline">{t('createInvoice')}</span>
                         </Button>
                       </TableCell>
                     </TableRow>

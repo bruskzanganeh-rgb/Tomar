@@ -127,7 +127,7 @@ export function AvailableWeeks() {
   const totalWeeks = weeks.length
 
   return (
-    <Card className="h-full min-h-0 flex flex-col overflow-hidden max-h-[480px] md:max-h-none" style={{ minHeight: 0 }}>
+    <Card className="h-full min-h-0 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-1.5">
@@ -197,10 +197,10 @@ export function AvailableWeeks() {
               </div>
             </div>
 
-            <div className="flex-1 relative min-h-0">
+            <div className="md:flex-1 relative min-h-0">
               <div
                 ref={scrollContainerRef}
-                className="absolute inset-0 overflow-y-auto space-y-1 pr-1"
+                className="max-h-[300px] overflow-y-auto md:max-h-none md:absolute md:inset-0 space-y-1 pr-1"
               >
                 {weeks.map((week, index) => {
                   const style = getStatusStyle(week.status)
