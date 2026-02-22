@@ -36,13 +36,23 @@ export function UserMenu() {
 
       setUserEmail(session.user.email || '')
 
-      const [{ data: company }, { data: admin }] = await Promise.all([
-        supabase.from('company_settings').select('company_name').single(),
+      const [{ data: membership }, { data: admin }] = await Promise.all([
+        supabase.from('company_members').select('company_id').single(),
         supabase.rpc('is_admin', { uid: session.user.id }),
       ])
 
+      let companyName = ''
+      if (membership) {
+        const { data: comp } = await supabase
+          .from('companies')
+          .select('company_name')
+          .eq('id', membership.company_id)
+          .single()
+        companyName = comp?.company_name || ''
+      }
+
       if (!cancelled) {
-        setCompanyName(company?.company_name || '')
+        setCompanyName(companyName)
         setIsAdmin(!!admin)
       }
     }

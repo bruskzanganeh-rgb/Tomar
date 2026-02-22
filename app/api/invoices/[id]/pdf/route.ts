@@ -41,7 +41,6 @@ export async function GET(
         client:clients(name, org_number, address, payment_terms, reference_person, invoice_language)
       `)
       .eq('id', id)
-      .eq('user_id', user.id)
       .single()
 
     if (invoiceError || !invoice) {
@@ -51,11 +50,17 @@ export async function GET(
       )
     }
 
-    // Fetch company settings - scoped to user
-    const { data: company, error: companyError } = await supabase
-      .from('company_settings')
-      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
+    // Fetch company info from companies table
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
       .eq('user_id', user.id)
+      .single()
+
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
+      .eq('id', membership?.company_id)
       .single()
 
     if (companyError || !company) {
@@ -92,7 +97,7 @@ export async function GET(
       .eq('user_id', user.id)
       .single()
 
-    const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+    const isPro = (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
     showBranding = !isPro
 
     // Find sponsor if free user

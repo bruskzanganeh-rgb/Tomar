@@ -9,6 +9,7 @@ export const completeOnboardingSchema = z.object({
     phone: z.string().optional(),
     bank_account: z.string().optional(),
     base_currency: z.string().optional(),
+    country_code: z.string().optional(),
   }),
   instruments: z.array(z.string()).optional(),
 })

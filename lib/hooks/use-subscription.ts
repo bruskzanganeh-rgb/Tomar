@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type Subscription = {
   id: string
-  plan: 'free' | 'pro'
+  plan: 'free' | 'pro' | 'team'
   status: string
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
@@ -91,7 +91,8 @@ export function useSubscription() {
     setLoading(false)
   }
 
-  const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+  const isPro = (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
+  const isTeam = subscription?.plan === 'team' && subscription?.status === 'active'
 
   const limits = {
     invoices: isPro ? Infinity : freeLimits.invoices,
@@ -106,6 +107,7 @@ export function useSubscription() {
     usage,
     loading,
     isPro,
+    isTeam,
     limits,
     canCreateInvoice,
     canScanReceipt,

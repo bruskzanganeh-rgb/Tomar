@@ -1,6 +1,6 @@
 import { createClient } from './client'
 
-export type AttachmentCategory = 'gig_info' | 'invoice_doc'
+export type AttachmentCategory = 'gig_info' | 'invoice_doc' | 'schedule'
 
 export type GigAttachment = {
   id: string

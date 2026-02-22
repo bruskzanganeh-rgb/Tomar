@@ -12,6 +12,7 @@ import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
+import { useCompany } from '@/lib/hooks/use-company'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { format } from 'date-fns'
@@ -32,6 +33,7 @@ type Gig = {
   client_id: string | null
   gig_type_id: string
   position_id: string | null
+  user_id: string
   client: { name: string; payment_terms: number } | null
   gig_type: { name: string; color: string | null; vat_rate: number } | null
   position: { name: string } | null
@@ -85,6 +87,9 @@ export default function CalendarPage() {
   const tToast = useTranslations('toast')
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
+  const tTeam = useTranslations('team')
+  const { company, members } = useCompany()
+  const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
 
   const [gigs, setGigs] = useState<Gig[]>([])
   const [loading, setLoading] = useState(true)
@@ -100,11 +105,24 @@ export default function CalendarPage() {
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [preselectedDate, setPreselectedDate] = useState<Date | undefined>(undefined)
+  const [memberFilter, setMemberFilter] = useState<string>('all')
+  const [currentUserId, setCurrentUserId] = useState<string>('')
   const supabase = createClient()
 
   useEffect(() => {
     loadGigs()
   }, [])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [])
+
+  function getMemberLabel(userId: string): string {
+    if (userId === currentUserId) return tTeam('me')
+    return userId.slice(0, 6)
+  }
 
   useEffect(() => {
     if (selectedGig) {
@@ -203,6 +221,7 @@ export default function CalendarPage() {
     const dateStr = formatDateLocal(date)
 
     return gigs.filter(gig => {
+      if (memberFilter !== 'all' && gig.user_id !== memberFilter) return false
       // If gig has specific dates in gig_dates, use those
       if (gig.gig_dates && gig.gig_dates.length > 0) {
         return gig.gig_dates.some(gd => gd.date === dateStr)
@@ -236,6 +255,7 @@ export default function CalendarPage() {
   // Get gigs for a specific month (for year view)
   function getGigsForMonth(year: number, month: number): Gig[] {
     return gigs.filter(gig => {
+      if (memberFilter !== 'all' && gig.user_id !== memberFilter) return false
       if (gig.gig_dates && gig.gig_dates.length > 0) {
         return gig.gig_dates.some(gd => {
           const d = new Date(gd.date + 'T12:00:00')
@@ -308,6 +328,29 @@ export default function CalendarPage() {
                 ))}
               </div>
             </div>
+            {isSharedMode && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={memberFilter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setMemberFilter('all')}
+                >
+                  {tTeam('allMembers')}
+                </Button>
+                {members.map(m => (
+                  <Button
+                    key={m.user_id}
+                    variant={memberFilter === m.user_id ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setMemberFilter(m.user_id)}
+                  >
+                    {getMemberLabel(m.user_id)}
+                  </Button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg border overflow-hidden">
                 <Button

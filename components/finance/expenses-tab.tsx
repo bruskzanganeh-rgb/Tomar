@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useCompany } from '@/lib/hooks/use-company'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -47,6 +48,7 @@ type Expense = {
   amount_base: number | null
   category: string | null
   notes: string | null
+  user_id: string
   attachment_url: string | null
   gig_id: string | null
   gig: {
@@ -73,6 +75,10 @@ export default function ExpensesTab() {
   const tg = useTranslations('gig')
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
+  const tTeam = useTranslations('team')
+  const { company, members } = useCompany()
+  const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
+  const [currentUserId, setCurrentUserId] = useState<string>('')
 
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -87,6 +93,17 @@ export default function ExpensesTab() {
   const [previewLoading, setPreviewLoading] = useState(false)
 
   const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [])
+
+  function getMemberLabel(userId: string): string {
+    if (userId === currentUserId) return tTeam('me')
+    return userId.slice(0, 6)
+  }
 
   const { data: expenses = [], isLoading: loading, mutate: mutateExpenses } = useSWR<Expense[]>(
     'expenses-with-gigs',
@@ -350,7 +367,12 @@ export default function ExpensesTab() {
                       {format(new Date(expense.date), 'PPP', { locale: dateLocale })}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {expense.supplier}
+                      <div>
+                        {expense.supplier}
+                        {isSharedMode && expense.user_id !== currentUserId && (
+                          <div className="text-xs text-blue-600">{getMemberLabel(expense.user_id)}</div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {expense.category ? (

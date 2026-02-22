@@ -60,10 +60,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User and token parameters required' }, { status: 400 })
     }
 
-    // Verify token and get locale
+    // Verify token and get locale + calendar preference
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('calendar_token, locale')
+      .select('calendar_token, locale, calendar_show_all_members')
       .eq('user_id', userId)
       .single()
 
@@ -74,8 +74,14 @@ export async function GET(request: NextRequest) {
     const locale = settings.locale || 'sv'
     const labels = getLabels(locale)
 
-    // Fetch gigs with their individual dates and sessions
-    const { data: gigs, error } = await supabase
+    // Check company visibility setting
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', userId)
+      .single()
+
+    let gigQuery = supabase
       .from('gigs')
       .select(`
         id,
@@ -84,13 +90,33 @@ export async function GET(request: NextRequest) {
         fee,
         status,
         notes,
+        user_id,
         client:clients(name),
         gig_type:gig_types(name),
         gig_dates(date, sessions)
       `)
-      .eq('user_id', userId)
       .neq('status', 'declined')
       .order('date', { ascending: true })
+
+    if (membership) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('gig_visibility')
+        .eq('id', membership.company_id)
+        .single()
+
+      if (company?.gig_visibility === 'shared' && settings.calendar_show_all_members !== false) {
+        // Show all company gigs
+        gigQuery = gigQuery.eq('company_id', membership.company_id)
+      } else {
+        // Show only this user's gigs
+        gigQuery = gigQuery.eq('user_id', userId)
+      }
+    } else {
+      gigQuery = gigQuery.eq('user_id', userId)
+    }
+
+    const { data: gigs, error } = await gigQuery
 
     if (error) {
       console.error('Error fetching gigs:', error)

@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { getPlanFromPriceId } from '@/lib/stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-01-28.clover',
@@ -53,6 +54,8 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   if (!userId) return
 
   const subscriptionId = session.subscription as string
+  const plan = (session.metadata?.plan as 'pro' | 'team') || 'pro'
+  const companyId = session.metadata?.company_id || null
 
   // Fetch the Stripe subscription for period details
   const stripeSub = await stripe.subscriptions.retrieve(subscriptionId)
@@ -60,7 +63,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   await supabase
     .from('subscriptions')
     .update({
-      plan: 'pro',
+      plan,
       status: 'active',
       stripe_subscription_id: subscriptionId,
       stripe_price_id: stripeSub.items.data[0]?.price.id || null,
@@ -68,6 +71,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       current_period_end: stripeSub.ended_at
         ? new Date(stripeSub.ended_at * 1000).toISOString()
         : null,
+      ...(companyId ? { company_id: companyId } : {}),
     })
     .eq('user_id', userId)
 }
@@ -84,12 +88,15 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   if (!sub) return
 
   const isActive = ['active', 'trialing'].includes(subscription.status)
+  const priceId = subscription.items.data[0]?.price.id
+  const plan = isActive ? getPlanFromPriceId(priceId) : 'free'
 
   await supabase
     .from('subscriptions')
     .update({
-      plan: isActive ? 'pro' : 'free',
+      plan,
       status: subscription.status as any,
+      stripe_price_id: priceId || null,
       current_period_start: new Date(subscription.start_date * 1000).toISOString(),
       current_period_end: subscription.ended_at
         ? new Date(subscription.ended_at * 1000).toISOString()

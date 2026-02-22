@@ -9,9 +9,10 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Mail, Send, Crown, Globe, Key } from 'lucide-react'
+import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Mail, Send, Crown, Globe, Key, Users } from 'lucide-react'
 import { SubscriptionSettings } from '@/components/settings/subscription-settings'
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings'
+import { TeamSettings } from '@/components/settings/team-settings'
 import { Switch } from '@/components/ui/switch'
 import {
   Select,
@@ -65,6 +66,7 @@ export default function SettingsPage() {
   const [testingEmail, setTestingEmail] = useState(false)
   const [emailProvider, setEmailProvider] = useState<string>('platform')
   const [userId, setUserId] = useState<string>('')
+  const [companyId, setCompanyId] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const { isPro } = useSubscription()
@@ -105,18 +107,65 @@ export default function SettingsPage() {
 
   async function loadSettings() {
     setLoading(true)
-    const { data, error } = await supabase
+
+    // Load personal prefs from company_settings
+    const { data: personalSettings, error: psError } = await supabase
       .from('company_settings')
-      .select('*')
+      .select('id, locale, calendar_token')
       .single()
 
-    if (error) {
-      console.error('Error loading settings:', error)
-    } else {
-      setSettings(data)
-      setLogoPreview(data?.logo_url || null)
-      setEmailProvider(data?.email_provider || 'platform')
+    if (psError) {
+      console.error('Error loading personal settings:', psError)
+      setLoading(false)
+      return
     }
+
+    // Load company info from companies table
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .single()
+
+    if (membership) {
+      const { data: company, error: compError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', membership.company_id)
+        .single()
+
+      if (!compError && company) {
+        // Merge company info + personal prefs into settings state
+        setSettings({
+          id: personalSettings.id,
+          company_name: company.company_name,
+          org_number: company.org_number,
+          address: company.address,
+          email: company.email,
+          phone: company.phone,
+          bank_account: company.bank_account,
+          logo_url: company.logo_url,
+          vat_registration_number: company.vat_registration_number,
+          late_payment_interest_text: company.late_payment_interest_text,
+          show_logo_on_invoice: company.show_logo_on_invoice,
+          our_reference: company.our_reference,
+          smtp_host: company.smtp_host,
+          smtp_port: company.smtp_port,
+          smtp_user: company.smtp_user,
+          smtp_password: company.smtp_password,
+          smtp_from_email: company.smtp_from_email,
+          smtp_from_name: company.smtp_from_name,
+          base_currency: company.base_currency,
+          locale: personalSettings.locale || 'sv',
+          email_provider: company.email_provider,
+          country_code: company.country_code,
+          calendar_token: personalSettings.calendar_token,
+        })
+        setLogoPreview(company.logo_url || null)
+        setEmailProvider(company.email_provider || 'platform')
+        setCompanyId(membership.company_id)
+      }
+    }
+
     setLoading(false)
   }
 
@@ -124,30 +173,48 @@ export default function SettingsPage() {
     if (!settings) return
 
     setSaving(true)
+
+    // Save company info to companies table
+    if (companyId) {
+      const { error: compError } = await supabase
+        .from('companies')
+        .update({
+          company_name: settings.company_name,
+          org_number: settings.org_number,
+          address: settings.address,
+          email: settings.email,
+          phone: settings.phone,
+          bank_account: settings.bank_account,
+          logo_url: logoPreview,
+          vat_registration_number: settings.vat_registration_number,
+          late_payment_interest_text: settings.late_payment_interest_text,
+          show_logo_on_invoice: settings.show_logo_on_invoice,
+          our_reference: settings.our_reference,
+          smtp_host: settings.smtp_host,
+          smtp_port: settings.smtp_port,
+          smtp_user: settings.smtp_user,
+          smtp_password: settings.smtp_password,
+          smtp_from_email: settings.smtp_from_email,
+          smtp_from_name: settings.smtp_from_name,
+          base_currency: settings.base_currency,
+          email_provider: emailProvider,
+          country_code: settings.country_code,
+        })
+        .eq('id', companyId)
+
+      if (compError) {
+        console.error('Error saving company settings:', compError)
+        toast.error(tToast('settingsError', { error: compError.message }))
+        setSaving(false)
+        return
+      }
+    }
+
+    // Save personal prefs to company_settings
     const { error } = await supabase
       .from('company_settings')
       .update({
-        company_name: settings.company_name,
-        org_number: settings.org_number,
-        address: settings.address,
-        email: settings.email,
-        phone: settings.phone,
-        bank_account: settings.bank_account,
-        logo_url: logoPreview,
-        vat_registration_number: settings.vat_registration_number,
-        late_payment_interest_text: settings.late_payment_interest_text,
-        show_logo_on_invoice: settings.show_logo_on_invoice,
-        our_reference: settings.our_reference,
-        smtp_host: settings.smtp_host,
-        smtp_port: settings.smtp_port,
-        smtp_user: settings.smtp_user,
-        smtp_password: settings.smtp_password,
-        smtp_from_email: settings.smtp_from_email,
-        smtp_from_name: settings.smtp_from_name,
-        base_currency: settings.base_currency,
         locale: settings.locale,
-        email_provider: emailProvider,
-        country_code: settings.country_code,
       })
       .eq('id', settings.id)
 
@@ -256,6 +323,10 @@ export default function SettingsPage() {
         <TabsTrigger value="calendar" className="gap-2">
           <Calendar className="h-4 w-4" />
           {t('tabCalendar')}
+        </TabsTrigger>
+        <TabsTrigger value="team" className="gap-2">
+          <Users className="h-4 w-4" />
+          {t('tabTeam')}
         </TabsTrigger>
         <TabsTrigger value="api" className="gap-2">
           <Key className="h-4 w-4" />
@@ -871,6 +942,11 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+      </TabsContent>
+
+      {/* Team Tab */}
+      <TabsContent value="team">
+        <TeamSettings />
       </TabsContent>
 
       {/* API Tab */}

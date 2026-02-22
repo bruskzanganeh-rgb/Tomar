@@ -73,13 +73,22 @@ export function SendReminderDialog({
   async function loadCompanyAndPrefill() {
     if (!invoice) return
 
-    const { data: company } = await supabase
-      .from('company_settings')
-      .select('company_name, bank_account')
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
       .single()
 
-    const companyName = company?.company_name || ''
-    const bankAccount = company?.bank_account || ''
+    let companyName = ''
+    let bankAccount = ''
+    if (membership) {
+      const { data: comp } = await supabase
+        .from('companies')
+        .select('company_name, bank_account')
+        .eq('id', membership.company_id)
+        .single()
+      companyName = comp?.company_name || ''
+      bankAccount = comp?.bank_account || ''
+    }
     const clientLang = invoice.client.invoice_language || 'sv'
     const isEnglish = clientLang === 'en'
 

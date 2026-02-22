@@ -1,0 +1,95 @@
+'use client'
+
+import useSWR from 'swr'
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
+
+export type Company = {
+  id: string
+  company_name: string
+  org_number: string
+  address: string
+  email: string
+  phone: string
+  bank_account: string
+  logo_url: string | null
+  country_code: string
+  vat_registration_number: string | null
+  late_payment_interest_text: string | null
+  show_logo_on_invoice: boolean
+  our_reference: string | null
+  invoice_prefix: string
+  next_invoice_number: number
+  payment_terms_default: number
+  base_currency: string
+  email_provider: string | null
+  email_inbound_address: string | null
+  smtp_host: string | null
+  smtp_port: number | null
+  smtp_user: string | null
+  smtp_password: string | null
+  smtp_from_email: string | null
+  smtp_from_name: string | null
+  gig_visibility: 'personal' | 'shared'
+}
+
+export type CompanyMember = {
+  id: string
+  company_id: string
+  user_id: string
+  role: 'owner' | 'member'
+  joined_at: string
+}
+
+export function useCompany() {
+  const { data, error, isLoading, mutate } = useSWR('company', async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    // Get membership
+    const { data: membership, error: memError } = await supabase
+      .from('company_members')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (memError || !membership) return null
+
+    // Get company
+    const { data: company, error: compError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', membership.company_id)
+      .single()
+
+    if (compError || !company) return null
+
+    // Get all members
+    const { data: members } = await supabase
+      .from('company_members')
+      .select('*')
+      .eq('company_id', membership.company_id)
+      .order('joined_at')
+
+    return {
+      company: company as Company,
+      membership: membership as CompanyMember,
+      members: (members || []) as CompanyMember[],
+    }
+  }, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  })
+
+  return {
+    company: data?.company ?? null,
+    companyId: data?.company?.id ?? null,
+    role: data?.membership?.role ?? null,
+    isOwner: data?.membership?.role === 'owner',
+    members: data?.members ?? [],
+    loading: isLoading,
+    error,
+    mutate,
+  }
+}

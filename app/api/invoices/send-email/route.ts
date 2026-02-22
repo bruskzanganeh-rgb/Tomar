@@ -32,12 +32,11 @@ export async function POST(request: NextRequest) {
 
     const serviceSupabase = createAdminClient()
 
-    // Fetch invoice - verify ownership (include fields needed for PDF generation)
+    // Fetch invoice (RLS handles company scoping)
     const { data: invoice, error: fetchError } = await supabase
       .from('invoices')
       .select('*, client:clients(name, email, org_number, address, payment_terms, reference_person, invoice_language)')
       .eq('id', invoiceId)
-      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !invoice) {
@@ -51,15 +50,22 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    if (!subscription || subscription.plan !== 'pro' || subscription.status !== 'active') {
+    const isPaidPlan = (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
+    if (!isPaidPlan) {
       return NextResponse.json({ error: 'Pro plan required to send emails' }, { status: 403 })
     }
 
-    // Fetch company settings (include fields needed for PDF generation)
-    const { data: company, error: companyError } = await supabase
-      .from('company_settings')
-      .select('smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name, email_provider, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
+    // Fetch company info from companies table
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
       .eq('user_id', user.id)
+      .single()
+
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name, email_provider, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
+      .eq('id', membership?.company_id)
       .single()
 
     if (companyError || !company) {
@@ -78,7 +84,7 @@ export async function POST(request: NextRequest) {
       payment_terms: number; reference_person: string | null; invoice_language: string | null
     }
 
-    const isPro = subscription?.plan === 'pro' && subscription?.status === 'active'
+    const isPro = isPaidPlan
 
     const { data: brandingConfig } = await supabase
       .from('platform_config')

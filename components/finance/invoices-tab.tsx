@@ -1,7 +1,8 @@
 "use client"
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useCompany } from '@/lib/hooks/use-company'
 import useSWR from 'swr'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { createClient } from '@/lib/supabase/client'
@@ -46,6 +47,7 @@ type Invoice = {
   status: string
   gig_id: string | null
   client_id: string
+  user_id: string
   original_pdf_url: string | null
   imported_from_pdf: boolean
   client: { id: string; name: string; email: string | null; invoice_language: string | null }
@@ -99,6 +101,10 @@ export default function InvoicesTab() {
   const tToast = useTranslations('toast')
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
+  const tTeam = useTranslations('team')
+  const { company, members } = useCompany()
+  const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
+  const [currentUserId, setCurrentUserId] = useState<string>('')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -113,6 +119,17 @@ export default function InvoicesTab() {
   const supabase = createClient()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollHint, setShowScrollHint] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [])
+
+  function getMemberLabel(userId: string): string {
+    if (userId === currentUserId) return tTeam('me')
+    return userId.slice(0, 6)
+  }
 
   // SWR: Invoices + reminder counts
   const { data: invoiceData, isLoading: loading, mutate: mutateInvoices } = useSWR(
@@ -594,6 +611,9 @@ export default function InvoicesTab() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate mt-0.5">{invoice.client.name}</p>
+                      {isSharedMode && invoice.user_id !== currentUserId && (
+                        <p className="text-xs text-blue-600">{getMemberLabel(invoice.user_id)}</p>
+                      )}
                     </div>
                     <span className="font-semibold text-sm whitespace-nowrap">
                       {formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}
@@ -671,7 +691,14 @@ export default function InvoicesTab() {
                         <TableCell className="font-medium">
                           #{invoice.invoice_number}
                         </TableCell>
-                        <TableCell>{invoice.client.name}</TableCell>
+                        <TableCell>
+                          <div>
+                            {invoice.client.name}
+                            {isSharedMode && invoice.user_id !== currentUserId && (
+                              <div className="text-xs text-blue-600">{getMemberLabel(invoice.user_id)}</div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {format(new Date(invoice.invoice_date), 'PPP', {
                             locale: dateLocale,

@@ -239,11 +239,18 @@ export function CreateInvoiceDialog({
   }
 
   async function loadCompanySettings() {
-    const { data } = await supabase
-      .from('company_settings')
-      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code')
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
       .single()
-    setCompanySettings(data)
+    if (membership) {
+      const { data } = await supabase
+        .from('companies')
+        .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code')
+        .eq('id', membership.company_id)
+        .single()
+      setCompanySettings(data)
+    }
   }
 
   async function loadNextInvoiceNumber() {

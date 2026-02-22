@@ -20,7 +20,7 @@ import {
   type GigAttachment,
   type AttachmentCategory
 } from '@/lib/supabase/storage'
-import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCheck } from 'lucide-react'
+import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCheck, CalendarDays } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -30,6 +30,7 @@ type CategoryConfig = Record<AttachmentCategory, { label: string; description: s
 const categoryColors: Record<AttachmentCategory, { color: string; icon: typeof FileText }> = {
   gig_info: { color: 'bg-blue-100 text-blue-800', icon: Music },
   invoice_doc: { color: 'bg-green-100 text-green-800', icon: FileCheck },
+  schedule: { color: 'bg-purple-100 text-purple-800', icon: CalendarDays },
 }
 
 type GigAttachmentsProps = {
@@ -119,6 +120,11 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       description: t('invoiceDocDescription'),
       ...categoryColors.invoice_doc,
     },
+    schedule: {
+      label: t('schedule'),
+      description: t('scheduleDescription'),
+      ...categoryColors.schedule,
+    },
   }
 
   useEffect(() => {
@@ -205,6 +211,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   // Group attachments by category
   const gigInfoAttachments = attachments.filter(a => a.category === 'gig_info' || !a.category)
   const invoiceDocAttachments = attachments.filter(a => a.category === 'invoice_doc')
+  const scheduleAttachments = attachments.filter(a => a.category === 'schedule')
 
   return (
     <div className="space-y-3">
@@ -230,6 +237,12 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                 <span className="flex items-center gap-1">
                   <FileCheck className="h-3 w-3" />
                   {t('invoiceDoc')}
+                </span>
+              </SelectItem>
+              <SelectItem value="schedule">
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3" />
+                  {t('schedule')}
                 </span>
               </SelectItem>
             </SelectContent>
@@ -307,6 +320,29 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                 <span>{t('invoiceDoc')} ({invoiceDocAttachments.length})</span>
               </div>
               {invoiceDocAttachments.map(attachment => (
+                <AttachmentRow
+                  key={attachment.id}
+                  attachment={attachment}
+                  onDownload={handleDownload}
+                  onDelete={confirmDelete}
+                  disabled={disabled}
+                  categoryConfig={categoryConfig}
+                  openFileLabel={t('openFile')}
+                  deleteFileLabel={t('deleteFile')}
+                  formatLocale={formatLocale}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Schedule section */}
+          {scheduleAttachments.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CalendarDays className="h-3 w-3" />
+                <span>{t('schedule')} ({scheduleAttachments.length})</span>
+              </div>
+              {scheduleAttachments.map(attachment => (
                 <AttachmentRow
                   key={attachment.id}
                   attachment={attachment}

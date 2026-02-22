@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
   }
 
-  const { priceId } = parsed.data
+  const { priceId, plan } = parsed.data
 
   // Get or create Stripe customer
   const { data: subscription } = await supabase
@@ -45,6 +45,21 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
   }
 
+  // For team plan, verify the user is a company owner
+  let companyId: string | undefined
+  if (plan === 'team') {
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!membership || membership.role !== 'owner') {
+      return NextResponse.json({ error: 'Only company owners can subscribe to team plan' }, { status: 403 })
+    }
+    companyId = membership.company_id
+  }
+
   // Create Checkout Session
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -53,7 +68,11 @@ export async function POST(request: Request) {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?upgrade=success`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?upgrade=canceled`,
-    metadata: { user_id: user.id },
+    metadata: {
+      user_id: user.id,
+      plan: plan || 'pro',
+      ...(companyId ? { company_id: companyId } : {}),
+    },
   })
 
   return NextResponse.json({ url: session.url })

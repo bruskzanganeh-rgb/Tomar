@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSubscription } from '@/lib/hooks/use-subscription'
+import { useCompany } from '@/lib/hooks/use-company'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertTriangle, Check, Crown, Info, Loader2 } from 'lucide-react'
+import { AlertTriangle, Check, Crown, Info, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -17,7 +18,8 @@ export function SubscriptionSettings() {
   const tc = useTranslations('common')
   const tToast = useTranslations('toast')
 
-  const { subscription, usage, isPro, limits, loading, refresh } = useSubscription()
+  const { subscription, usage, isPro, isTeam, limits, loading, refresh } = useSubscription()
+  const { isOwner } = useCompany()
   const [upgrading, setUpgrading] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [reactivating, setReactivating] = useState(false)
@@ -32,13 +34,13 @@ export function SubscriptionSettings() {
     }
   }, [searchParams])
 
-  async function handleUpgrade(priceId: string) {
+  async function handleUpgrade(priceId: string, plan: 'pro' | 'team' = 'pro') {
     setUpgrading(true)
     try {
       const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ priceId, plan }),
       })
 
       const data = await res.json()
@@ -93,6 +95,8 @@ export function SubscriptionSettings() {
     )
   }
 
+  const planLabel = isTeam ? t('team') : isPro ? t('pro') : t('free')
+
   return (
     <div className="space-y-6">
       {/* Current plan */}
@@ -101,7 +105,12 @@ export function SubscriptionSettings() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">{t('yourPlan')}</CardTitle>
             <Badge variant={isPro ? 'default' : 'secondary'} className="text-xs">
-              {isPro ? (
+              {isTeam ? (
+                <>
+                  <Users className="h-3 w-3 mr-1" />
+                  {t('team')}
+                </>
+              ) : isPro ? (
                 <>
                   <Crown className="h-3 w-3 mr-1" />
                   {t('pro')}
@@ -116,7 +125,7 @@ export function SubscriptionSettings() {
           {isPro ? (
             <div>
               <p className="text-sm text-muted-foreground mb-2">
-                {t('unlimitedAccess')}
+                {isTeam ? t('teamAccess') : t('unlimitedAccess')}
               </p>
               {subscription?.current_period_end && (
                 <p className="text-xs text-muted-foreground">
@@ -231,6 +240,7 @@ export function SubscriptionSettings() {
         onConfirm={handleCancel}
       />
 
+      {/* Pro upgrade cards (shown when not Pro) */}
       {!isPro && (
         <div className="grid md:grid-cols-2 gap-4">
           <Card>
@@ -257,7 +267,7 @@ export function SubscriptionSettings() {
                 </li>
               </ul>
               <Button
-                onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '')}
+                onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '', 'pro')}
                 disabled={upgrading}
                 className="w-full"
                 variant="outline"
@@ -295,7 +305,7 @@ export function SubscriptionSettings() {
                 </li>
               </ul>
               <Button
-                onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '')}
+                onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '', 'pro')}
                 disabled={upgrading}
                 className="w-full"
               >
@@ -304,6 +314,92 @@ export function SubscriptionSettings() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Team upgrade cards (shown to owners who are not on Team plan) */}
+      {isOwner && !isTeam && (
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('teamPlanTitle')}</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {t('teamMonthly')}
+                </CardTitle>
+                <CardDescription>
+                  <span className="text-2xl font-bold text-foreground">99 kr</span>
+                  <span className="text-muted-foreground"> {t('perMonth')}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 mb-4">
+                  <li className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t('everythingInPro')}
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t('inviteMembers')}
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t('sharedCalendar')}
+                  </li>
+                </ul>
+                <Button
+                  onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '', 'team')}
+                  disabled={upgrading}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {upgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {isPro ? t('upgradeToTeam') : t('upgrade')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    {t('teamYearly')}
+                  </CardTitle>
+                  <Badge className="text-[10px]">{t('save15')}</Badge>
+                </div>
+                <CardDescription>
+                  <span className="text-2xl font-bold text-foreground">999 kr</span>
+                  <span className="text-muted-foreground"> {t('perYear')}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 mb-4">
+                  <li className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t('everythingInPro')}
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t('inviteMembers')}
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t('sharedCalendar')}
+                  </li>
+                </ul>
+                <Button
+                  onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '', 'team')}
+                  disabled={upgrading}
+                  className="w-full"
+                >
+                  {upgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {isPro ? t('upgradeToTeam') : t('upgrade')}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>

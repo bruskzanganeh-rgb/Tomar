@@ -25,6 +25,7 @@ import { Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { GigAttachments } from './gig-attachments'
+import { uploadGigAttachment } from '@/lib/supabase/storage'
 import { GigReceipts } from './gig-receipts'
 import { MultiDayDatePicker } from '@/components/ui/multi-day-date-picker'
 import { format } from 'date-fns'
@@ -114,6 +115,7 @@ export function GigDialog({
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('SEK')
   const [scheduleTexts, setScheduleTexts] = useState<Record<string, string>>({})
   const [scanningSchedule, setScanningSchedule] = useState(false)
+  const [scheduleFile, setScheduleFile] = useState<File | null>(null)
   const scheduleFileRef = useRef<HTMLInputElement>(null)
 
   const supabase = createClient()
@@ -142,6 +144,7 @@ export function GigDialog({
         })
         setSelectedDates(initialDate ? [initialDate] : [])
         setScheduleTexts({})
+        setScheduleFile(null)
       }
     }
   }, [open])
@@ -194,14 +197,21 @@ export function GigDialog({
   }
 
   async function loadBaseCurrency() {
-    const { data } = await supabase
-      .from('company_settings')
-      .select('base_currency')
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
       .single()
-    if (data?.base_currency) {
-      setBaseCurrency(data.base_currency as SupportedCurrency)
-      if (!gig) {
-        setFormData(f => ({ ...f, currency: data.base_currency }))
+    if (membership) {
+      const { data } = await supabase
+        .from('companies')
+        .select('base_currency')
+        .eq('id', membership.company_id)
+        .single()
+      if (data?.base_currency) {
+        setBaseCurrency(data.base_currency as SupportedCurrency)
+        if (!gig) {
+          setFormData(f => ({ ...f, currency: data.base_currency }))
+        }
       }
     }
   }
@@ -361,6 +371,15 @@ export function GigDialog({
       if (datesError) {
         console.error('Error updating gig dates:', datesError)
       }
+
+      // Upload schedule file if imported
+      if (scheduleFile) {
+        try {
+          await uploadGigAttachment(gig.id, scheduleFile, 'schedule')
+        } catch (err) {
+          console.error('Schedule file upload error:', err)
+        }
+      }
     } else {
       // Create new gig
       const { data: newGig, error } = await supabase
@@ -381,6 +400,15 @@ export function GigDialog({
       const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
       if (datesError) {
         console.error('Error inserting gig dates:', datesError)
+      }
+
+      // Upload schedule file if imported
+      if (scheduleFile) {
+        try {
+          await uploadGigAttachment(newGig.id, scheduleFile, 'schedule')
+        } catch (err) {
+          console.error('Schedule file upload error:', err)
+        }
       }
 
       toast.success(tToast('gigCreated'))
@@ -437,6 +465,7 @@ export function GigDialog({
         setFormData(f => ({ ...f, venue: result.venue }))
       }
 
+      setScheduleFile(file)
       toast.success(tToast('scheduleScanned') || 'Schema importerat')
     } catch (err) {
       console.error('Schedule scan error:', err)

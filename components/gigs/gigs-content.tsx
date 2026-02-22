@@ -32,6 +32,7 @@ import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
+import { useCompany } from '@/lib/hooks/use-company'
 
 function fmtFee(amount: number, currency?: string | null): string {
   return formatCurrency(amount, (currency || 'SEK') as SupportedCurrency)
@@ -98,6 +99,7 @@ type Gig = {
   position_id: string | null
   currency: string | null
   fee_base: number | null
+  user_id: string
   client: { name: string; payment_terms: number } | null
   gig_type: { name: string; vat_rate: number; color: string | null }
   position: { name: string } | null
@@ -168,8 +170,11 @@ export default function GigsPage() {
   const tStatus = useTranslations('status')
   const tc = useTranslations('common')
   const tToast = useTranslations('toast')
+  const tTeam = useTranslations('team')
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
+  const { company, members } = useCompany()
+  const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingGig, setEditingGig] = useState<Gig | null>(null)
@@ -190,6 +195,8 @@ export default function GigsPage() {
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
   const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
   const [showScrollHint, setShowScrollHint] = useState(true)
+  const [memberFilter, setMemberFilter] = useState<string>('all')
+  const [currentUserId, setCurrentUserId] = useState<string>('')
   const supabase = createClient()
   const upcomingScrollRef = useRef<HTMLDivElement>(null)
   const historyScrollRef = useRef<HTMLDivElement>(null)
@@ -202,6 +209,7 @@ export default function GigsPage() {
         .from('gigs')
         .select(`
           *,
+          user_id,
           client:clients(name, payment_terms),
           gig_type:gig_types(name, vat_rate, color),
           position:positions(name),
@@ -216,6 +224,17 @@ export default function GigsPage() {
   )
 
   const loadGigs = useCallback(() => mutateGigs(), [mutateGigs])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [])
+
+  function getMemberLabel(userId: string): string {
+    if (userId === currentUserId) return tTeam('me')
+    return userId.slice(0, 6)
+  }
 
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget
@@ -376,6 +395,7 @@ export default function GigsPage() {
   const pastUnanswered = pastNeedingAction.filter(g => g.status === 'pending' || g.status === 'tentative')
 
   const matchesSearch = (g: any) => {
+    if (memberFilter !== 'all' && g.user_id !== memberFilter) return false
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
     return (
@@ -388,17 +408,17 @@ export default function GigsPage() {
 
   const sortedUpcoming = useMemo(() =>
     sortGigs(gigs.filter(g => activeStatuses.has(g.status) && !gigHasPassed(g) && matchesSearch(g)), upcomingSort),
-    [gigs, upcomingSort, searchQuery]
+    [gigs, upcomingSort, searchQuery, memberFilter]
   )
 
   const sortedHistory = useMemo(() =>
     sortGigs(gigs.filter(g => historyStatuses.has(g.status) && matchesSearch(g)), historySort),
-    [gigs, historySort, searchQuery]
+    [gigs, historySort, searchQuery, memberFilter]
   )
 
   const sortedDeclined = useMemo(() =>
     sortGigs(gigs.filter(g => g.status === 'declined' && matchesSearch(g)), declinedSort),
-    [gigs, declinedSort, searchQuery]
+    [gigs, declinedSort, searchQuery, memberFilter]
   )
 
   const pipelineCounts = useMemo(() => ({
@@ -491,6 +511,9 @@ export default function GigsPage() {
                           {gig.project_name && (
                             <div className="text-sm text-muted-foreground truncate max-w-[200px]">{gig.project_name}</div>
                           )}
+                          {isSharedMode && gig.user_id !== currentUserId && (
+                            <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
@@ -554,14 +577,39 @@ export default function GigsPage() {
                   {t('declined')} ({sortedDeclined.length})
                 </TabsTrigger>
               </TabsList>
-              <div className="relative flex-1 min-w-[140px] max-w-[240px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={tc('search') + '...'}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-sm"
-                />
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="relative min-w-[140px] max-w-[240px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder={tc('search') + '...'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
+                {isSharedMode && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant={memberFilter === 'all' ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => setMemberFilter('all')}
+                    >
+                      {tTeam('allMembers')}
+                    </Button>
+                    {members.map(m => (
+                      <Button
+                        key={m.user_id}
+                        variant={memberFilter === m.user_id ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => setMemberFilter(m.user_id)}
+                      >
+                        {getMemberLabel(m.user_id)}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button onClick={() => setShowCreateDialog(true)} size="sm">
                 <Plus className="h-4 w-4 sm:mr-2" />
@@ -630,6 +678,9 @@ export default function GigsPage() {
                             <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
                             <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
                             {gig.project_name && <p className="text-xs text-muted-foreground truncate">{gig.project_name}</p>}
+                            {isSharedMode && gig.user_id !== currentUserId && (
+                              <p className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</p>
+                            )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
@@ -696,6 +747,9 @@ export default function GigsPage() {
                                 {formatGigDates(gig, dateLocale)}
                                 {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
                                 {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
+                                {isSharedMode && gig.user_id !== currentUserId && (
+                                  <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
@@ -782,6 +836,9 @@ export default function GigsPage() {
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
                             <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
+                            {isSharedMode && gig.user_id !== currentUserId && (
+                              <p className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</p>
+                            )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
@@ -842,6 +899,9 @@ export default function GigsPage() {
                                 {formatGigDates(gig, dateLocale)}
                                 {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
                                 {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
+                                {isSharedMode && gig.user_id !== currentUserId && (
+                                  <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
@@ -907,6 +967,9 @@ export default function GigsPage() {
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
                             <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
+                            {isSharedMode && gig.user_id !== currentUserId && (
+                              <p className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</p>
+                            )}
                           </div>
                           <div className="text-right shrink-0">
                             <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
@@ -967,6 +1030,9 @@ export default function GigsPage() {
                                 {formatGigDates(gig, dateLocale)}
                                 {gig.total_days > 1 && <span className="text-xs text-muted-foreground ml-1">({gig.total_days} {tc('days')})</span>}
                                 {gig.project_name && <div className="text-sm text-muted-foreground truncate max-w-[250px]" title={gig.project_name}>{gig.project_name}</div>}
+                                {isSharedMode && gig.user_id !== currentUserId && (
+                                  <div className="text-xs text-blue-600">{getMemberLabel(gig.user_id)}</div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
@@ -1119,6 +1185,9 @@ export default function GigsPage() {
                         {selectedGig.gig_type.name}
                         {selectedGig.position && ` • ${selectedGig.position.name}`}
                       </span>
+                      {isSharedMode && selectedGig.user_id !== currentUserId && (
+                        <span className="text-xs text-blue-600">{getMemberLabel(selectedGig.user_id)}</span>
+                      )}
                     </div>
                   </div>
                 </div>
