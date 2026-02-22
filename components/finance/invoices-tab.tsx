@@ -31,6 +31,7 @@ import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
+import { PageTransition } from '@/components/ui/page-transition'
 
 type Invoice = {
   id: string
@@ -375,6 +376,7 @@ export default function InvoicesTab() {
   }
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="relative w-full max-w-xs">
@@ -891,5 +893,6 @@ export default function InvoicesTab() {
         }}
       />
     </div>
+    </PageTransition>
   )
 }

@@ -25,6 +25,8 @@ import { toast } from 'sonner'
 import { useTranslations, useLocale } from 'next-intl'
 import { useSubscription } from '@/lib/hooks/use-subscription'
 import { COUNTRY_CONFIGS, getCountryConfig } from '@/lib/country-config'
+import { PageTransition } from '@/components/ui/page-transition'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type CompanySettings = {
   id: string
@@ -303,38 +305,55 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">{tc('loading')}</div>
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-20 rounded-md" />
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border p-6 space-y-4">
+              <Skeleton className="h-5 w-32" />
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
+    <PageTransition>
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="company" className="gap-2">
-          <Building2 className="h-4 w-4" />
-          {t('tabCompany')}
+      <TabsList className="w-full overflow-x-auto justify-start">
+        <TabsTrigger value="company" className="gap-2" title={t('tabCompany')}>
+          <Building2 className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline">{t('tabCompany')}</span>
         </TabsTrigger>
-        <TabsTrigger value="email" className="gap-2">
-          <Mail className="h-4 w-4" />
-          {t('tabEmail')}
+        <TabsTrigger value="email" className="gap-2" title={t('tabEmail')}>
+          <Mail className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline">{t('tabEmail')}</span>
         </TabsTrigger>
-        <TabsTrigger value="calendar" className="gap-2">
-          <Calendar className="h-4 w-4" />
-          {t('tabCalendar')}
+        <TabsTrigger value="calendar" className="gap-2" title={t('tabCalendar')}>
+          <Calendar className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline">{t('tabCalendar')}</span>
         </TabsTrigger>
-        <TabsTrigger value="team" className="gap-2">
-          <Users className="h-4 w-4" />
-          {t('tabTeam')}
+        <TabsTrigger value="team" className="gap-2" title={t('tabTeam')}>
+          <Users className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline">{t('tabTeam')}</span>
         </TabsTrigger>
-        <TabsTrigger value="api" className="gap-2">
-          <Key className="h-4 w-4" />
-          API
+        <TabsTrigger value="api" className="gap-2" title="API">
+          <Key className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline">API</span>
         </TabsTrigger>
-        <TabsTrigger value="subscription" className="gap-2">
-          <Crown className="h-4 w-4" />
-          {t('tabSubscription')}
+        <TabsTrigger value="subscription" className="gap-2" title={t('tabSubscription')}>
+          <Crown className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline">{t('tabSubscription')}</span>
         </TabsTrigger>
       </TabsList>
 
@@ -959,5 +978,6 @@ export default function SettingsPage() {
         <SubscriptionSettings />
       </TabsContent>
     </Tabs>
+    </PageTransition>
   )
 }

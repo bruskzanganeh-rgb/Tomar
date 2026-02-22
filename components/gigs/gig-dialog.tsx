@@ -506,7 +506,7 @@ export function GigDialog({
           </div>
 
           {/* Main layout: form fields left, calendar right */}
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_380px]">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px]">
 
             {/* LEFT — Form fields */}
             <div>
@@ -536,7 +536,7 @@ export function GigDialog({
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       {t('type')} <span className="text-destructive">*</span>
@@ -587,7 +587,7 @@ export function GigDialog({
 
               {/* Grupp 2: Var */}
               <div className="px-8 py-6 border-t border-gray-100">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('projectName')}</Label>
                     <Input
@@ -647,7 +647,7 @@ export function GigDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('status')}</Label>
                     <Select
@@ -708,7 +708,7 @@ export function GigDialog({
 
           {/* Anteckningar — full width, two columns */}
           <div className="px-8 py-4 border-t border-gray-100">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">{t('notes')}</Label>
                 <Textarea
@@ -742,7 +742,7 @@ export function GigDialog({
           {/* Kvitton & Bilagor — full width, edit only */}
           {isEditing && (
             <div className="px-8 py-6 border-t border-gray-100">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <GigReceipts
                   gigId={gig.id}
                   gigTitle={formData.project_name || gig.gig_type?.name}

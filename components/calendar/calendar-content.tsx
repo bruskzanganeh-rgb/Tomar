@@ -17,6 +17,8 @@ import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { PageTransition } from '@/components/ui/page-transition'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type Gig = {
   id: string
@@ -309,17 +311,18 @@ export default function CalendarPage() {
   }
 
   return (
+    <PageTransition>
     <div className="space-y-2">
       <Card>
         <CardHeader className="py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
+          <div className="flex flex-wrap items-center justify-between gap-y-2">
+            <div className="flex items-center gap-4 min-w-0">
+              <CardTitle className="flex items-center gap-2 text-lg shrink-0">
                 <CalendarIcon className="h-5 w-5" />
                 {viewMode === 'year' ? year : `${monthNames[month]} ${year}`}
               </CardTitle>
               {/* Compact legend */}
-              <div className="hidden md:flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="hidden lg:flex items-center gap-3 text-xs text-muted-foreground">
                 {Object.entries(statusColors).map(([status, color]) => (
                   <div key={status} className="flex items-center gap-1">
                     <div className={cn('w-2 h-2 rounded-full', color)} />
@@ -384,8 +387,19 @@ export default function CalendarPage() {
         </CardHeader>
         <CardContent className="pt-0">
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {tc('loading')}
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <Skeleton key={`h-${i}`} className="h-4 w-full" />
+                ))}
+              </div>
+              {Array.from({ length: 5 }).map((_, row) => (
+                <div key={row} className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: 7 }).map((_, col) => (
+                    <Skeleton key={col} className="h-16 w-full rounded" />
+                  ))}
+                </div>
+              ))}
             </div>
           ) : viewMode === 'year' ? (
             /* Year View */
@@ -560,9 +574,9 @@ export default function CalendarPage() {
 
       {/* Detail Panel Backdrop */}
       <div
-        className={`fixed inset-0 z-40 transition-all duration-500 ${
+        className={`fixed inset-0 z-40 transition-all duration-300 ${
           selectedGig
-            ? 'bg-black/40 backdrop-blur-sm opacity-100'
+            ? 'bg-black/50 backdrop-blur-sm opacity-100'
             : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setSelectedGig(null)}
@@ -570,12 +584,12 @@ export default function CalendarPage() {
 
       {/* Detail Panel - Bottom Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           selectedGig ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ height: '50vh', minHeight: '320px' }}
       >
-        <div className="h-full bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
+        <div className="h-full bg-gradient-to-b from-background/95 to-background/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
 
           <div className="flex justify-center pt-2 pb-0">
@@ -625,7 +639,7 @@ export default function CalendarPage() {
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto pb-2">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                   {/* Column 1 - Arvode, Plats, Datum */}
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
@@ -854,5 +868,6 @@ export default function CalendarPage() {
         }}
       />
     </div>
+    </PageTransition>
   )
 }

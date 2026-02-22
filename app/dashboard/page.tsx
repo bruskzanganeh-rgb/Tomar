@@ -15,21 +15,23 @@ import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { AvailableWeeks } from '@/components/dashboard/available-weeks'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { ListSkeleton } from '@/components/skeletons/list-skeleton'
+import { PageTransition } from '@/components/ui/page-transition'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+    transition: { staggerChildren: 0.05, delayChildren: 0.05 }
   }
 }
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.25, 0.4, 0.25, 1] }
+    transition: { duration: 0.3, ease: [0.25, 0.4, 0.25, 1] }
   }
 }
 
@@ -87,6 +89,7 @@ export default function DashboardPage() {
   const [showGigDialog, setShowGigDialog] = useState(false)
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
   const [gridHeight, setGridHeight] = useState<number | undefined>(undefined)
+  const [isDesktop, setIsDesktop] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -95,8 +98,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     function updateHeight() {
-      if (window.innerWidth < 768) return setGridHeight(undefined)
-      const zoom = 0.65
+      if (window.innerWidth < 768) {
+        setGridHeight(undefined)
+        setIsDesktop(false)
+        return
+      }
+      const desktop = window.innerWidth >= 1280
+      setIsDesktop(desktop)
+      const zoom = desktop ? 0.65 : 1
       const header = 56
       const padding = 64
       setGridHeight(window.innerHeight / zoom - header - padding)
@@ -148,6 +157,7 @@ export default function DashboardPage() {
   }
 
   return (
+    <PageTransition>
     <motion.div
       variants={containerVariants}
       initial="hidden"
@@ -155,7 +165,7 @@ export default function DashboardPage() {
       className="space-y-4"
     >
       {/* Mobile Quick Actions */}
-      <motion.div variants={itemVariants} className="md:hidden">
+      <motion.div variants={itemVariants} className="lg:hidden">
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => setShowGigDialog(true)}
@@ -193,7 +203,9 @@ export default function DashboardPage() {
         className="grid gap-4"
         style={{
           ...(gridHeight ? { height: gridHeight, maxHeight: gridHeight, overflow: 'hidden' } : {}),
-          gridTemplateColumns: gridHeight ? '2.618fr 1.618fr 1fr' : undefined,
+          gridTemplateColumns: gridHeight
+            ? (isDesktop ? '2.618fr 1.618fr 1fr' : '1.618fr 1fr')
+            : undefined,
           gridTemplateRows: gridHeight ? 'minmax(0, 1fr)' : undefined,
         }}
       >
@@ -216,13 +228,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="pb-4 md:flex-1 md:flex md:flex-col" style={{ minHeight: 0 }}>
             {loading ? (
-              <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
-                {tc('loading')}
-              </div>
+              <ListSkeleton items={3} />
             ) : upcomingGigs.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground">
                 <Music className="h-6 w-6 mx-auto mb-1 opacity-50" />
-                <p className="text-xs">{t('noUpcoming')}</p>
+                <p className="text-xs">{tGig('noUpcoming')}</p>
               </div>
             ) : (
               <div className="md:flex-1 md:relative" style={{ minHeight: 0 }}>
@@ -268,9 +278,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="pb-4 flex-1 flex flex-col" style={{ minHeight: 0 }}>
               {loading ? (
-                <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm">
-                  {tc('loading')}
-                </div>
+                <ListSkeleton items={2} />
               ) : pendingGigs.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <Clock className="h-6 w-6 mx-auto mb-1 opacity-50" />
@@ -338,5 +346,6 @@ export default function DashboardPage() {
         onSuccess={() => {}}
       />
     </motion.div>
+    </PageTransition>
   )
 }

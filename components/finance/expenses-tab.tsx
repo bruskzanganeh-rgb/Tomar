@@ -38,6 +38,7 @@ import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { toast } from 'sonner'
+import { PageTransition } from '@/components/ui/page-transition'
 
 type Expense = {
   id: string
@@ -180,6 +181,7 @@ export default function ExpensesTab() {
   }).sort((a, b) => parseInt(a.year) - parseInt(b.year))
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
         <Button variant="outline" onClick={() => setShowExportDialog(true)} className="w-full sm:w-auto">
@@ -540,5 +542,6 @@ export default function ExpensesTab() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageTransition>
   )
 }

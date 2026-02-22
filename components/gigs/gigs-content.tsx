@@ -33,6 +33,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
 import { useCompany } from '@/lib/hooks/use-company'
+import { PageTransition } from '@/components/ui/page-transition'
 
 function fmtFee(amount: number, currency?: string | null): string {
   return formatCurrency(amount, (currency || 'SEK') as SupportedCurrency)
@@ -449,6 +450,7 @@ export default function GigsPage() {
   })
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       {/* Section 1: Past gigs needing action */}
       {pastNeedingAction.length > 0 && (
@@ -519,7 +521,7 @@ export default function GigsPage() {
                       <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                           <span className="text-sm">{gig.gig_type.name}</span>
                         </div>
                       </TableCell>
@@ -562,22 +564,28 @@ export default function GigsPage() {
       <Card>
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setShowScrollHint(true) }}>
           <CardHeader>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <TabsList>
-                <TabsTrigger value="upcoming" className="gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {t('upcoming')} ({sortedUpcoming.length})
-                </TabsTrigger>
-                <TabsTrigger value="history" className="gap-2">
-                  <History className="h-4 w-4" />
-                  {t('history')} ({sortedHistory.length})
-                </TabsTrigger>
-                <TabsTrigger value="declined" className="gap-2">
-                  <Ban className="h-4 w-4" />
-                  {t('declined')} ({sortedDeclined.length})
-                </TabsTrigger>
-              </TabsList>
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <TabsList>
+                  <TabsTrigger value="upcoming" className="gap-1.5">
+                    <Calendar className="h-4 w-4 shrink-0 hidden sm:block" />
+                    {t('upcoming')} ({sortedUpcoming.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="gap-1.5">
+                    <History className="h-4 w-4 shrink-0 hidden sm:block" />
+                    {t('history')} ({sortedHistory.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="declined" className="gap-1.5">
+                    <Ban className="h-4 w-4 shrink-0 hidden sm:block" />
+                    {t('declined')} ({sortedDeclined.length})
+                  </TabsTrigger>
+                </TabsList>
+                <Button onClick={() => setShowCreateDialog(true)} size="sm" className="shrink-0">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('newGig')}</span>
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="relative min-w-[140px] max-w-[240px]">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -611,10 +619,6 @@ export default function GigsPage() {
                   </div>
                 )}
               </div>
-              <Button onClick={() => setShowCreateDialog(true)} size="sm">
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('newGig')}</span>
-              </Button>
             </div>
             {activeTab === 'history' && (
               <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -694,7 +698,7 @@ export default function GigsPage() {
                         </div>
                         <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -755,7 +759,7 @@ export default function GigsPage() {
                             <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                                 <span className="text-sm">{gig.gig_type.name}</span>
                                 <Badge variant="outline" className="text-xs">{gig.gig_type.vat_rate}%</Badge>
                               </div>
@@ -852,7 +856,7 @@ export default function GigsPage() {
                         </div>
                         <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -907,7 +911,7 @@ export default function GigsPage() {
                             <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                                 <span className="text-sm">{gig.gig_type.name}</span>
                                 <Badge variant="outline" className="text-xs">{gig.gig_type.vat_rate}%</Badge>
                               </div>
@@ -983,7 +987,7 @@ export default function GigsPage() {
                         </div>
                         <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -1038,7 +1042,7 @@ export default function GigsPage() {
                             <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{t('notSpecified')}</span>}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#gray' }} />
+                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                                 <span className="text-sm">{gig.gig_type.name}</span>
                                 <Badge variant="outline" className="text-xs">{gig.gig_type.vat_rate}%</Badge>
                               </div>
@@ -1139,9 +1143,9 @@ export default function GigsPage() {
 
       {/* Detail Panel Backdrop */}
       <div
-        className={`fixed inset-0 z-40 transition-all duration-500 ${
+        className={`fixed inset-0 z-40 transition-all duration-300 ${
           selectedGig
-            ? 'bg-black/40 backdrop-blur-sm opacity-100'
+            ? 'bg-black/50 backdrop-blur-sm opacity-100'
             : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setSelectedGig(null)}
@@ -1149,13 +1153,13 @@ export default function GigsPage() {
 
       {/* Detail Panel - Premium 2025 Design */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           selectedGig ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ height: '50vh', minHeight: '320px' }}
       >
         {/* Glass effect container */}
-        <div className="h-full bg-gradient-to-b from-white/95 to-white/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
+        <div className="h-full bg-gradient-to-b from-background/95 to-background/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
           {/* Decorative top bar */}
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
 
@@ -1211,7 +1215,7 @@ export default function GigsPage() {
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto pb-2">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                   {/* Column 1 - Fee, Date, Venue */}
                   <div className="space-y-3">
                     {/* Fee + Venue on same row */}
@@ -1491,5 +1495,6 @@ export default function GigsPage() {
         }}
       />
     </div>
+    </PageTransition>
   )
 }
