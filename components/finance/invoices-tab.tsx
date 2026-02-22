@@ -592,7 +592,7 @@ export default function InvoicesTab() {
           ) : (
             <>
             {/* Mobile card view */}
-            <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+            <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
               {invoices.map((invoice) => (
                 <div
                   key={invoice.id}
@@ -654,7 +654,7 @@ export default function InvoicesTab() {
             </div>
 
             {/* Desktop table view */}
-            <div className="relative hidden md:block">
+            <div className="relative hidden lg:block">
             <div ref={scrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
               <table className="w-full caption-bottom text-sm table-fixed">
                 <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">

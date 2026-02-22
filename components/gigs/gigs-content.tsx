@@ -672,7 +672,7 @@ export default function GigsPage() {
               ) : (
                 <>
                 {/* Mobile card view */}
-                <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
                   {sortedUpcoming.map((gig) => {
                     const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
                     return (
@@ -717,7 +717,7 @@ export default function GigsPage() {
                 </div>
 
                 {/* Desktop table view */}
-                <div className="relative hidden md:block">
+                <div className="relative hidden lg:block">
                 <div ref={upcomingScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
                   <table className="w-full caption-bottom text-sm table-fixed">
                     <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -831,7 +831,7 @@ export default function GigsPage() {
               ) : (
                 <>
                 {/* Mobile card view */}
-                <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
                   {sortedHistory.map((gig) => {
                     const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
                     return (
@@ -869,7 +869,7 @@ export default function GigsPage() {
                 </div>
 
                 {/* Desktop table view */}
-                <div className="relative hidden md:block">
+                <div className="relative hidden lg:block">
                 <div ref={historyScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
                   <table className="w-full caption-bottom text-sm table-fixed">
                     <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -962,7 +962,7 @@ export default function GigsPage() {
               ) : (
                 <>
                 {/* Mobile card view */}
-                <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
                   {sortedDeclined.map((gig) => {
                     const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
                     return (
@@ -1000,7 +1000,7 @@ export default function GigsPage() {
                 </div>
 
                 {/* Desktop table view */}
-                <div className="relative hidden md:block">
+                <div className="relative hidden lg:block">
                 <div ref={declinedScrollRef} onScroll={handleScroll} className="h-[calc(100vh-13rem)] overflow-auto rounded-md border">
                   <table className="w-full caption-bottom text-sm table-fixed">
                     <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -1087,7 +1087,7 @@ export default function GigsPage() {
 
       {/* Mobile FAB */}
       <Button
-        className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg md:hidden"
+        className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg lg:hidden"
         onClick={() => setShowCreateDialog(true)}
       >
         <Plus className="h-6 w-6" />

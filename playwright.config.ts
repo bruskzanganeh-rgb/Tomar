@@ -62,6 +62,15 @@ export default defineConfig({
       },
     },
     {
+      name: 'iPad-landscape-auth',
+      testMatch: /ui-audit\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1180, height: 820 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+    {
       name: 'Desktop-auth',
       testMatch: /ui-audit\.spec\.ts/,
       dependencies: ['setup'],

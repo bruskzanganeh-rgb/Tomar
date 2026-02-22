@@ -348,7 +348,7 @@ export default function ExpensesTab() {
           ) : (
             <>
             {/* Mobile card view */}
-            <div className="md:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+            <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
               {filteredExpenses.map((expense) => (
                 <div
                   key={expense.id}
@@ -409,7 +409,7 @@ export default function ExpensesTab() {
             </div>
 
             {/* Desktop table view */}
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -134,7 +134,7 @@ export default function ClientsPage() {
           ) : (
             <>
             {/* Mobile card view */}
-            <div className="md:hidden space-y-2">
+            <div className="lg:hidden space-y-2">
               {filteredClients.map((client) => {
                 const invoiceCount = client.invoices?.length || 0
                 const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
@@ -164,7 +164,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Desktop table view */}
-            <div className="hidden md:block">
+            <div className="hidden lg:block">
             <Table>
               <TableHeader>
                 <TableRow>
