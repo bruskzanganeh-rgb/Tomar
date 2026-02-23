@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Calendar, FileText, Receipt, CalendarDays, Check, ArrowRight } from 'lucide-react'
@@ -17,6 +18,17 @@ const stagger: Variants = {
 }
 
 export default function LandingPage() {
+  const [proPrice, setProPrice] = useState(49)
+
+  useEffect(() => {
+    fetch('/api/config/tiers')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.pro?.priceMonthly) setProPrice(data.pro.priceMonthly)
+      })
+      .catch(() => {})
+  }, [])
+
   const features = [
     {
       icon: Calendar,
@@ -180,7 +192,7 @@ export default function LandingPage() {
               </div>
               <p className="text-sm font-medium text-[#C7D2FE]/70 mb-1">Pro</p>
               <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-bold text-white">49 kr</span>
+                <span className="text-4xl font-bold text-white">{proPrice} kr</span>
                 <span className="text-sm text-[#C7D2FE]/50">/mån</span>
               </div>
               <div className="space-y-3 mb-8">
