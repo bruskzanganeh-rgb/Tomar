@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkStorageQuota } from '@/lib/usage'
 
 // Extrahera filsökväg från public URL
 function extractFilePath(attachmentUrl: string): string | null {
@@ -111,6 +112,15 @@ export async function POST(
       )
     }
 
+    // Check storage quota
+    const quota = await checkStorageQuota(user.id)
+    if (!quota.allowed) {
+      return NextResponse.json(
+        { error: 'Storage quota exceeded. Upgrade your plan for more storage.' },
+        { status: 403 }
+      )
+    }
+
     // Hämta befintlig expense - verifiera ägarskap (service role för att undvika RLS-problem)
     const { data: expense, error: fetchError } = await serviceSupabase
       .from('expenses')
@@ -163,10 +173,10 @@ export async function POST(
       .from('expenses')
       .getPublicUrl(filePath)
 
-    // Uppdatera expense med ny attachment_url
+    // Uppdatera expense med ny attachment_url och file_size
     const { error: updateError } = await serviceSupabase
       .from('expenses')
-      .update({ attachment_url: urlData.publicUrl })
+      .update({ attachment_url: urlData.publicUrl, file_size: buffer.length })
       .eq('id', id)
       .eq('user_id', user.id)
 

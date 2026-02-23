@@ -4,6 +4,7 @@ import { apiSuccess, apiError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { ALLOWED_RECEIPT_TYPES, MAX_FILE_SIZE } from '@/lib/upload/file-validation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkStorageQuota } from '@/lib/usage'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -114,6 +115,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       fileExt = extMap[rawType] || 'jpg'
     }
 
+    // Check storage quota
+    const quota = await checkStorageQuota(auth.userId)
+    if (!quota.allowed) {
+      return apiError('Storage quota exceeded. Upgrade your plan for more storage.', 403)
+    }
+
     // Verify ownership
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
@@ -145,7 +152,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const { error: updateError } = await supabase
       .from('expenses')
-      .update({ attachment_url: urlData.publicUrl })
+      .update({ attachment_url: urlData.publicUrl, file_size: fileBuffer.length })
       .eq('id', id)
       .eq('user_id', auth.userId)
 

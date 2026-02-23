@@ -99,6 +99,7 @@ function AttachmentRow({ attachment, onDownload, onDelete, disabled, categoryCon
 export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   const t = useTranslations('gig')
   const tc = useTranslations('common')
+  const ts = useTranslations('subscription')
   const formatLocale = useFormatLocale()
   const [attachments, setAttachments] = useState<GigAttachment[]>([])
   const [loading, setLoading] = useState(true)
@@ -169,7 +170,11 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
         setAttachments(prev => [attachment, ...prev])
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('uploadError'))
+      if (err instanceof Error && err.message === 'STORAGE_QUOTA_EXCEEDED') {
+        setError(ts('storageQuotaFull'))
+      } else {
+        setError(err instanceof Error ? err.message : t('uploadError'))
+      }
     } finally {
       setUploading(false)
       // Reset file input

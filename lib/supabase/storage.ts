@@ -19,6 +19,15 @@ export async function uploadGigAttachment(
   file: File,
   category: AttachmentCategory = 'gig_info'
 ): Promise<GigAttachment> {
+  // Check storage quota before uploading
+  const quotaRes = await fetch('/api/storage/quota')
+  if (quotaRes.ok) {
+    const quota = await quotaRes.json()
+    if (quota.usedBytes >= quota.limitBytes) {
+      throw new Error('STORAGE_QUOTA_EXCEEDED')
+    }
+  }
+
   const supabase = createClient()
 
   // Sanitize filename and create unique path

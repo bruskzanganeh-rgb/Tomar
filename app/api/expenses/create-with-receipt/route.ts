@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { findDuplicateExpense, type DuplicateExpense } from '@/lib/expenses/duplicate-checker'
+import { checkStorageQuota } from '@/lib/usage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,9 +64,19 @@ export async function POST(request: NextRequest) {
     }
 
     let attachmentUrl: string | null = null
+    let fileSize: number | null = null
 
     // Ladda upp fil till Supabase Storage om den finns
     if (file) {
+      // Check storage quota
+      const quota = await checkStorageQuota(user.id)
+      if (!quota.allowed) {
+        return NextResponse.json(
+          { error: 'Storage quota exceeded. Upgrade your plan for more storage.' },
+          { status: 403 }
+        )
+      }
+
       const fileExt = file.name.split('.').pop() || 'jpg'
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
       const filePath = `receipts/${new Date(date).getFullYear()}/${fileName}`
@@ -90,6 +101,7 @@ export async function POST(request: NextRequest) {
           .getPublicUrl(filePath)
 
         attachmentUrl = urlData.publicUrl
+        fileSize = buffer.length
       }
     }
 
@@ -105,6 +117,7 @@ export async function POST(request: NextRequest) {
         category,
         notes,
         attachment_url: attachmentUrl,
+        file_size: fileSize,
         dropbox_synced: false,
         gig_id: gigId,
         user_id: user.id,

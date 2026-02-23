@@ -10,6 +10,12 @@ const DEFAULT_LIMITS = {
   receiptScans: 3,
 }
 
+export const STORAGE_LIMITS = {
+  free: 10 * 1024 * 1024,        // 10 MB
+  pro: 1024 * 1024 * 1024,       // 1 GB
+  team: 5 * 1024 * 1024 * 1024,  // 5 GB
+} as const
+
 async function getFreeLimits() {
   const { data } = await supabaseAdmin
     .from('platform_config')
@@ -96,4 +102,39 @@ export async function checkUsageLimit(
     : limits.receiptScans
 
   return { allowed: current < limit, current, limit }
+}
+
+export async function checkStorageQuota(userId: string): Promise<{
+  allowed: boolean
+  usedBytes: number
+  limitBytes: number
+  plan: string
+}> {
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('plan, status')
+    .eq('user_id', userId)
+    .single()
+
+  const plan = (sub?.status === 'active' ? sub?.plan : 'free') || 'free'
+  const limitBytes = STORAGE_LIMITS[plan as keyof typeof STORAGE_LIMITS] || STORAGE_LIMITS.free
+
+  const { data: attRows } = await supabaseAdmin
+    .from('gig_attachments')
+    .select('file_size')
+    .eq('user_id', userId)
+
+  const attBytes = (attRows || []).reduce((sum, r) => sum + (r.file_size || 0), 0)
+
+  const { data: expRows } = await supabaseAdmin
+    .from('expenses')
+    .select('file_size')
+    .eq('user_id', userId)
+    .not('attachment_url', 'is', null)
+
+  const expBytes = (expRows || []).reduce((sum, r) => sum + (r.file_size || 0), 0)
+
+  const usedBytes = attBytes + expBytes
+
+  return { allowed: usedBytes < limitBytes, usedBytes, limitBytes, plan }
 }

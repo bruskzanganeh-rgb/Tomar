@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertTriangle, Check, Crown, Info, Loader2, Users } from 'lucide-react'
+import { AlertTriangle, Check, Crown, HardDrive, Info, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -18,7 +18,7 @@ export function SubscriptionSettings() {
   const tc = useTranslations('common')
   const tToast = useTranslations('toast')
 
-  const { subscription, usage, isPro, isTeam, limits, loading, refresh } = useSubscription()
+  const { subscription, usage, isPro, isTeam, limits, loading, refresh, storageQuota } = useSubscription()
   const { isOwner } = useCompany()
   const [upgrading, setUpgrading] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -95,6 +95,13 @@ export function SubscriptionSettings() {
     )
   }
 
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+  }
+
   const planLabel = isTeam ? t('team') : isPro ? t('pro') : t('free')
 
   return (
@@ -131,6 +138,25 @@ export function SubscriptionSettings() {
                 <p className="text-xs text-muted-foreground">
                   {t('renewsAt', { date: new Date(subscription.current_period_end).toLocaleDateString('sv-SE') })}
                 </p>
+              )}
+              {storageQuota && (
+                <div className="mt-3 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <HardDrive className="h-3 w-3" />
+                      {t('storage')}
+                    </span>
+                    <span>
+                      {t('storageUsed', { used: formatBytes(storageQuota.usedBytes), limit: formatBytes(storageQuota.limitBytes) })}
+                    </span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-1.5">
+                    <div
+                      className={`rounded-full h-1.5 transition-all ${storageQuota.usedBytes >= storageQuota.limitBytes ? 'bg-red-500' : 'bg-primary'}`}
+                      style={{ width: `${Math.min((storageQuota.usedBytes / storageQuota.limitBytes) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
               )}
               {subscription?.cancel_at_period_end && (
                 <div className="mt-2">
@@ -193,6 +219,25 @@ export function SubscriptionSettings() {
                     style={{ width: `${Math.min(((usage?.receipt_scan_count || 0) / limits.receiptScans) * 100, 100)}%` }}
                   />
                 </div>
+                {storageQuota && (
+                  <>
+                    <div className="flex justify-between text-sm mt-3">
+                      <span className="flex items-center gap-1.5">
+                        <HardDrive className="h-3.5 w-3.5" />
+                        {t('storage')}
+                      </span>
+                      <span className={storageQuota.usedBytes >= storageQuota.limitBytes ? 'text-red-500 font-medium' : ''}>
+                        {t('storageUsed', { used: formatBytes(storageQuota.usedBytes), limit: formatBytes(storageQuota.limitBytes) })}
+                      </span>
+                    </div>
+                    <div className="w-full bg-secondary rounded-full h-1.5">
+                      <div
+                        className={`rounded-full h-1.5 transition-all ${storageQuota.usedBytes >= storageQuota.limitBytes ? 'bg-red-500' : 'bg-primary'}`}
+                        style={{ width: `${Math.min((storageQuota.usedBytes / storageQuota.limitBytes) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

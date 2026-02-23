@@ -4,6 +4,7 @@ import { apiSuccess, apiError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { MAX_FILE_SIZE } from '@/lib/upload/file-validation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { checkStorageQuota } from '@/lib/usage'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -123,6 +124,12 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     if (!['gig_info', 'invoice_doc'].includes(category)) {
       return apiError('Invalid category. Use "gig_info" or "invoice_doc".', 400)
+    }
+
+    // Check storage quota
+    const quota = await checkStorageQuota(auth.userId)
+    if (!quota.allowed) {
+      return apiError('Storage quota exceeded. Upgrade your plan for more storage.', 403)
     }
 
     // Verify gig ownership

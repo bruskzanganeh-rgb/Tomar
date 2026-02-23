@@ -18,6 +18,12 @@ type Usage = {
   receipt_scan_count: number
 }
 
+type StorageQuota = {
+  usedBytes: number
+  limitBytes: number
+  plan: string
+}
+
 type FreeLimits = {
   invoices: number
   receiptScans: number
@@ -32,12 +38,14 @@ export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [usage, setUsage] = useState<Usage | null>(null)
   const [freeLimits, setFreeLimits] = useState<FreeLimits>(DEFAULT_LIMITS)
+  const [storageQuota, setStorageQuota] = useState<StorageQuota | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     loadSubscription()
     loadFreeLimits()
+    loadStorageQuota()
   }, [])
 
   async function loadFreeLimits() {
@@ -49,6 +57,18 @@ export function useSubscription() {
       }
     } catch {
       // Use defaults on failure
+    }
+  }
+
+  async function loadStorageQuota() {
+    try {
+      const res = await fetch('/api/storage/quota')
+      if (res.ok) {
+        const data = await res.json()
+        setStorageQuota(data)
+      }
+    } catch {
+      // Ignore - storage quota is non-critical
     }
   }
 
@@ -111,6 +131,7 @@ export function useSubscription() {
     limits,
     canCreateInvoice,
     canScanReceipt,
+    storageQuota,
     refresh: loadSubscription,
   }
 }
