@@ -25,36 +25,47 @@ type StorageQuota = {
   plan: string
 }
 
-type FreeLimits = {
-  invoices: number
-  receiptScans: number
+type TierData = {
+  invoiceLimit: number
+  receiptScanLimit: number
+  storageMb: number
+  priceMonthly: number
+  priceYearly: number
+  features: string[]
 }
 
-const DEFAULT_LIMITS: FreeLimits = {
-  invoices: 5,
-  receiptScans: 3,
+export type TierConfig = {
+  free: TierData
+  pro: TierData
+  team: TierData
+}
+
+const DEFAULT_TIER_CONFIG: TierConfig = {
+  free: { invoiceLimit: 5, receiptScanLimit: 3, storageMb: 10, priceMonthly: 0, priceYearly: 0, features: [] },
+  pro: { invoiceLimit: 0, receiptScanLimit: 0, storageMb: 1024, priceMonthly: 49, priceYearly: 499, features: ['unlimitedInvoices', 'unlimitedScans', 'noBranding'] },
+  team: { invoiceLimit: 0, receiptScanLimit: 0, storageMb: 5120, priceMonthly: 99, priceYearly: 999, features: ['everythingInPro', 'inviteMembers', 'sharedCalendar'] },
 }
 
 export function useSubscription() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [usage, setUsage] = useState<Usage | null>(null)
-  const [freeLimits, setFreeLimits] = useState<FreeLimits>(DEFAULT_LIMITS)
+  const [tierConfig, setTierConfig] = useState<TierConfig>(DEFAULT_TIER_CONFIG)
   const [storageQuota, setStorageQuota] = useState<StorageQuota | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
     loadSubscription()
-    loadFreeLimits()
+    loadTierConfig()
     loadStorageQuota()
   }, [])
 
-  async function loadFreeLimits() {
+  async function loadTierConfig() {
     try {
-      const res = await fetch('/api/config/limits')
+      const res = await fetch('/api/config/tiers')
       if (res.ok) {
         const data = await res.json()
-        setFreeLimits(data)
+        setTierConfig(data)
       }
     } catch {
       // Use defaults on failure
@@ -115,13 +126,16 @@ export function useSubscription() {
   const isPro = (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
   const isTeam = subscription?.plan === 'team' && subscription?.status === 'active'
 
+  const plan = isTeam ? 'team' : isPro ? 'pro' : 'free'
+  const tier = tierConfig[plan]
+
   const limits = {
-    invoices: isPro ? Infinity : freeLimits.invoices,
-    receiptScans: isPro ? Infinity : freeLimits.receiptScans,
+    invoices: tier.invoiceLimit === 0 ? Infinity : tier.invoiceLimit,
+    receiptScans: tier.receiptScanLimit === 0 ? Infinity : tier.receiptScanLimit,
   }
 
-  const canCreateInvoice = isPro || (usage?.invoice_count || 0) < limits.invoices
-  const canScanReceipt = isPro || (usage?.receipt_scan_count || 0) < limits.receiptScans
+  const canCreateInvoice = limits.invoices === Infinity || (usage?.invoice_count || 0) < limits.invoices
+  const canScanReceipt = limits.receiptScans === Infinity || (usage?.receipt_scan_count || 0) < limits.receiptScans
 
   return {
     subscription,
@@ -133,6 +147,7 @@ export function useSubscription() {
     canCreateInvoice,
     canScanReceipt,
     storageQuota,
+    tierConfig,
     refresh: loadSubscription,
   }
 }

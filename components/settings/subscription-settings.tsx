@@ -18,7 +18,7 @@ export function SubscriptionSettings() {
   const tc = useTranslations('common')
   const tToast = useTranslations('toast')
 
-  const { subscription, usage, isPro, isTeam, limits, loading, refresh, storageQuota } = useSubscription()
+  const { subscription, usage, isPro, isTeam, limits, loading, refresh, storageQuota, tierConfig } = useSubscription()
   const { isOwner } = useCompany()
   const [upgrading, setUpgrading] = useState(false)
   const [changingPlan, setChangingPlan] = useState(false)
@@ -335,24 +335,18 @@ export function SubscriptionSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">{t('proMonthly')}</CardTitle>
               <CardDescription>
-                <span className="text-2xl font-bold text-foreground">49 kr</span>
+                <span className="text-2xl font-bold text-foreground">{tierConfig.pro.priceMonthly} kr</span>
                 <span className="text-muted-foreground"> {t('perMonth')}</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 mb-4">
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  {t('unlimitedInvoices')}
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  {t('unlimitedScans')}
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  {t('noBranding')}
-                </li>
+                {tierConfig.pro.features.map(key => (
+                  <li key={key} className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t(key)}
+                  </li>
+                ))}
               </ul>
               <Button
                 onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '', 'pro')}
@@ -373,24 +367,18 @@ export function SubscriptionSettings() {
                 <Badge className="text-[10px]">{t('save15')}</Badge>
               </div>
               <CardDescription>
-                <span className="text-2xl font-bold text-foreground">499 kr</span>
+                <span className="text-2xl font-bold text-foreground">{tierConfig.pro.priceYearly} kr</span>
                 <span className="text-muted-foreground"> {t('perYear')}</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 mb-4">
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  {t('unlimitedInvoices')}
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  {t('unlimitedScans')}
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  {t('noBranding')}
-                </li>
+                {tierConfig.pro.features.map(key => (
+                  <li key={key} className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                    {t(key)}
+                  </li>
+                ))}
               </ul>
               <Button
                 onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '', 'pro')}
@@ -417,24 +405,18 @@ export function SubscriptionSettings() {
                   {t('teamMonthly')}
                 </CardTitle>
                 <CardDescription>
-                  <span className="text-2xl font-bold text-foreground">99 kr</span>
+                  <span className="text-2xl font-bold text-foreground">{tierConfig.team.priceMonthly} kr</span>
                   <span className="text-muted-foreground"> {t('perMonth')}</span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-4">
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    {t('everythingInPro')}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    {t('inviteMembers')}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    {t('sharedCalendar')}
-                  </li>
+                  {tierConfig.team.features.map(key => (
+                    <li key={key} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      {t(key)}
+                    </li>
+                  ))}
                 </ul>
                 <Button
                   onClick={() => subscription?.stripe_subscription_id
@@ -461,24 +443,18 @@ export function SubscriptionSettings() {
                   <Badge className="text-[10px]">{t('save15')}</Badge>
                 </div>
                 <CardDescription>
-                  <span className="text-2xl font-bold text-foreground">999 kr</span>
+                  <span className="text-2xl font-bold text-foreground">{tierConfig.team.priceYearly} kr</span>
                   <span className="text-muted-foreground"> {t('perYear')}</span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-4">
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    {t('everythingInPro')}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    {t('inviteMembers')}
-                  </li>
-                  <li className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    {t('sharedCalendar')}
-                  </li>
+                  {tierConfig.team.features.map(key => (
+                    <li key={key} className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      {t(key)}
+                    </li>
+                  ))}
                 </ul>
                 <Button
                   onClick={() => subscription?.stripe_subscription_id
