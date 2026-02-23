@@ -823,7 +823,14 @@
     "everythingInPro": "Everything in Pro",
     "inviteMembers": "Invite team members",
     "sharedCalendar": "Shared calendar and gigs",
-    "upgradeToTeam": "Upgrade to Team"
+    "upgradeToTeam": "Upgrade to Team",
+    "changePlanSuccess": "Plan changed successfully",
+    "changePlanError": "Could not change plan",
+    "downgradeToPro": "Downgrade to Pro",
+    "downgradeToProDesc": "Switch back to the Pro plan. You keep unlimited invoices and scans but lose team features.",
+    "downgradeConfirmTitle": "Downgrade to Pro?",
+    "downgradeConfirmDesc": "Your plan will be changed to Pro. Any price difference will be credited automatically.",
+    "downgrade": "Downgrade"
   },
   "admin": {
     "title": "Superadmin",

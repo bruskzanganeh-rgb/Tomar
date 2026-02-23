@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertTriangle, Check, Crown, HardDrive, Info, Loader2, Users } from 'lucide-react'
+import { AlertTriangle, ArrowDown, Check, Crown, HardDrive, Info, Loader2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -21,9 +21,11 @@ export function SubscriptionSettings() {
   const { subscription, usage, isPro, isTeam, limits, loading, refresh, storageQuota } = useSubscription()
   const { isOwner } = useCompany()
   const [upgrading, setUpgrading] = useState(false)
+  const [changingPlan, setChangingPlan] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [reactivating, setReactivating] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   // Sync subscription from Stripe after successful checkout
@@ -52,6 +54,28 @@ export function SubscriptionSettings() {
     } catch (err: any) {
       toast.error(err.message)
       setUpgrading(false)
+    }
+  }
+
+  async function handleChangePlan(priceId: string) {
+    setChangingPlan(true)
+    try {
+      const res = await fetch('/api/stripe/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      toast.success(t('changePlanSuccess'))
+      refresh()
+    } catch (err: any) {
+      toast.error(err.message || t('changePlanError'))
+    } finally {
+      setChangingPlan(false)
+      setShowDowngradeConfirm(null)
     }
   }
 
@@ -362,8 +386,8 @@ export function SubscriptionSettings() {
         </div>
       )}
 
-      {/* Team upgrade cards (shown to owners who are not on Team plan, only if price IDs are configured) */}
-      {isOwner && !isTeam && process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID && (
+      {/* Team upgrade cards (shown to owners who are not on Team plan) */}
+      {isOwner && !isTeam && (
         <div>
           <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('teamPlanTitle')}</h3>
           <div className="grid md:grid-cols-2 gap-4">
@@ -394,12 +418,15 @@ export function SubscriptionSettings() {
                   </li>
                 </ul>
                 <Button
-                  onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '', 'team')}
-                  disabled={upgrading}
+                  onClick={() => subscription?.stripe_subscription_id
+                    ? handleChangePlan(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '')
+                    : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '', 'team')
+                  }
+                  disabled={upgrading || changingPlan}
                   className="w-full"
                   variant="outline"
                 >
-                  {upgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {(upgrading || changingPlan) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {isPro ? t('upgradeToTeam') : t('upgrade')}
                 </Button>
               </CardContent>
@@ -435,11 +462,14 @@ export function SubscriptionSettings() {
                   </li>
                 </ul>
                 <Button
-                  onClick={() => handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '', 'team')}
-                  disabled={upgrading}
+                  onClick={() => subscription?.stripe_subscription_id
+                    ? handleChangePlan(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '')
+                    : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '', 'team')
+                  }
+                  disabled={upgrading || changingPlan}
                   className="w-full"
                 >
-                  {upgrading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {(upgrading || changingPlan) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {isPro ? t('upgradeToTeam') : t('upgrade')}
                 </Button>
               </CardContent>
@@ -447,6 +477,52 @@ export function SubscriptionSettings() {
           </div>
         </div>
       )}
+
+      {/* Downgrade to Pro (shown to Team users) */}
+      {isTeam && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ArrowDown className="h-4 w-4" />
+              {t('downgradeToPro')}
+            </CardTitle>
+            <CardDescription>{t('downgradeToProDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDowngradeConfirm(process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '')}
+                disabled={changingPlan}
+              >
+                {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                Pro {t('perMonth')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDowngradeConfirm(process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '')}
+                disabled={changingPlan}
+              >
+                {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                Pro {t('perYear')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={!!showDowngradeConfirm}
+        onOpenChange={(open) => { if (!open) setShowDowngradeConfirm(null) }}
+        title={t('downgradeConfirmTitle')}
+        description={t('downgradeConfirmDesc')}
+        confirmLabel={t('downgrade')}
+        onConfirm={() => {
+          if (showDowngradeConfirm) handleChangePlan(showDowngradeConfirm)
+        }}
+      />
     </div>
   )
 }
