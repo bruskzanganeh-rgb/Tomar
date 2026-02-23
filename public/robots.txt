@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /gigs
+Disallow: /finance
+Disallow: /settings
+Disallow: /calendar
+Disallow: /config
+Disallow: /admin
+Disallow: /onboarding
+
+Sitemap: https://amida.babalisk.com/sitemap.xml

@@ -236,12 +236,15 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-[#1a3a5c] py-8">
-        <div className="mx-auto max-w-5xl px-6 flex items-center justify-between text-sm text-[#C7D2FE]/50">
+        <div className="mx-auto max-w-5xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#C7D2FE]/50">
           <div className="flex items-center gap-2">
             <Image src="/logo.png" alt="Amida" width={24} height={24} />
-            <span>Amida</span>
+            <span>&copy; {new Date().getFullYear()} Amida</span>
           </div>
-          <span>&copy; {new Date().getFullYear()} Amida. Built for musicians.</span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-[#C7D2FE] transition-colors">Integritetspolicy</Link>
+            <Link href="/terms" className="hover:text-[#C7D2FE] transition-colors">Villkor</Link>
+          </div>
         </div>
       </footer>
     </div>

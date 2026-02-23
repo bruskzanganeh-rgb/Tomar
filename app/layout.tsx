@@ -32,11 +32,13 @@ export const metadata: Metadata = {
     siteName: 'Amida',
     locale: 'sv_SE',
     type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Amida — Gig & invoice management for musicians' }],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Amida',
     description: 'Gig and invoice management for freelance musicians',
+    images: ['/og-image.png'],
   },
   manifest: '/manifest.json',
   appleWebApp: {
