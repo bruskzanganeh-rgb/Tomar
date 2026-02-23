@@ -522,6 +522,7 @@ export function CreateInvoiceDialog({
                   referencePerson={formData.reference_person}
                   notes={formData.notes}
                   reverseCharge={isReverseCharge}
+                  locale={selectedClient?.invoice_language || undefined}
                 />
               </div>
             </div>

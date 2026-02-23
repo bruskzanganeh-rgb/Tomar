@@ -12,6 +12,62 @@ const colors = {
   muted: '#9ca3af',
 }
 
+// Inline labels matching lib/pdf/generator.tsx
+const LABELS: Record<string, Record<string, string>> = {
+  sv: {
+    invoice: 'Faktura',
+    orgNr: 'Org.nr',
+    billedTo: 'Faktureras till',
+    invoiceDate: 'Fakturadatum',
+    dueDate: 'Förfallodatum',
+    ourReference: 'Vår referens',
+    yourReference: 'Er referens',
+    daysNet: 'dagar netto',
+    bankAccount: 'Bankgiro',
+    description: 'Beskrivning',
+    amount: 'Belopp',
+    subtotal: 'Summa',
+    vat: 'Moms',
+    basis: 'underlag',
+    totalDue: 'Att betala',
+    paymentRef: 'Vänligen ange fakturanummer #{n} som referens vid betalning!',
+    phone: 'Telefon',
+    email: 'E-post',
+    vatRegNumber: 'Momsreg.nr',
+    message: 'Meddelande',
+    invoicedAmount: 'Fakturerat belopp',
+    reverseCharge: 'Omvänd skattskyldighet — Reverse charge pursuant to Article 196, Council Directive 2006/112/EC',
+  },
+  en: {
+    invoice: 'Invoice',
+    orgNr: 'Org. no.',
+    billedTo: 'Billed to',
+    invoiceDate: 'Invoice date',
+    dueDate: 'Due date',
+    ourReference: 'Our reference',
+    yourReference: 'Your reference',
+    daysNet: 'days net',
+    bankAccount: 'Bank account',
+    description: 'Description',
+    amount: 'Amount',
+    subtotal: 'Subtotal',
+    vat: 'VAT',
+    basis: 'basis',
+    totalDue: 'Total due',
+    paymentRef: 'Please quote invoice #{n} as reference when paying!',
+    phone: 'Phone',
+    email: 'Email',
+    vatRegNumber: 'VAT reg. no.',
+    message: 'Message',
+    invoicedAmount: 'Invoiced amount',
+    reverseCharge: 'Reverse charge pursuant to Article 196, Council Directive 2006/112/EC',
+  },
+}
+
+function getLabels(locale: string) {
+  return LABELS[locale] || LABELS.sv
+}
+
 type CompanySettings = {
   company_name: string
   org_number: string
@@ -53,6 +109,7 @@ type InvoicePreviewProps = {
   referencePerson?: string
   notes?: string
   reverseCharge?: boolean
+  locale?: string
 }
 
 export function InvoicePreview({
@@ -69,10 +126,13 @@ export function InvoicePreview({
   referencePerson,
   notes,
   reverseCharge,
+  locale: localeProp,
 }: InvoicePreviewProps) {
-  const tp = useTranslations('pdf')
   const t = useTranslations('invoice')
   const formatLocale = useFormatLocale()
+
+  // Use client's invoice_language if provided, otherwise fall back to app locale
+  const l = getLabels(localeProp || 'sv')
 
   function formatCurrency(amount: number): string {
     return amount.toLocaleString(formatLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr'
@@ -86,7 +146,7 @@ export function InvoicePreview({
 
   const displayLines = lines.length > 0
     ? lines
-    : [{ description: t('invoicedAmount'), amount: subtotal, vat_rate: primaryVatRate }]
+    : [{ description: l.invoicedAmount, amount: subtotal, vat_rate: primaryVatRate }]
 
   // Group lines by VAT rate and calculate underlag (base amount) for each
   const vatGroups = displayLines.reduce((acc, line) => {
@@ -130,12 +190,12 @@ export function InvoicePreview({
                 {company?.company_name || t('companyName')}
               </div>
               <div style={{ fontSize: '8px', color: colors.secondary }}>
-                {tp('orgNr', { number: company?.org_number || '-' })}
+                {l.orgNr} {company?.org_number || '-'}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '9px', color: colors.secondary, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                {tp('invoice')}
+                {l.invoice}
               </div>
               <div style={{ fontWeight: 'bold', fontSize: '20px', color: colors.accent, marginTop: '2px' }}>
                 #{invoiceNumber}
@@ -153,13 +213,13 @@ export function InvoicePreview({
           }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '8px', color: colors.secondary, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                {tp('billedTo')}
+                {l.billedTo}
               </div>
               <div style={{ fontWeight: 'bold', fontSize: '11px', marginBottom: '3px' }}>
                 {client?.name || t('selectClientPlaceholder')}
               </div>
               {client?.org_number && (
-                <div style={{ fontSize: '9px', color: colors.secondary, marginBottom: '2px' }}>{tp('orgNr', { number: client.org_number })}</div>
+                <div style={{ fontSize: '9px', color: colors.secondary, marginBottom: '2px' }}>{l.orgNr} {client.org_number}</div>
               )}
               {client?.address && (
                 <div style={{ fontSize: '9px', color: colors.secondary }}>{client.address}</div>
@@ -168,7 +228,7 @@ export function InvoicePreview({
             <div style={{ textAlign: 'right' }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '4px' }}>
                 <span style={{ fontSize: '8px', color: colors.secondary, width: '75px', textAlign: 'right', marginRight: '10px' }}>
-                  {tp('invoiceDate')}
+                  {l.invoiceDate}
                 </span>
                 <span style={{ fontWeight: 'bold', fontSize: '9px', width: '70px', textAlign: 'right' }}>
                   {formatDate(invoiceDate)}
@@ -176,7 +236,7 @@ export function InvoicePreview({
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <span style={{ fontSize: '8px', color: colors.secondary, width: '75px', textAlign: 'right', marginRight: '10px' }}>
-                  {tp('dueDate')}
+                  {l.dueDate}
                 </span>
                 <span style={{ fontWeight: 'bold', fontSize: '9px', width: '70px', textAlign: 'right' }}>
                   {formatDate(dueDate)}
@@ -197,23 +257,23 @@ export function InvoicePreview({
           }}>
             {company?.our_reference && (
               <div style={{ minWidth: '140px' }}>
-                <span style={{ color: colors.secondary }}>{tp('ourReference')} </span>
+                <span style={{ color: colors.secondary }}>{l.ourReference} </span>
                 <span style={{ fontWeight: 'bold' }}>{company.our_reference}</span>
               </div>
             )}
             {referencePerson && (
               <div style={{ minWidth: '140px' }}>
-                <span style={{ color: colors.secondary }}>{tp('yourReference')} </span>
+                <span style={{ color: colors.secondary }}>{l.yourReference} </span>
                 <span style={{ fontWeight: 'bold' }}>{referencePerson}</span>
               </div>
             )}
             {client?.payment_terms && (
               <div style={{ minWidth: '140px' }}>
-                <span style={{ color: colors.secondary }}>{tp('daysNet', { days: client.payment_terms })}</span>
+                <span style={{ color: colors.secondary }}>{client.payment_terms} {l.daysNet}</span>
               </div>
             )}
             <div style={{ minWidth: '140px' }}>
-              <span style={{ color: colors.secondary }}>{tp('bankAccount')} </span>
+              <span style={{ color: colors.secondary }}>{l.bankAccount} </span>
               <span style={{ fontWeight: 'bold' }}>{company?.bank_account || '-'}</span>
             </div>
           </div>
@@ -222,16 +282,16 @@ export function InvoicePreview({
           <div style={{ marginBottom: '20px', flex: 1 }}>
             <div style={{ display: 'flex', paddingBottom: '8px', marginBottom: '6px', borderBottom: `1px solid ${colors.border}` }}>
               <div style={{ flex: 4, fontSize: '8px', color: colors.secondary, textTransform: 'uppercase' }}>
-                {tp('description')}
+                {l.description}
               </div>
               <div style={{ flex: 1, textAlign: 'right', fontSize: '8px', color: colors.secondary, textTransform: 'uppercase' }}>
-                {tp('amount')}
+                {l.amount}
               </div>
             </div>
             {displayLines.map((line, index) => (
               <div key={index} style={{ display: 'flex', paddingTop: '6px', paddingBottom: '6px' }}>
                 <div style={{ flex: 4, fontSize: '8px' }}>
-                  {line.description || `${tp('description')}...`}
+                  {line.description || `${l.description}...`}
                 </div>
                 <div style={{ flex: 1, textAlign: 'right', fontWeight: 'bold', fontSize: '8px' }}>
                   {formatCurrency(line.amount)}
@@ -248,7 +308,7 @@ export function InvoicePreview({
               borderTop: `1px solid ${colors.border}`,
             }}>
               <div style={{ fontSize: '7px', color: colors.secondary, textTransform: 'uppercase', marginBottom: '3px' }}>
-                {tp('message')}
+                {l.message}
               </div>
               <div style={{ fontSize: '8px', color: colors.primary, lineHeight: 1.4 }}>
                 {notes}
@@ -261,19 +321,19 @@ export function InvoicePreview({
             {/* Totals - matches PDF totalsSection */}
             <div style={{ marginLeft: 'auto', width: '250px', marginBottom: '15px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', paddingBottom: '4px' }}>
-                <span style={{ fontSize: '9px', color: colors.secondary }}>{tp('subtotal')}</span>
+                <span style={{ fontSize: '9px', color: colors.secondary }}>{l.subtotal}</span>
                 <span style={{ fontSize: '9px' }}>{formatCurrency(subtotal)}</span>
               </div>
               {sortedVatRates.map((rate) => (
                 <div key={rate} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', paddingBottom: '4px' }}>
                   <span style={{ fontSize: '8px', color: colors.secondary }}>
-                    {tp('vat', { rate })} ({tp('vatBasis', { amount: formatCurrency(vatGroups[rate].underlag).replace(' kr', '') })})
+                    {l.vat} {rate}% ({l.basis} {formatCurrency(vatGroups[rate].underlag).replace(' kr', '')})
                   </span>
                   <span style={{ fontSize: '9px' }}>{formatCurrency(vatGroups[rate].vat)}</span>
                 </div>
               ))}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', marginTop: '6px', borderTop: `1.5px solid ${colors.primary}` }}>
-                <span style={{ fontWeight: 'bold', fontSize: '10px', textTransform: 'uppercase' }}>{tp('totalDue')}</span>
+                <span style={{ fontWeight: 'bold', fontSize: '10px', textTransform: 'uppercase' }}>{l.totalDue}</span>
                 <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{formatCurrency(total)}</span>
               </div>
             </div>
@@ -281,7 +341,7 @@ export function InvoicePreview({
             {/* Reverse charge notice */}
             {reverseCharge && (
               <div style={{ marginTop: '6px', padding: '6px 8px', backgroundColor: '#fef3c7', borderRadius: '3px', fontSize: '7px', color: '#92400e', fontWeight: 600 }}>
-                {t('reverseChargeText')}
+                {l.reverseCharge}
               </div>
             )}
 
@@ -289,7 +349,7 @@ export function InvoicePreview({
             <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: '10px', marginTop: '5px' }}>
               {/* Payment reference text */}
               <div style={{ fontWeight: 'bold', fontSize: '8px', color: colors.primary, textAlign: 'center', marginBottom: '6px' }}>
-                {tp('paymentReference', { number: invoiceNumber })}
+                {l.paymentRef.replace('#{n}', `#${invoiceNumber}`)}
               </div>
 
               {/* Late payment interest text */}
@@ -321,19 +381,19 @@ export function InvoicePreview({
 
                 {/* Column 3: Contact info */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{tp('phone')}</div>
+                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.phone}</div>
                   <div style={{ fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company?.phone || '-'}</div>
-                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{tp('email')}</div>
+                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.email}</div>
                   <div style={{ fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company?.email || '-'}</div>
                 </div>
 
                 {/* Column 4: Payment info */}
                 <div style={{ flex: 1, textAlign: 'right' }}>
-                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{tp('bankAccount')}</div>
+                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.bankAccount}</div>
                   <div style={{ fontWeight: 'bold', fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company?.bank_account || '-'}</div>
                   {company?.vat_registration_number && (
                     <>
-                      <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{tp('vatRegNumber')}</div>
+                      <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.vatRegNumber}</div>
                       <div style={{ fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company.vat_registration_number}</div>
                     </>
                   )}
