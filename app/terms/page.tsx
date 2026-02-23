@@ -80,14 +80,27 @@ export default function TermsPage() {
           <section>
             <h2 className="text-lg font-semibold text-white">6. Ansvarsbegränsning</h2>
             <p>
-              Tjänsten tillhandahålls "i befintligt skick". Vi strävar efter hög tillgänglighet
-              men garanterar inte avbrottsfri drift. Babalisk AB ansvarar inte for:
+              Tjänsten tillhandahålls "i befintligt skick". Amida är ett administrativt verktyg
+              — inte en bokföringsbyrå eller redovisningstjänst. Du ansvarar själv for att
+              fakturor, belopp, kunduppgifter och övrig information du anger i Tjänsten är
+              korrekta och fullständiga.
+            </p>
+            <p>
+              Vi strävar efter hög tillgänglighet men garanterar inte avbrottsfri drift.
+              Babalisk AB ansvarar inte for:
             </p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Indirekta skador, utebliven vinst eller förlorad data utöver vad som orsakats av grov vårdslöshet.</li>
               <li>Felaktigheter i AI-genererade kvittotolkningar — du ansvarar for att verifiera extraherade uppgifter.</li>
               <li>Tredjepartstjänsters tillgänglighet (Stripe, e-postleverantörer).</li>
+              <li>Felaktiga belopp, momssatser eller uppgifter i fakturor som du skapar via Tjänsten.</li>
             </ul>
+            <p>
+              Vi vidtar rimliga tekniska och organisatoriska säkerhetsåtgärder for att skydda
+              din data, men kan inte garantera mot dataförlust. Du rekommenderas att regelbundet
+              exportera viktig data (t.ex. fakturor som PDF) och inte förlita dig på Tjänsten
+              som enda lagringskälla.
+            </p>
             <p>
               Vårt totala ansvar begränsas till det belopp du betalat for Tjänsten under de
               senaste 12 månaderna.
@@ -95,7 +108,17 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">7. Uppsägning</h2>
+            <h2 className="text-lg font-semibold text-white">7. Force majeure</h2>
+            <p>
+              Babalisk AB ansvarar inte for förseningar eller avbrott i Tjänsten som orsakas av
+              omständigheter utanför vår rimliga kontroll, inklusive men inte begränsat till:
+              naturkatastrofer, strömavbrott, internetstörningar, cyberattacker, fel hos
+              tredjepartsleverantörer, pandemier, myndighetsbeslut eller lagändringar.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-white">8. Uppsägning</h2>
             <p>
               Du kan radera ditt konto när som helst. Vi förbehåller oss rätten att stänga
               av konton som bryter mot dessa villkor, efter rimligt varsel om inte omständigheterna
@@ -104,7 +127,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">8. Ändringar av villkoren</h2>
+            <h2 className="text-lg font-semibold text-white">9. Ändringar av villkoren</h2>
             <p>
               Vi kan uppdatera dessa villkor. Väsentliga ändringar meddelas minst 30 dagar i
               förväg via e-post eller i Tjänsten. Fortsatt användning efter ändringarna träder
@@ -113,7 +136,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">9. Tillämplig lag</h2>
+            <h2 className="text-lg font-semibold text-white">10. Tillämplig lag</h2>
             <p>
               Dessa villkor regleras av svensk lag. Tvister avgörs av svensk allmän domstol
               med Stockholms tingsrätt som första instans.
@@ -121,7 +144,7 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">10. Kontakt</h2>
+            <h2 className="text-lg font-semibold text-white">11. Kontakt</h2>
             <p>
               Frågor om dessa villkor besvaras av:<br />
               Babalisk AB<br />
