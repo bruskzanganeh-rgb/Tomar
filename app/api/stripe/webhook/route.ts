@@ -91,6 +91,15 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id
   const plan = isActive ? getPlanFromPriceId(priceId) : 'free'
 
+  // Clear pending_plan when the plan actually changes (scheduled downgrade completed)
+  const { data: currentSub } = await supabase
+    .from('subscriptions')
+    .select('plan, pending_plan')
+    .eq('user_id', sub.user_id)
+    .single()
+
+  const pendingPlan = (currentSub?.pending_plan === plan) ? null : currentSub?.pending_plan
+
   await supabase
     .from('subscriptions')
     .update({
@@ -102,6 +111,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
         ? new Date(subscription.ended_at * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
+      pending_plan: pendingPlan ?? null,
     })
     .eq('user_id', sub.user_id)
 }

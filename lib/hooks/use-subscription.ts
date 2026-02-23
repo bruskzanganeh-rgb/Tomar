@@ -11,6 +11,7 @@ type Subscription = {
   stripe_subscription_id: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  pending_plan: string | null
 }
 
 type Usage = {

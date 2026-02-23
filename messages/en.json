@@ -830,8 +830,11 @@
     "downgradeToPro": "Downgrade to Pro",
     "downgradeToProDesc": "Switch back to the Pro plan. You keep unlimited invoices and scans but lose team features.",
     "downgradeConfirmTitle": "Downgrade to Pro?",
-    "downgradeConfirmDesc": "Your plan will be changed to Pro. Any price difference will be credited automatically.",
-    "downgrade": "Downgrade"
+    "downgradeConfirmDesc": "Your plan will change to Pro at the end of the current period. You keep Team access until then.",
+    "downgrade": "Downgrade",
+    "downgradeScheduled": "Downgrade scheduled for end of period",
+    "downgradeCancelled": "Downgrade cancelled",
+    "pendingDowngradeNotice": "Downgrade to Pro is scheduled. The change takes effect at the next billing period."
   },
   "admin": {
     "title": "Superadmin",

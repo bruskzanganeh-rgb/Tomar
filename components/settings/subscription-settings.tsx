@@ -69,13 +69,32 @@ export function SubscriptionSettings() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      toast.success(t('changePlanSuccess'))
+      if (data.scheduled) {
+        toast.success(t('downgradeScheduled'))
+      } else {
+        toast.success(t('changePlanSuccess'))
+      }
       refresh()
     } catch (err: any) {
       toast.error(err.message || t('changePlanError'))
     } finally {
       setChangingPlan(false)
       setShowDowngradeConfirm(null)
+    }
+  }
+
+  async function handleCancelDowngrade() {
+    setChangingPlan(true)
+    try {
+      const res = await fetch('/api/stripe/cancel-downgrade', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success(t('downgradeCancelled'))
+      refresh()
+    } catch (err: any) {
+      toast.error(err.message || t('changePlanError'))
+    } finally {
+      setChangingPlan(false)
     }
   }
 
@@ -479,7 +498,7 @@ export function SubscriptionSettings() {
       )}
 
       {/* Downgrade to Pro (shown to Team users) */}
-      {isTeam && (
+      {isTeam && !subscription?.pending_plan && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -507,6 +526,31 @@ export function SubscriptionSettings() {
               >
                 {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
                 Pro {t('perYear')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending downgrade notice */}
+      {subscription?.pending_plan && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  {t('pendingDowngradeNotice')}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelDowngrade}
+                disabled={changingPlan}
+              >
+                {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
+                {tc('cancel')}
               </Button>
             </div>
           </CardContent>

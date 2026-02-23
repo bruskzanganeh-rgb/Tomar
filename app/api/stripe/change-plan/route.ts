@@ -58,8 +58,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No active Stripe subscription to modify' }, { status: 400 })
   }
 
+  // Determine current plan
+  const { data: currentSub } = await supabase
+    .from('subscriptions')
+    .select('plan')
+    .eq('user_id', user.id)
+    .single()
+
+  const currentPlan = currentSub?.plan || 'free'
+  const isDowngrade = currentPlan === 'team' && targetPlan === 'pro'
+
   try {
-    // Get the current subscription from Stripe
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
     const itemId = stripeSub.items.data[0]?.id
 
@@ -67,23 +76,54 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No subscription item found' }, { status: 400 })
     }
 
-    // Update the subscription with the new price
-    const updated = await stripe.subscriptions.update(sub.stripe_subscription_id, {
-      items: [{ id: itemId, price: priceId }],
-      proration_behavior: 'create_prorations',
-    })
+    if (isDowngrade) {
+      // Schedule downgrade at period end using Stripe Subscription Schedules
+      const currentPriceId = stripeSub.items.data[0]?.price.id
 
-    // Update the database immediately (webhook will also handle this)
-    const newPriceId = updated.items.data[0]?.price.id
-    await supabase
-      .from('subscriptions')
-      .update({
-        plan: getPlanFromPriceId(newPriceId),
-        stripe_price_id: newPriceId,
+      const schedule = await stripe.subscriptionSchedules.create({
+        from_subscription: sub.stripe_subscription_id,
       })
-      .eq('user_id', user.id)
 
-    return NextResponse.json({ success: true, plan: getPlanFromPriceId(newPriceId) })
+      await stripe.subscriptionSchedules.update(schedule.id, {
+        end_behavior: 'release',
+        phases: [
+          {
+            items: [{ price: currentPriceId, quantity: 1 }],
+            start_date: schedule.phases[0].start_date,
+            end_date: schedule.phases[0].end_date,
+          },
+          {
+            items: [{ price: priceId, quantity: 1 }],
+          },
+        ],
+      })
+
+      // Store pending downgrade in DB
+      await supabase
+        .from('subscriptions')
+        .update({ pending_plan: targetPlan })
+        .eq('user_id', user.id)
+
+      return NextResponse.json({ success: true, scheduled: true, plan: targetPlan })
+    } else {
+      // Immediate upgrade with proration
+      const updated = await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        items: [{ id: itemId, price: priceId }],
+        proration_behavior: 'create_prorations',
+      })
+
+      const newPriceId = updated.items.data[0]?.price.id
+      await supabase
+        .from('subscriptions')
+        .update({
+          plan: getPlanFromPriceId(newPriceId),
+          stripe_price_id: newPriceId,
+          pending_plan: null,
+        })
+        .eq('user_id', user.id)
+
+      return NextResponse.json({ success: true, plan: getPlanFromPriceId(newPriceId) })
+    }
   } catch (err: any) {
     console.error('Change plan error:', err)
     return NextResponse.json({ error: err.message || 'Failed to change plan' }, { status: 500 })
