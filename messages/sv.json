@@ -60,6 +60,7 @@
     "newGig": "Nytt uppdrag",
     "editGig": "Redigera uppdrag",
     "client": "Uppdragsgivare",
+    "clientShort": "UppdragsG.",
     "type": "Typ",
     "position": "Position",
     "venue": "Plats",

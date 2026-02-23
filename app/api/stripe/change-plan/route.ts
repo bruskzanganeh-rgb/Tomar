@@ -3,6 +3,13 @@ import { stripe, getPlanFromPriceId } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
+const PRICE_IDS: Record<string, string | undefined> = {
+  'pro-monthly': process.env.STRIPE_PRO_MONTHLY_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID,
+  'pro-yearly': process.env.STRIPE_PRO_YEARLY_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID,
+  'team-monthly': process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID,
+  'team-yearly': process.env.STRIPE_TEAM_YEARLY_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID,
+}
+
 export async function POST(request: Request) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const { success: rl } = rateLimit(`change-plan:${ip}`, 5, 60_000)
@@ -15,12 +22,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { priceId } = await request.json()
-  if (!priceId) {
-    return NextResponse.json({ error: 'priceId is required' }, { status: 400 })
+  const { plan, interval } = await request.json()
+  if (!plan || !interval) {
+    return NextResponse.json({ error: 'plan and interval are required' }, { status: 400 })
   }
 
-  const targetPlan = getPlanFromPriceId(priceId)
+  const priceId = PRICE_IDS[`${plan}-${interval}`]
+  if (!priceId) {
+    return NextResponse.json({ error: 'Invalid plan/interval combination' }, { status: 400 })
+  }
+
+  const targetPlan = plan as string
 
   // For team plan, verify the user is a company owner
   if (targetPlan === 'team') {

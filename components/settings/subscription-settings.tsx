@@ -57,13 +57,13 @@ export function SubscriptionSettings() {
     }
   }
 
-  async function handleChangePlan(priceId: string) {
+  async function handleChangePlan(plan: 'pro' | 'team', interval: 'monthly' | 'yearly') {
     setChangingPlan(true)
     try {
       const res = await fetch('/api/stripe/change-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ plan, interval }),
       })
 
       const data = await res.json()
@@ -419,7 +419,7 @@ export function SubscriptionSettings() {
                 </ul>
                 <Button
                   onClick={() => subscription?.stripe_subscription_id
-                    ? handleChangePlan(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '')
+                    ? handleChangePlan('team', 'monthly')
                     : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '', 'team')
                   }
                   disabled={upgrading || changingPlan}
@@ -463,7 +463,7 @@ export function SubscriptionSettings() {
                 </ul>
                 <Button
                   onClick={() => subscription?.stripe_subscription_id
-                    ? handleChangePlan(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '')
+                    ? handleChangePlan('team', 'yearly')
                     : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '', 'team')
                   }
                   disabled={upgrading || changingPlan}
@@ -493,7 +493,7 @@ export function SubscriptionSettings() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowDowngradeConfirm(process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID || '')}
+                onClick={() => setShowDowngradeConfirm('monthly')}
                 disabled={changingPlan}
               >
                 {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
@@ -502,7 +502,7 @@ export function SubscriptionSettings() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowDowngradeConfirm(process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID || '')}
+                onClick={() => setShowDowngradeConfirm('yearly')}
                 disabled={changingPlan}
               >
                 {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
@@ -520,7 +520,7 @@ export function SubscriptionSettings() {
         description={t('downgradeConfirmDesc')}
         confirmLabel={t('downgrade')}
         onConfirm={() => {
-          if (showDowngradeConfirm) handleChangePlan(showDowngradeConfirm)
+          if (showDowngradeConfirm) handleChangePlan('pro', showDowngradeConfirm as 'monthly' | 'yearly')
         }}
       />
     </div>

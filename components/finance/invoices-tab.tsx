@@ -504,11 +504,10 @@ export default function InvoicesTab() {
                   <TableRow>
                     <TableHead className="w-8"></TableHead>
                     <TableHead className="w-[18%]">{tGig('date')}</TableHead>
-                    <TableHead className="w-[22%]">{tGig('client')}</TableHead>
-                    <TableHead className="w-[20%]">{tGig('project')}</TableHead>
-                    <TableHead className="w-[10%]">{tGig('type')}</TableHead>
-                    <TableHead className="w-[12%]">{tGig('fee')}</TableHead>
-                    <TableHead className="w-[14%] text-right">{tGig('action')}</TableHead>
+                    <TableHead className="w-[22%]">{tGig('clientShort')}</TableHead>
+                    <TableHead className="w-[20%] hidden xl:table-cell">{tGig('project')}</TableHead>
+                    <TableHead className="w-[15%]">{tGig('fee')}</TableHead>
+                    <TableHead className="w-[10%] text-right">{tGig('action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -533,12 +532,9 @@ export default function InvoicesTab() {
                           ? `${format(new Date(gig.start_date), 'd MMM', { locale: dateLocale })} - ${format(new Date(gig.end_date), 'd MMM yyyy', { locale: dateLocale })}`
                           : format(new Date(gig.date), 'PPP', { locale: dateLocale })}
                       </TableCell>
-                      <TableCell className="font-medium">{gig.client_name}</TableCell>
-                      <TableCell className="text-muted-foreground truncate" title={gig.project_name || undefined}>
+                      <TableCell className="font-medium truncate" title={gig.client_name}>{gig.client_name}</TableCell>
+                      <TableCell className="text-muted-foreground truncate hidden xl:table-cell" title={gig.project_name || undefined}>
                         {gig.project_name || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{gig.gig_type_name}</Badge>
                       </TableCell>
                       <TableCell className="font-medium">
                         {gig.fee.toLocaleString(formatLocale)} {tc('kr')}
