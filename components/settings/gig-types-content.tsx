@@ -122,15 +122,10 @@ export default function GigTypesPage() {
                       <Badge variant="outline">{type.vat_rate}%</Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded"
-                          style={{ backgroundColor: type.color || '#gray' }}
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          {type.color || '-'}
-                        </span>
-                      </div>
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: type.color || '#gray' }}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
