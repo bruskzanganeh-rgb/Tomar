@@ -99,9 +99,9 @@ export function CreateClientDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col overflow-hidden">
             <DialogHeader>
               <DialogTitle>{t('newClient')}</DialogTitle>
               <DialogDescription>
@@ -109,6 +109,7 @@ export function CreateClientDialog({
               </DialogDescription>
             </DialogHeader>
 
+            <div className="overflow-y-auto flex-1 -mx-6 px-6">
             <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
@@ -126,7 +127,7 @@ export function CreateClientDialog({
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="client_code"
@@ -159,7 +160,7 @@ export function CreateClientDialog({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="country_code"
@@ -316,8 +317,9 @@ export function CreateClientDialog({
                 )}
               />
             </div>
+            </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"

@@ -522,7 +522,7 @@ export function GigDialog({
                       setFormData({ ...formData, client_id: value })
                     }
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full truncate">
                       <SelectValue placeholder={t('selectClient')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -547,7 +547,7 @@ export function GigDialog({
                         setFormData({ ...formData, gig_type_id: value })
                       }
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full truncate">
                         <SelectValue placeholder={t('selectType')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -568,7 +568,7 @@ export function GigDialog({
                           setFormData({ ...formData, position_id: value })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full truncate">
                           <SelectValue placeholder={t('selectPosition')} />
                         </SelectTrigger>
                         <SelectContent>

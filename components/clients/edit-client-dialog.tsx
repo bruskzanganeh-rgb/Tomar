@@ -134,9 +134,9 @@ export function EditClientDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col overflow-hidden">
             <DialogHeader>
               <DialogTitle>{t('editClient')}</DialogTitle>
               <DialogDescription>
@@ -144,6 +144,7 @@ export function EditClientDialog({
               </DialogDescription>
             </DialogHeader>
 
+            <div className="overflow-y-auto flex-1 -mx-6 px-6">
             <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
@@ -161,7 +162,7 @@ export function EditClientDialog({
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="client_code"
@@ -194,7 +195,7 @@ export function EditClientDialog({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="country_code"
@@ -351,8 +352,9 @@ export function EditClientDialog({
                 )}
               />
             </div>
+            </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"

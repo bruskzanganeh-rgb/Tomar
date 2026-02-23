@@ -345,7 +345,7 @@ export function UploadReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {step === 'upload' ? t('uploadReceipt') : t('reviewAndSave')}

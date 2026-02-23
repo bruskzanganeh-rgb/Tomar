@@ -289,7 +289,7 @@ export function EditInvoiceDialog({
               </div>
 
               {/* Right column: Form fields */}
-              <div className="flex-1 min-w-0 grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                 <div className="space-y-1">
                   <Label htmlFor="invoice_number">{t('invoiceNumber')}</Label>
                   <Input

@@ -559,7 +559,7 @@ export function CreateInvoiceDialog({
                     }}
                     required
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="truncate">
                       <SelectValue placeholder={t('selectClient')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -705,7 +705,7 @@ export function CreateInvoiceDialog({
                           value={line.gig_type_id}
                           onValueChange={(value) => updateLine(index, 'gig_type_id', value)}
                         >
-                          <SelectTrigger className="w-40">
+                          <SelectTrigger className="w-40 truncate">
                             <SelectValue placeholder={t('type')} />
                           </SelectTrigger>
                           <SelectContent>
