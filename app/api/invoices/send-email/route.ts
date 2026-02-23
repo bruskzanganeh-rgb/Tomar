@@ -214,6 +214,28 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Store sent PDF to Supabase storage
+    try {
+      const storagePath = `invoices/${invoiceId}/sent.pdf`
+      const { error: uploadError } = await serviceSupabase.storage
+        .from('expenses')
+        .upload(storagePath, pdfBuffer, {
+          contentType: 'application/pdf',
+          upsert: true,
+        })
+
+      if (!uploadError) {
+        await serviceSupabase
+          .from('invoices')
+          .update({ pdf_url: storagePath })
+          .eq('id', invoiceId)
+      } else {
+        console.error('PDF storage upload error:', uploadError)
+      }
+    } catch (storageErr) {
+      console.error('PDF storage exception:', storageErr)
+    }
+
     // Update invoice status - scope to user for safety
     if (invoice.status === 'draft') {
       await supabase

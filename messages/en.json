@@ -221,6 +221,7 @@
     "importedInvoice": "Imported invoice",
     "createdInvoice": "Created invoice",
     "originalPdf": "Original PDF",
+    "sentPdf": "Sent invoice PDF",
     "openInNewWindow": "Open in new window",
     "noPdf": "No PDF",
     "createdManually": "Invoice was created manually",

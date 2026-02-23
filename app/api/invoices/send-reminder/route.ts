@@ -190,6 +190,36 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Store sent PDF if not already stored
+    try {
+      const { data: existingInvoice } = await serviceSupabase
+        .from('invoices')
+        .select('pdf_url')
+        .eq('id', invoiceId)
+        .single()
+
+      if (!existingInvoice?.pdf_url) {
+        const storagePath = `invoices/${invoiceId}/sent.pdf`
+        const { error: uploadError } = await serviceSupabase.storage
+          .from('expenses')
+          .upload(storagePath, pdfBuffer, {
+            contentType: 'application/pdf',
+            upsert: true,
+          })
+
+        if (!uploadError) {
+          await serviceSupabase
+            .from('invoices')
+            .update({ pdf_url: storagePath })
+            .eq('id', invoiceId)
+        } else {
+          console.error('Reminder PDF storage upload error:', uploadError)
+        }
+      }
+    } catch (storageErr) {
+      console.error('Reminder PDF storage exception:', storageErr)
+    }
+
     // Compute next reminder number
     const { data: maxReminder } = await supabase
       .from('invoice_reminders')

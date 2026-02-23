@@ -50,6 +50,7 @@ type Invoice = {
   client_id: string
   user_id: string
   original_pdf_url: string | null
+  pdf_url: string | null
   imported_from_pdf: boolean
   client: { id: string; name: string; email: string | null; invoice_language: string | null }
 }
@@ -379,16 +380,7 @@ export default function InvoicesTab() {
   return (
     <PageTransition>
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={`${tc('search')}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      <div className="flex items-center justify-end">
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
           {t('newInvoice')}
@@ -569,10 +561,21 @@ export default function InvoicesTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {t('allInvoices', { count: invoices.length })}
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {t('allInvoices', { count: invoices.length })}
+            </CardTitle>
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={`${tc('search')}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (

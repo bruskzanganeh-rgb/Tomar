@@ -221,6 +221,7 @@
     "importedInvoice": "Importerad faktura",
     "createdInvoice": "Skapad faktura",
     "originalPdf": "Original-PDF",
+    "sentPdf": "Skickad faktura-PDF",
     "openInNewWindow": "Öppna i nytt fönster",
     "noPdf": "Ingen PDF",
     "createdManually": "Fakturan skapades manuellt",

@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Receipt, BarChart3, Upload, Image, Download, Loader2, X } from 'lucide-react'
+import { Receipt, BarChart3, Upload, Image, Download, Loader2, X, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,7 @@ export default function ExpensesTab() {
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
+  const [searchQuery, setSearchQuery] = useState('')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [supplierFilter, setSupplierFilter] = useState<string>('all')
@@ -165,6 +167,13 @@ export default function ExpensesTab() {
     if (supplierFilter !== 'all' && e.supplier !== supplierFilter) return false
     if (gigFilter === 'linked' && !e.gig_id) return false
     if (gigFilter === 'unlinked' && e.gig_id) return false
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      const matchesSupplier = e.supplier.toLowerCase().includes(q)
+      const matchesCategory = e.category?.toLowerCase().includes(q)
+      const matchesNotes = e.notes?.toLowerCase().includes(q)
+      if (!matchesSupplier && !matchesCategory && !matchesNotes) return false
+    }
     return true
   })
 
@@ -317,12 +326,23 @@ export default function ExpensesTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
-              ? `${t('expenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
-              : `${t('allExpenses')} (${expenses.length})`}
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
+                ? `${t('expenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
+                : `${t('allExpenses')} (${expenses.length})`}
+            </CardTitle>
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={`${tc('search')}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
