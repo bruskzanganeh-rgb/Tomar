@@ -24,6 +24,7 @@ import { Loader2, Trash2, ExternalLink, Upload, Image, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { GigCombobox } from '@/components/expenses/gig-combobox'
+import { GigListBox } from '@/components/expenses/gig-listbox'
 import { isValidReceiptFile, ALLOWED_RECEIPT_EXTENSIONS } from '@/lib/upload/file-validation'
 
 type Expense = {
@@ -493,11 +494,22 @@ export function EditExpenseDialog({
             {/* Höger kolumn: Uppdragsväljare */}
             <div className="flex-1 space-y-2">
               <Label>{t('gig')}</Label>
-              <GigCombobox
-                gigs={gigs}
-                value={formData.gig_id}
-                onValueChange={(value) => setFormData({ ...formData, gig_id: value })}
-              />
+              {/* Dropdown på mobil */}
+              <div className="md:hidden">
+                <GigCombobox
+                  gigs={gigs}
+                  value={formData.gig_id}
+                  onValueChange={(value) => setFormData({ ...formData, gig_id: value })}
+                />
+              </div>
+              {/* Inline lista på desktop */}
+              <div className="hidden md:block">
+                <GigListBox
+                  gigs={gigs}
+                  value={formData.gig_id}
+                  onValueChange={(value) => setFormData({ ...formData, gig_id: value })}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
                 {t('linkExpenseToGigHint')}
               </p>
