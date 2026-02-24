@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, FileText, Download, Mail, Check, Trash2, ClipboardList, ChevronDown, Bell, Search } from 'lucide-react'
+import { Plus, FileText, Download, Mail, Check, Trash2, ClipboardList, ChevronDown, Bell, Search, Loader2, X, Eye } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { CreateInvoiceDialog } from '@/components/invoices/create-invoice-dialog'
 import { SendInvoiceDialog } from '@/components/invoices/send-invoice-dialog'
@@ -30,6 +30,11 @@ import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
 import { PageTransition } from '@/components/ui/page-transition'
 import { downloadFile } from '@/lib/download'
@@ -120,6 +125,10 @@ export default function InvoicesTab() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null)
   const [confirmPaidInvoice, setConfirmPaidInvoice] = useState<string | null>(null)
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null)
+  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false)
+  const [pdfPreviewInvoiceNumber, setPdfPreviewInvoiceNumber] = useState<number>(0)
   const supabase = createClient()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollHint, setShowScrollHint] = useState(true)
@@ -316,6 +325,26 @@ export default function InvoicesTab() {
     estimateSize: () => 57,
     overscan: 5,
   })
+
+  async function openPdfPreview(invoiceId: string, invoiceNumber: number) {
+    setPdfPreviewInvoiceNumber(invoiceNumber)
+    setPdfPreviewOpen(true)
+    setPdfPreviewLoading(true)
+    setPdfPreviewUrl(null)
+
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/pdf`)
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      setPdfPreviewUrl(url)
+    } catch {
+      toast.error(t('errorLoadingPdf'))
+      setPdfPreviewOpen(false)
+    } finally {
+      setPdfPreviewLoading(false)
+    }
+  }
 
   async function markAsPaid(id: string) {
     const { error } = await supabase
@@ -638,8 +667,8 @@ export default function InvoicesTab() {
                           <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => downloadFile(`/api/invoices/${invoice.id}/pdf`, `Faktura-${invoice.invoice_number}.pdf`)}>
-                        <Download className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openPdfPreview(invoice.id, invoice.invoice_number)}>
+                        <Eye className="h-3.5 w-3.5" />
                       </Button>
                       {invoice.status === 'overdue' ? (
                         <Button variant="ghost" size="icon" className="h-9 w-9 text-amber-600" onClick={() => { setSelectedInvoice(invoice); setShowReminderDialog(true) }} title={t('reminder.sendReminder')}>
@@ -752,10 +781,10 @@ export default function InvoicesTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => downloadFile(`/api/invoices/${invoice.id}/pdf`, `Faktura-${invoice.invoice_number}.pdf`)}
-                              title={t('downloadPdf')}
+                              onClick={() => openPdfPreview(invoice.id, invoice.invoice_number)}
+                              title={t('previewPdf')}
                             >
-                              <Download className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
                             {invoice.status === 'overdue' ? (
                               <Button
@@ -906,6 +935,53 @@ export default function InvoicesTab() {
           setConfirmPaidInvoice(null)
         }}
       />
+      <Dialog open={pdfPreviewOpen} onOpenChange={(open) => {
+        setPdfPreviewOpen(open)
+        if (!open && pdfPreviewUrl) {
+          URL.revokeObjectURL(pdfPreviewUrl)
+          setPdfPreviewUrl(null)
+        }
+      }}>
+        <DialogContent className="sm:max-w-[700px] p-0">
+          <DialogTitle className="sr-only">
+            {t('invoice')} #{pdfPreviewInvoiceNumber}
+          </DialogTitle>
+          <div className="relative">
+            <div className="absolute top-2 right-2 z-10 flex gap-1">
+              {pdfPreviewUrl && (
+                <button
+                  onClick={() => downloadFile(pdfPreviewUrl, `Faktura-${pdfPreviewInvoiceNumber}.pdf`)}
+                  className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                  title={tc('download')}
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                onClick={() => setPdfPreviewOpen(false)}
+                className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {pdfPreviewLoading ? (
+              <div className="flex items-center justify-center h-96">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            ) : pdfPreviewUrl ? (
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-[80vh] rounded-lg"
+                title={`${t('invoice')} #${pdfPreviewInvoiceNumber}`}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96 text-gray-500">
+                {t('errorLoadingPdf')}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
     </PageTransition>
   )

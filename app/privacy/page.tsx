@@ -3,8 +3,8 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Integritetspolicy',
-  description: 'Integritetspolicy för Amida, en tjänst av Babalisk AB.',
+  title: 'Privacy Policy',
+  description: 'Privacy policy for Amida, a service by Babalisk AB.',
   alternates: { canonical: 'https://amida.babalisk.com/privacy' },
 }
 
@@ -21,92 +21,92 @@ export default function PrivacyPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="text-3xl font-bold text-white mb-2">Integritetspolicy</h1>
-        <p className="text-sm text-[#C7D2FE]/50 mb-10">Senast uppdaterad: 23 februari 2026</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Privacy Policy</h1>
+        <p className="text-sm text-[#C7D2FE]/50 mb-10">Last updated: February 23, 2026</p>
 
         <div className="prose prose-invert prose-sm max-w-none text-[#C7D2FE]/80 space-y-8">
           <section>
-            <h2 className="text-lg font-semibold text-white">1. Personuppgiftsansvarig</h2>
+            <h2 className="text-lg font-semibold text-white">1. Data Controller</h2>
             <p>
-              Babalisk AB ansvarar for behandlingen av dina personuppgifter i samband med
-              tjänsten Amida (amida.babalisk.com). Kontakta oss vid frågor:
+              Babalisk AB is responsible for the processing of your personal data in connection with
+              the service Amida (amida.babalisk.com). Contact us with any questions:
             </p>
-            <p>E-post: <a href="mailto:support@babalisk.com" className="text-[#F59E0B] hover:underline">support@babalisk.com</a></p>
+            <p>Email: <a href="mailto:support@babalisk.com" className="text-[#F59E0B] hover:underline">support@babalisk.com</a></p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">2. Vilka uppgifter vi samlar in</h2>
+            <h2 className="text-lg font-semibold text-white">2. Data We Collect</h2>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong className="text-white">Kontouppgifter</strong> — e-postadress och lösenord (krypterat) vid registrering.</li>
-              <li><strong className="text-white">Företagsinformation</strong> — företagsnamn, organisationsnummer, adress, bankuppgifter som du anger i inställningarna.</li>
-              <li><strong className="text-white">Uppdrag och fakturor</strong> — datum, arvoden, klientnamn, fakturadata som du skapar i tjänsten.</li>
-              <li><strong className="text-white">Kvitton och bilagor</strong> — bilder du laddar upp for kvittoskanning eller som bilagor till uppdrag.</li>
-              <li><strong className="text-white">Betalningsuppgifter</strong> — hanteras av Stripe. Vi lagrar inte kortnummer.</li>
-              <li><strong className="text-white">Teknisk data</strong> — IP-adress, webbläsartyp och enhetsinformation for säkerhet och prestanda.</li>
+              <li><strong className="text-white">Account information</strong> — email address and password (encrypted) upon registration.</li>
+              <li><strong className="text-white">Company information</strong> — company name, registration number, address, and bank details that you enter in settings.</li>
+              <li><strong className="text-white">Gigs and invoices</strong> — dates, fees, client names, and invoice data that you create in the service.</li>
+              <li><strong className="text-white">Receipts and attachments</strong> — images you upload for receipt scanning or as attachments to gigs.</li>
+              <li><strong className="text-white">Payment information</strong> — handled by Stripe. We do not store card numbers.</li>
+              <li><strong className="text-white">Technical data</strong> — IP address, browser type, and device information for security and performance.</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">3. Varfor vi behandlar dina uppgifter</h2>
+            <h2 className="text-lg font-semibold text-white">3. Why We Process Your Data</h2>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Leverera och förbättra tjänsten (avtalsgrund).</li>
-              <li>Hantera ditt konto och prenumeration.</li>
-              <li>Skicka fakturor och påminnelser via e-post på din begäran.</li>
-              <li>AI-bearbetning av kvitton for att extrahera belopp och leverantör.</li>
-              <li>Förhindra missbruk och upprätthålla säkerhet (berättigat intresse).</li>
+              <li>Deliver and improve the service (contractual basis).</li>
+              <li>Manage your account and subscription.</li>
+              <li>Send invoices and reminders via email at your request.</li>
+              <li>AI processing of receipts to extract amounts and suppliers.</li>
+              <li>Prevent abuse and maintain security (legitimate interest).</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">4. Tredjeparter</h2>
-            <p>Vi delar uppgifter med följande tjänster, alla med adekvata skyddsåtgärder:</p>
+            <h2 className="text-lg font-semibold text-white">4. Third Parties</h2>
+            <p>We share data with the following services, all with adequate safeguards:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong className="text-white">Supabase</strong> (EU) — databas och autentisering.</li>
-              <li><strong className="text-white">Stripe</strong> (USA, EU SCC) — betalningshantering.</li>
-              <li><strong className="text-white">Resend</strong> (USA, EU SCC) — e-postutskick av fakturor.</li>
-              <li><strong className="text-white">Anthropic</strong> (USA, EU SCC) — AI-analys av kvitton. Bilddata används inte for modellträning.</li>
-              <li><strong className="text-white">Vercel</strong> (USA, EU SCC) — hosting och CDN.</li>
+              <li><strong className="text-white">Supabase</strong> (EU) — database and authentication.</li>
+              <li><strong className="text-white">Stripe</strong> (USA, EU SCC) — payment processing.</li>
+              <li><strong className="text-white">Resend</strong> (USA, EU SCC) — email delivery of invoices.</li>
+              <li><strong className="text-white">Anthropic</strong> (USA, EU SCC) — AI analysis of receipts. Image data is not used for model training.</li>
+              <li><strong className="text-white">Vercel</strong> (USA, EU SCC) — hosting and CDN.</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">5. Lagring och radering</h2>
+            <h2 className="text-lg font-semibold text-white">5. Storage and Deletion</h2>
             <p>
-              Dina uppgifter lagras så länge du har ett aktivt konto. Om du raderar ditt konto
-              tar vi bort alla personuppgifter inom 30 dagar, med undantag for data vi är
-              skyldiga att behålla enligt bokföringslagen (7 år for fakturadata).
+              Your data is stored as long as you have an active account. If you delete your account,
+              we will remove all personal data within 30 days, except for data we are required to
+              retain under accounting regulations (7 years for invoice data).
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">6. Dina rättigheter (GDPR)</h2>
-            <p>Du har rätt att:</p>
+            <h2 className="text-lg font-semibold text-white">6. Your Rights (GDPR)</h2>
+            <p>You have the right to:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong className="text-white">Få tillgång</strong> till dina personuppgifter.</li>
-              <li><strong className="text-white">Rätta</strong> felaktiga uppgifter.</li>
-              <li><strong className="text-white">Radera</strong> dina uppgifter ("rätten att bli glömd").</li>
-              <li><strong className="text-white">Exportera</strong> dina uppgifter i ett maskinläsbart format.</li>
-              <li><strong className="text-white">Invända</strong> mot behandling baserad på berättigat intresse.</li>
-              <li><strong className="text-white">Lämna klagomål</strong> till Integritetsskyddsmyndigheten (IMY).</li>
+              <li><strong className="text-white">Access</strong> your personal data.</li>
+              <li><strong className="text-white">Rectify</strong> inaccurate data.</li>
+              <li><strong className="text-white">Erase</strong> your data (&quot;right to be forgotten&quot;).</li>
+              <li><strong className="text-white">Export</strong> your data in a machine-readable format.</li>
+              <li><strong className="text-white">Object</strong> to processing based on legitimate interest.</li>
+              <li><strong className="text-white">Lodge a complaint</strong> with the Swedish Authority for Privacy Protection (IMY).</li>
             </ul>
-            <p>Kontakta <a href="mailto:support@babalisk.com" className="text-[#F59E0B] hover:underline">support@babalisk.com</a> for att utöva dina rättigheter.</p>
+            <p>Contact <a href="mailto:support@babalisk.com" className="text-[#F59E0B] hover:underline">support@babalisk.com</a> to exercise your rights.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-semibold text-white">7. Cookies</h2>
             <p>
-              Amida använder enbart nödvändiga cookies for autentisering (Supabase session-cookies)
-              och språkval. Vi använder inga spårningscookies eller tredjepartscookies for reklam.
-              Vercel Analytics samlar in anonymiserad prestandadata utan cookies.
+              Amida only uses essential cookies for authentication (Supabase session cookies)
+              and language preferences. We do not use tracking cookies or third-party cookies for advertising.
+              Vercel Analytics collects anonymized performance data without cookies.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white">8. Ändringar</h2>
+            <h2 className="text-lg font-semibold text-white">8. Changes</h2>
             <p>
-              Vi kan uppdatera denna policy. Väsentliga ändringar meddelas via e-post eller
-              i tjänsten. Fortsatt användning efter ändringar innebär att du godkänner den
-              uppdaterade policyn.
+              We may update this policy. Material changes will be communicated via email or
+              within the service. Continued use after changes constitutes acceptance of the
+              updated policy.
             </p>
           </section>
         </div>
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
             <span>Amida</span>
           </Link>
           <div className="flex gap-4">
-            <Link href="/terms" className="hover:text-[#C7D2FE]">Användarvillkor</Link>
+            <Link href="/terms" className="hover:text-[#C7D2FE]">Terms of Service</Link>
           </div>
         </div>
       </footer>

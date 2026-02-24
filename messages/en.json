@@ -209,6 +209,8 @@
     "sendInvoice": "Send invoice",
     "sendViaEmail": "Send via email",
     "downloadPdf": "Download PDF",
+    "previewPdf": "Preview PDF",
+    "errorLoadingPdf": "Could not load PDF",
     "collectiveInvoice": "Collective invoice",
     "collectiveInvoiceCount": "Collective invoice ({count} gigs)",
     "allInvoices": "All invoices ({count})",

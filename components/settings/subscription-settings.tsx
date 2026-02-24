@@ -335,7 +335,7 @@ export function SubscriptionSettings() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">{t('proMonthly')}</CardTitle>
               <CardDescription>
-                <span className="text-2xl font-bold text-foreground">{tierConfig.pro.priceMonthly} kr</span>
+                <span className="text-2xl font-bold text-foreground">${tierConfig.pro.priceMonthly}</span>
                 <span className="text-muted-foreground"> {t('perMonth')}</span>
               </CardDescription>
             </CardHeader>
@@ -405,7 +405,7 @@ export function SubscriptionSettings() {
                   {t('teamMonthly')}
                 </CardTitle>
                 <CardDescription>
-                  <span className="text-2xl font-bold text-foreground">{tierConfig.team.priceMonthly} kr</span>
+                  <span className="text-2xl font-bold text-foreground">${tierConfig.team.priceMonthly}</span>
                   <span className="text-muted-foreground"> {t('perMonth')}</span>
                 </CardDescription>
               </CardHeader>

@@ -209,6 +209,8 @@
     "sendInvoice": "Skicka faktura",
     "sendViaEmail": "Skicka via e-post",
     "downloadPdf": "Ladda ner PDF",
+    "previewPdf": "Visa PDF",
+    "errorLoadingPdf": "Kunde inte ladda PDF",
     "collectiveInvoice": "Samlingsfaktura",
     "collectiveInvoiceCount": "Samlingsfaktura ({count} uppdrag)",
     "allInvoices": "Alla fakturor ({count})",

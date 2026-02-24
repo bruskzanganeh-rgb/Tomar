@@ -52,8 +52,8 @@ export default function LandingPage() {
             offers: {
               '@type': 'AggregateOffer',
               lowPrice: '0',
-              highPrice: '99',
-              priceCurrency: 'SEK',
+              highPrice: '10',
+              priceCurrency: 'USD',
               offerCount: '3',
             },
             description: 'Gig and invoice management for freelance musicians. Track gigs, generate invoices and scan receipts.',
@@ -166,8 +166,8 @@ export default function LandingPage() {
             <span>&copy; {new Date().getFullYear()} Amida</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:text-[#C7D2FE] transition-colors">Integritetspolicy</Link>
-            <Link href="/terms" className="hover:text-[#C7D2FE] transition-colors">Villkor</Link>
+            <Link href="/privacy" className="hover:text-[#C7D2FE] transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-[#C7D2FE] transition-colors">Terms</Link>
           </div>
         </div>
       </footer>
