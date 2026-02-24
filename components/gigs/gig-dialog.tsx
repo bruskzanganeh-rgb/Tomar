@@ -610,7 +610,7 @@ export function GigDialog({
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
             <DialogHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pr-8">
                 <div>
                   <DialogTitle className="text-base font-semibold tracking-tight">
                     {isEditing ? t('editGig') : t('newGig')}
@@ -641,8 +641,8 @@ export function GigDialog({
             </DialogHeader>
           </div>
 
-          {/* Main 3-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px_340px] min-h-0 flex-1 overflow-hidden">
+          {/* Main 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 min-h-0 flex-1 overflow-hidden">
 
             {/* LEFT — Form */}
             <div className="overflow-y-auto px-5 py-4 space-y-3">
@@ -831,28 +831,24 @@ export function GigDialog({
                   </p>
                 </div>
               </div>
-            </div>
 
-            {/* MIDDLE — Attachments */}
-            <div className="border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/20 overflow-y-auto px-4 py-4 space-y-4">
+              {/* Section: Receipts & Attachments */}
               {effectiveGigId ? (
-                <>
-                  <div className={cn(sectionCard, "p-3")}>
+                <div className={sectionCard}>
+                  <p className={sectionHeader}>{t('sectionAttachments')}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <GigReceipts
                       gigId={effectiveGigId}
                       gigTitle={formData.project_name || gig?.gig_type?.name}
                       disabled={loading}
                     />
-                  </div>
-                  <div className={cn(sectionCard, "p-3")}>
                     <GigAttachments gigId={effectiveGigId} disabled={loading} />
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                  <Paperclip className="h-8 w-8 text-muted-foreground/30 mb-3" />
-                  <p className="text-sm text-muted-foreground/60">{t('sectionAttachments')}</p>
-                  <p className="text-xs text-muted-foreground/40 mt-1">{t('attachmentsLoading')}</p>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed border-border/40 text-muted-foreground/50">
+                  <Paperclip className="h-4 w-4 shrink-0" />
+                  <p className="text-xs">{t('attachmentsLoading')}</p>
                 </div>
               )}
             </div>
