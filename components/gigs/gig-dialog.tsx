@@ -649,7 +649,7 @@ export function GigDialog({
           <div className="grid grid-cols-1 lg:grid-cols-2 min-h-0 flex-1 overflow-hidden">
 
             {/* LEFT — Form (always on desktop, step 1 on mobile) */}
-            {(isLg || step === 1) && <div className="overflow-y-auto px-5 py-4 space-y-3">
+            <div className={cn("overflow-y-auto px-5 py-4 space-y-3", !isLg && step !== 1 && "hidden")}>
 
               {/* Section: Gig Details */}
               <div className={sectionCard}>
@@ -855,10 +855,10 @@ export function GigDialog({
                   <p className="text-xs">{t('attachmentsLoading')}</p>
                 </div>
               )}
-            </div>}
+            </div>
 
             {/* RIGHT — Calendar (always on desktop, step 2 on mobile) */}
-            {(isLg || step === 2) && <div className="border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto">
+            <div className={cn("border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto", !isLg && step !== 2 && "hidden")}>
               <MultiDayDatePicker
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
@@ -877,7 +877,7 @@ export function GigDialog({
                 className="hidden"
                 onChange={handleScheduleFileSelected}
               />
-            </div>}
+            </div>
           </div>
 
           {/* Footer */}
