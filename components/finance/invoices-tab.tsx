@@ -32,6 +32,7 @@ import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
 import { PageTransition } from '@/components/ui/page-transition'
+import { downloadFile } from '@/lib/download'
 
 type Invoice = {
   id: string
@@ -637,7 +638,7 @@ export default function InvoicesTab() {
                           <Check className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => window.open(`/api/invoices/${invoice.id}/pdf`, '_blank')}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => downloadFile(`/api/invoices/${invoice.id}/pdf`, `Faktura-${invoice.invoice_number}.pdf`)}>
                         <Download className="h-3.5 w-3.5" />
                       </Button>
                       {invoice.status === 'overdue' ? (
@@ -751,9 +752,7 @@ export default function InvoicesTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                window.open(`/api/invoices/${invoice.id}/pdf`, '_blank')
-                              }}
+                              onClick={() => downloadFile(`/api/invoices/${invoice.id}/pdf`, `Faktura-${invoice.invoice_number}.pdf`)}
                               title={t('downloadPdf')}
                             >
                               <Download className="h-4 w-4" />

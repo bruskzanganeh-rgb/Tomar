@@ -26,6 +26,7 @@ import { Loader2, Upload, Image, X, Sparkles, AlertCircle, PenLine, AlertTriangl
 import { toast } from 'sonner'
 import { useSubscription } from '@/lib/hooks/use-subscription'
 import { GigCombobox } from '@/components/expenses/gig-combobox'
+import { GigListBox } from '@/components/expenses/gig-listbox'
 import { isValidReceiptFile, ALLOWED_RECEIPT_EXTENSIONS, ALLOWED_RECEIPT_TYPES } from '@/lib/upload/file-validation'
 
 type UploadReceiptDialogProps = {
@@ -345,7 +346,7 @@ export function UploadReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`max-h-[90vh] ${step === 'review' ? 'flex flex-col w-[95vw] md:max-w-5xl' : 'sm:max-w-[600px] overflow-y-auto'}`}>
         <DialogHeader>
           <DialogTitle>
             {step === 'upload' ? t('uploadReceipt') : t('reviewAndSave')}
@@ -479,35 +480,37 @@ export function UploadReceiptDialog({
         )}
 
         {step === 'review' && (
-          <div className="space-y-4">
-            {/* Mini-preview */}
-            {file && (
-              <div className="flex items-start gap-4">
-                {preview ? (
+          <div className="flex flex-col md:flex-row gap-6 min-w-0 flex-1 overflow-y-auto">
+            {/* Vänster kolumn: Kvittobild */}
+            <div className="w-full md:w-44 md:shrink-0 space-y-3">
+              <Label className="text-sm font-medium">{t('receipt')}</Label>
+              {file && (
+                preview ? (
                   <img
                     src={preview}
                     alt={t('receipt')}
-                    className="w-20 h-20 object-cover rounded-lg border"
+                    className="w-full h-40 md:h-56 object-cover rounded-lg border shadow-sm"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-lg border flex items-center justify-center bg-gray-50">
-                    <FileText className="h-8 w-8 text-red-500" />
+                  <div className="w-full h-40 md:h-56 rounded-lg border flex flex-col items-center justify-center bg-gray-50">
+                    <FileText className="h-12 w-12 text-red-500" />
+                    <p className="text-xs text-gray-500 mt-2">{t('pdfFile')}</p>
                   </div>
-                )}
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600">{file?.name}</p>
-                  {formData.confidence > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      {t('aiConfidence')}: {Math.round(formData.confidence * 100)}%
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+                )
+              )}
+              {file && (
+                <p className="text-xs text-gray-500 truncate">{file.name}</p>
+              )}
+              {formData.confidence > 0 && (
+                <p className="text-xs text-gray-400">
+                  {t('aiConfidence')}: {Math.round(formData.confidence * 100)}%
+                </p>
+              )}
+            </div>
 
-            {/* Form fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
+            {/* Mitten kolumn: Formulärfält */}
+            <div className="w-full md:w-72 md:shrink-0 space-y-3">
+              <div className="space-y-1">
                 <Label htmlFor="date">{t('date')}</Label>
                 <Input
                   id="date"
@@ -517,7 +520,7 @@ export function UploadReceiptDialog({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="supplier">{t('supplier')}</Label>
                 <Input
                   id="supplier"
@@ -527,8 +530,8 @@ export function UploadReceiptDialog({
                 />
               </div>
 
-              <div className="col-span-1 sm:col-span-2 grid grid-cols-[1fr_auto] gap-4">
-                <div className="space-y-2">
+              <div className="flex gap-3">
+                <div className="flex-1 space-y-1">
                   <Label htmlFor="amount">{t('amount')}</Label>
                   <Input
                     id="amount"
@@ -538,8 +541,7 @@ export function UploadReceiptDialog({
                     onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
-
-                <div className="space-y-2">
+                <div className="w-24 space-y-1">
                   <Label htmlFor="currency">{t('currency')}</Label>
                   <Select
                     value={formData.currency}
@@ -557,7 +559,7 @@ export function UploadReceiptDialog({
                 </div>
               </div>
 
-              <div className="col-span-1 sm:col-span-2 space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="category">{t('category')}</Label>
                 <Select
                   value={formData.category}
@@ -574,7 +576,7 @@ export function UploadReceiptDialog({
                 </Select>
               </div>
 
-              <div className="col-span-1 sm:col-span-2 space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="notes">{t('notes')}</Label>
                 <Input
                   id="notes"
@@ -583,22 +585,31 @@ export function UploadReceiptDialog({
                   placeholder={t('optionalDescription')}
                 />
               </div>
+            </div>
 
-              {/* Visa uppdragsval om inte redan kopplat via prop */}
-              {!gigId && (
-                <div className="col-span-1 sm:col-span-2 space-y-2">
-                  <Label>{t('linkToGig')}</Label>
+            {/* Höger kolumn: Uppdragsväljare */}
+            {!gigId && (
+              <div className="flex-1 min-w-0 space-y-2">
+                <Label>{t('linkToGig')}</Label>
+                <div className="md:hidden">
                   <GigCombobox
                     gigs={gigs}
                     value={selectedGigId}
                     onValueChange={setSelectedGigId}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t('optionalLinkReceiptToGig')}
-                  </p>
                 </div>
-              )}
-            </div>
+                <div className="hidden md:block">
+                  <GigListBox
+                    gigs={gigs}
+                    value={selectedGigId}
+                    onValueChange={setSelectedGigId}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t('optionalLinkReceiptToGig')}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

@@ -24,6 +24,7 @@ import { Loader2, Trash2, FileText, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { createClient } from '@/lib/supabase/client'
+import { downloadFile } from '@/lib/download'
 
 type Invoice = {
   id: string
@@ -271,7 +272,7 @@ export function EditInvoiceDialog({
                       variant="outline"
                       size="sm"
                       className="w-full text-xs"
-                      onClick={() => window.open(pdfUrl, '_blank')}
+                      onClick={() => pdfUrl && downloadFile(pdfUrl, `Faktura-${formData.invoice_number}.pdf`)}
                     >
                       <ExternalLink className="h-3 w-3 mr-1" />
                       {t('openInNewWindow')}

@@ -177,7 +177,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="Faktura-${invoice.invoice_number}.pdf"`,
+        'Content-Disposition': `attachment; filename="Faktura-${invoice.invoice_number}.pdf"`,
       },
     })
   } catch (error: any) {

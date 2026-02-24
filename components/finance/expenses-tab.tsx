@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Receipt, BarChart3, Upload, Image, Download, Loader2, X, Search } from 'lucide-react'
+import { Receipt, BarChart3, Upload, Image, Download, Loader2, X, Search, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   Dialog,
@@ -39,6 +39,7 @@ import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { toast } from 'sonner'
+import { downloadFile } from '@/lib/download'
 import { PageTransition } from '@/components/ui/page-transition'
 
 type Expense = {
@@ -94,6 +95,7 @@ export default function ExpensesTab() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewIsPdf, setPreviewIsPdf] = useState(false)
 
   const supabase = createClient()
 
@@ -134,7 +136,8 @@ export default function ExpensesTab() {
     { revalidateOnFocus: false, dedupingInterval: 30_000 }
   )
 
-  async function openPreview(expenseId: string) {
+  async function openPreview(expenseId: string, attachmentUrl?: string) {
+    setPreviewIsPdf(!!attachmentUrl && attachmentUrl.toLowerCase().includes('.pdf'))
     setPreviewOpen(true)
     setPreviewLoading(true)
     setPreviewUrl(null)
@@ -415,7 +418,7 @@ export default function ExpensesTab() {
                       ) : <div />}
                       {expense.attachment_url && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); openPreview(expense.id) }}
+                          onClick={(e) => { e.stopPropagation(); openPreview(expense.id, expense.attachment_url!) }}
                           className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
                           title={t('showReceiptImage')}
                         >
@@ -496,7 +499,7 @@ export default function ExpensesTab() {
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       {expense.attachment_url && (
                         <button
-                          onClick={() => openPreview(expense.id)}
+                          onClick={() => openPreview(expense.id, expense.attachment_url!)}
                           className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
                           title={t('showReceiptImage')}
                         >
@@ -534,25 +537,44 @@ export default function ExpensesTab() {
       />
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="sm:max-w-[600px] p-0">
+        <DialogContent className={`p-0 ${previewIsPdf ? 'sm:max-w-[700px]' : 'sm:max-w-[600px]'}`}>
           <DialogTitle className="sr-only">{t('receiptPreview')}</DialogTitle>
           <div className="relative">
-            <button
-              onClick={() => setPreviewOpen(false)}
-              className="absolute top-2 right-2 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="absolute top-2 right-2 z-10 flex gap-1">
+              {previewUrl && (
+                <button
+                  onClick={() => previewUrl && downloadFile(previewUrl, `kvitto.${previewIsPdf ? 'pdf' : 'jpg'}`)}
+                  className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                  title={tc('download')}
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                onClick={() => setPreviewOpen(false)}
+                className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             {previewLoading ? (
               <div className="flex items-center justify-center h-96">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             ) : previewUrl ? (
-              <img
-                src={previewUrl}
-                alt={t('receipt')}
-                className="w-full max-h-[80vh] object-contain"
-              />
+              previewIsPdf ? (
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-[80vh] rounded-lg"
+                  title={t('receiptPreview')}
+                />
+              ) : (
+                <img
+                  src={previewUrl}
+                  alt={t('receipt')}
+                  className="w-full max-h-[80vh] object-contain"
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-96 text-gray-500">
                 {t('couldNotLoadImage')}

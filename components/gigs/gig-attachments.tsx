@@ -24,6 +24,7 @@ import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCh
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { downloadFile } from '@/lib/download'
 
 type CategoryConfig = Record<AttachmentCategory, { label: string; description: string; color: string; icon: typeof FileText }>
 
@@ -204,7 +205,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       setError(null)
       const url = await getSignedUrl(attachment.file_path)
       if (url) {
-        window.open(url, '_blank')
+        await downloadFile(url, attachment.file_name)
       } else {
         setError(t('downloadError'))
       }
