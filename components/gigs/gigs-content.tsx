@@ -240,6 +240,20 @@ export default function GigsPage() {
     return userId.slice(0, 6)
   }
 
+  function handleDuplicate(gig: Gig) {
+    setDuplicateValues({
+      client_id: gig.client_id || undefined,
+      gig_type_id: gig.gig_type_id,
+      position_id: gig.position_id || undefined,
+      fee: gig.fee?.toString() || undefined,
+      currency: gig.currency || undefined,
+      venue: gig.venue || undefined,
+      project_name: gig.project_name || undefined,
+    })
+    setSelectedGig(null)
+    setShowCreateDialog(true)
+  }
+
   function handleScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50
@@ -711,6 +725,7 @@ export default function GigsPage() {
                                 <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setConfirmDeclineGig(gig.id)}><X className="h-3.5 w-3.5 text-red-600" /></Button>
                               </>
                             )}
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleDuplicate(gig)} title={t('duplicateGig')}><Copy className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
@@ -802,6 +817,7 @@ export default function GigsPage() {
                                     <Check className="h-4 w-4 text-blue-600" />
                                   </Button>
                                 )}
+                                <Button variant="ghost" size="sm" onClick={() => handleDuplicate(gig)} title={t('duplicateGig')}><Copy className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => confirmDeleteGig(gig.id)} title={t('deleteGig')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                               </div>
@@ -865,6 +881,7 @@ export default function GigsPage() {
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleDuplicate(gig)} title={t('duplicateGig')}><Copy className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
@@ -933,6 +950,7 @@ export default function GigsPage() {
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleDuplicate(gig)} title={t('duplicateGig')}><Copy className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => confirmDeleteGig(gig.id)} title={t('deleteGig')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                               </div>
@@ -996,6 +1014,7 @@ export default function GigsPage() {
                             <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleDuplicate(gig)} title={t('duplicateGig')}><Copy className="h-3.5 w-3.5" /></Button>
                             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setEditingGig(gig)}><Edit className="h-3.5 w-3.5" /></Button>
                           </div>
                         </div>
@@ -1064,6 +1083,7 @@ export default function GigsPage() {
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleDuplicate(gig)} title={t('duplicateGig')}><Copy className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => setEditingGig(gig)} title={t('editGig')}><Edit className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="sm" onClick={() => confirmDeleteGig(gig.id)} title={t('deleteGig')}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                               </div>
@@ -1446,19 +1466,7 @@ export default function GigsPage() {
                 <Button
                   variant="outline"
                   className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
-                  onClick={() => {
-                    setDuplicateValues({
-                      client_id: selectedGig.client_id || undefined,
-                      gig_type_id: selectedGig.gig_type_id,
-                      position_id: selectedGig.position_id || undefined,
-                      fee: selectedGig.fee?.toString() || undefined,
-                      currency: selectedGig.currency || undefined,
-                      venue: selectedGig.venue || undefined,
-                      project_name: selectedGig.project_name || undefined,
-                    })
-                    setSelectedGig(null)
-                    setShowCreateDialog(true)
-                  }}
+                  onClick={() => handleDuplicate(selectedGig)}
                 >
                   <Copy className="h-3.5 w-3.5 mr-1.5" />
                   {t('duplicateGig')}
