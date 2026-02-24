@@ -100,13 +100,13 @@ export function GigListBox({
       </div>
 
       {/* List */}
-      <div className="max-h-[300px] overflow-y-auto">
+      <div className="max-h-[50vh] md:max-h-[300px] overflow-y-auto">
         {/* Inget uppdrag */}
         {!q && (
           <button
             type="button"
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left",
+              "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left min-w-0",
               value === 'none' && "bg-muted"
             )}
             onClick={() => onValueChange('none')}
@@ -127,7 +127,7 @@ export function GigListBox({
                 type="button"
                 key={gig.id}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left",
+                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left min-w-0",
                   value === gig.id && "bg-muted"
                 )}
                 onClick={() => onValueChange(gig.id)}
@@ -161,7 +161,7 @@ export function GigListBox({
                 type="button"
                 key={gig.id}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left",
+                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50 transition-colors text-left min-w-0",
                   value === gig.id && "bg-muted"
                 )}
                 onClick={() => onValueChange(gig.id)}

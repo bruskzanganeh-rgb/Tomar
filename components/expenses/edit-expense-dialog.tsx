@@ -298,7 +298,7 @@ export function EditExpenseDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[1100px]">
+        <DialogContent className="max-h-[90vh] flex flex-col w-[95vw] md:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{t('editExpense')}</DialogTitle>
             <DialogDescription>
@@ -307,9 +307,9 @@ export function EditExpenseDialog({
           </DialogHeader>
 
           {/* Responsive layout: stacked on mobile, 3 columns on desktop */}
-          <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex flex-col md:flex-row gap-6 min-w-0 flex-1 overflow-y-auto">
             {/* Vänster kolumn: Kvittobild */}
-            <div className="w-full md:w-40 md:shrink-0 space-y-3">
+            <div className="w-full md:w-44 md:shrink-0 space-y-3">
               <Label className="text-sm font-medium">{t('receiptImage')}</Label>
 
               {attachmentLoading ? (
@@ -414,7 +414,7 @@ export function EditExpenseDialog({
             </div>
 
             {/* Mitten kolumn: Formulärfält */}
-            <div className="w-full md:w-64 md:shrink-0 space-y-3">
+            <div className="w-full md:w-72 md:shrink-0 space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="date">{t('date')}</Label>
                 <Input
@@ -492,7 +492,7 @@ export function EditExpenseDialog({
             </div>
 
             {/* Höger kolumn: Uppdragsväljare */}
-            <div className="flex-1 space-y-2">
+            <div className="flex-1 min-w-0 space-y-2">
               <Label>{t('gig')}</Label>
               {/* Dropdown på mobil */}
               <div className="md:hidden">
