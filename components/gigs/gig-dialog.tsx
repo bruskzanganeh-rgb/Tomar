@@ -114,6 +114,8 @@ export function GigDialog({
   const [formData, setFormData] = useState({ ...defaultFormData })
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('SEK')
   const [scheduleTexts, setScheduleTexts] = useState<Record<string, string>>({})
+  const [parsedSessions, setParsedSessions] = useState<Record<string, { start: string; end: string | null; label?: string }[]>>({})
+  const [parsingSessions, setParsingSessions] = useState<Record<string, boolean>>({})
   const [scanningSchedule, setScanningSchedule] = useState(false)
   const [scheduleFile, setScheduleFile] = useState<File | null>(null)
   const scheduleFileRef = useRef<HTMLInputElement>(null)
@@ -227,12 +229,17 @@ export function GigDialog({
       const dates = data.map(d => new Date(d.date + 'T12:00:00'))
       setSelectedDates(dates)
 
-      // Load schedule texts
+      // Load schedule texts and existing parsed sessions
       const texts: Record<string, string> = {}
+      const sessions: Record<string, { start: string; end: string | null; label?: string }[]> = {}
       data.forEach(d => {
         if (d.schedule_text) texts[d.date] = d.schedule_text
+        if (d.sessions && Array.isArray(d.sessions) && d.sessions.length > 0) {
+          sessions[d.date] = d.sessions as { start: string; end: string | null; label?: string }[]
+        }
       })
       setScheduleTexts(texts)
+      setParsedSessions(sessions)
     } else {
       // Fallback to start_date if no gig_dates
       if (gig?.start_date) {
@@ -313,26 +320,25 @@ export function GigDialog({
       response_deadline: formData.response_deadline || null,
     }
 
-    // Parse schedule texts with AI if any exist
-    let parsedSessions: Record<string, unknown[]> = {}
-    const scheduleEntries = Object.entries(scheduleTexts)
-      .filter(([_, text]) => text.trim())
+    // Parse any unparsed schedule texts before saving
+    const unparsedEntries = Object.entries(scheduleTexts)
+      .filter(([date, text]) => text.trim() && !parsedSessions[date])
       .map(([date, text]) => ({ date, text }))
 
-    if (scheduleEntries.length > 0) {
+    let finalSessions = { ...parsedSessions }
+    if (unparsedEntries.length > 0) {
       try {
         const res = await fetch('/api/gigs/parse-schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entries: scheduleEntries }),
+          body: JSON.stringify({ entries: unparsedEntries }),
         })
         if (res.ok) {
           const data = await res.json()
-          parsedSessions = data.sessions || {}
+          finalSessions = { ...finalSessions, ...(data.sessions || {}) }
         }
       } catch (err) {
         console.error('Schedule parse error:', err)
-        // Continue saving without parsed sessions
       }
     }
 
@@ -344,7 +350,7 @@ export function GigDialog({
           gig_id: gigId,
           date: key,
           schedule_text: scheduleTexts[key] || null,
-          sessions: parsedSessions[key] || [],
+          sessions: finalSessions[key] || [],
         }
       })
     }
@@ -418,6 +424,35 @@ export function GigDialog({
     setLoading(false)
     onSuccess()
     onOpenChange(false)
+  }
+
+  async function handleParseScheduleText(date: string, text: string) {
+    if (!text.trim()) {
+      setParsedSessions(prev => {
+        const next = { ...prev }
+        delete next[date]
+        return next
+      })
+      return
+    }
+    setParsingSessions(prev => ({ ...prev, [date]: true }))
+    try {
+      const res = await fetch('/api/gigs/parse-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries: [{ date, text }] }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.sessions?.[date]) {
+          setParsedSessions(prev => ({ ...prev, [date]: data.sessions[date] }))
+        }
+      }
+    } catch (err) {
+      console.error('Schedule parse error:', err)
+    } finally {
+      setParsingSessions(prev => ({ ...prev, [date]: false }))
+    }
   }
 
   async function handleScanSchedule() {
@@ -694,6 +729,9 @@ export function GigDialog({
                 scheduleTexts={scheduleTexts}
                 onScheduleTextsChange={setScheduleTexts}
                 onScanSchedule={handleScanSchedule}
+                parsedSessions={parsedSessions}
+                parsingSessions={parsingSessions}
+                onParseScheduleText={handleParseScheduleText}
               />
               {/* Hidden file input for schedule scan */}
               <input

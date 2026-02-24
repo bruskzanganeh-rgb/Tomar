@@ -1108,7 +1108,9 @@
     "onboardingPositionError": "Could not save position",
     "onboardingSaveError": "Could not save settings",
     "receiptDeleted": "Receipt deleted",
-    "receiptUploaded": "Receipt uploaded"
+    "receiptUploaded": "Receipt uploaded",
+    "scheduleScanned": "Schedule imported",
+    "scheduleScanError": "Could not read the schedule"
   },
   "gigTypes": {
     "subtitle": "Manage gig types with different VAT rates",

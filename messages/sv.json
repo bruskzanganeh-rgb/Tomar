@@ -1108,7 +1108,9 @@
     "onboardingPositionError": "Kunde inte spara position",
     "onboardingSaveError": "Kunde inte spara inställningar",
     "receiptDeleted": "Kvitto borttaget",
-    "receiptUploaded": "Kvitto uppladdat"
+    "receiptUploaded": "Kvitto uppladdat",
+    "scheduleScanned": "Schema importerat",
+    "scheduleScanError": "Kunde inte läsa schemat"
   },
   "gigTypes": {
     "subtitle": "Hantera typer av uppdrag med olika momssatser",

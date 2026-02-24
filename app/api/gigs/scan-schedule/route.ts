@@ -1,25 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { parseScheduleWithVision, parseScheduleWithText, sessionsToText } from '@/lib/schedule/parser'
+import { parseScheduleWithVision, parseScheduleWithPdf, sessionsToText } from '@/lib/schedule/parser'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
-import { extractText, renderPageAsImage } from 'unpdf'
-
-async function pdfToBase64Image(buffer: ArrayBuffer): Promise<string> {
-  const bufferCopy = buffer.slice(0)
-  const uint8Array = new Uint8Array(bufferCopy)
-
-  const imageArrayBuffer = await renderPageAsImage(uint8Array, 1, {
-    scale: 2.0,
-    canvasImport: () => import('@napi-rs/canvas'),
-  })
-
-  const bytes = new Uint8Array(imageArrayBuffer)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return Buffer.from(binary, 'binary').toString('base64')
-}
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
@@ -61,30 +43,8 @@ export async function POST(request: NextRequest) {
     let result
 
     if (isPdf) {
-      try {
-        const bufferCopy = arrayBuffer.slice(0)
-        const { text: textArray } = await extractText(new Uint8Array(bufferCopy))
-        const text = textArray.join('\n')
-
-        if (text && text.trim().length >= 50) {
-          result = await parseScheduleWithText(text, user.id)
-        } else {
-          const base64Image = await pdfToBase64Image(arrayBuffer)
-          result = await parseScheduleWithVision(base64Image, 'image/png', user.id)
-        }
-      } catch (pdfError) {
-        console.error('PDF text extraction failed, trying image conversion:', pdfError)
-        try {
-          const base64Image = await pdfToBase64Image(arrayBuffer)
-          result = await parseScheduleWithVision(base64Image, 'image/png', user.id)
-        } catch (imageError) {
-          console.error('PDF image conversion also failed:', imageError)
-          return NextResponse.json(
-            { error: 'Could not read the PDF file. Try an image instead.' },
-            { status: 400 }
-          )
-        }
-      }
+      const base64 = Buffer.from(arrayBuffer).toString('base64')
+      result = await parseScheduleWithPdf(base64, user.id)
     } else {
       const bytes = new Uint8Array(arrayBuffer)
       let binary = ''

@@ -224,10 +224,11 @@ export async function parseScheduleWithVision(
 }
 
 /**
- * Scan a schedule from extracted PDF text (cheaper than vision).
+ * Scan a schedule PDF by sending it directly to Claude's API.
+ * Uses the document content type — no local PDF rendering needed.
  */
-export async function parseScheduleWithText(
-  text: string,
+export async function parseScheduleWithPdf(
+  pdfBase64: string,
   userId?: string
 ): Promise<ScannedScheduleData> {
   try {
@@ -240,7 +241,20 @@ export async function parseScheduleWithText(
       messages: [
         {
           role: 'user',
-          content: `Läs denna schematext och extrahera datum, tider och typ:\n\n${text}`,
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: pdfBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: 'Läs detta schema och extrahera datum, tider och typ.',
+            },
+          ],
         },
       ],
     })

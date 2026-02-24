@@ -20,7 +20,9 @@ import {
 } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { enUS } from 'date-fns/locale/en-US'
-import { ChevronLeft, ChevronRight, Clock, Upload } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Upload, Loader2, Check } from 'lucide-react'
+
+type Session = { start: string; end: string | null; label?: string }
 
 type MultiDayDatePickerProps = {
   selectedDates: Date[]
@@ -29,6 +31,9 @@ type MultiDayDatePickerProps = {
   scheduleTexts?: Record<string, string>
   onScheduleTextsChange?: (texts: Record<string, string>) => void
   onScanSchedule?: () => void
+  parsedSessions?: Record<string, Session[]>
+  parsingSessions?: Record<string, boolean>
+  onParseScheduleText?: (date: string, text: string) => void
 }
 
 export function MultiDayDatePicker({
@@ -38,6 +43,9 @@ export function MultiDayDatePicker({
   scheduleTexts,
   onScheduleTextsChange,
   onScanSchedule,
+  parsedSessions,
+  parsingSessions,
+  onParseScheduleText,
 }: MultiDayDatePickerProps) {
   const t = useTranslations('datePicker')
   const appLocale = useLocale()
@@ -313,30 +321,84 @@ export function MultiDayDatePicker({
 
           {allSameText ? (
             /* Single input for all days */
-            <Input
-              value={sharedText}
-              onChange={e => handleSharedTextChange(e.target.value)}
-              placeholder={t('schedulePlaceholder')}
-              className="text-sm h-9"
-              disabled={disabled}
-            />
+            <div className="space-y-1">
+              <div className="relative">
+                <Input
+                  value={sharedText}
+                  onChange={e => handleSharedTextChange(e.target.value)}
+                  onBlur={() => {
+                    if (onParseScheduleText && sortedDates.length > 0) {
+                      const firstKey = format(sortedDates[0], 'yyyy-MM-dd')
+                      onParseScheduleText(firstKey, sharedText)
+                    }
+                  }}
+                  placeholder={t('schedulePlaceholder')}
+                  className="text-sm h-9 pr-7"
+                  disabled={disabled}
+                />
+                {sortedDates.length > 0 && parsingSessions?.[format(sortedDates[0], 'yyyy-MM-dd')] && (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                )}
+                {sortedDates.length > 0 && !parsingSessions?.[format(sortedDates[0], 'yyyy-MM-dd')] &&
+                  (parsedSessions?.[format(sortedDates[0], 'yyyy-MM-dd')]?.length ?? 0) > 0 && (
+                  <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                )}
+              </div>
+              {(() => {
+                const firstKey = sortedDates.length > 0 ? format(sortedDates[0], 'yyyy-MM-dd') : ''
+                const sessions = firstKey ? parsedSessions?.[firstKey] : undefined
+                return sessions && sessions.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {sessions.map((s, i) => (
+                      <span key={i} className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">
+                        {s.label && <span className="font-medium">{s.label} </span>}
+                        {s.start}{s.end ? `–${s.end}` : ''}
+                      </span>
+                    ))}
+                  </div>
+                ) : null
+              })()}
+            </div>
           ) : (
             /* Per-day inputs */
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
               {sortedDates.map(date => {
                 const key = format(date, 'yyyy-MM-dd')
+                const sessions = parsedSessions?.[key]
+                const isParsing = parsingSessions?.[key]
                 return (
-                  <div key={key} className="flex items-center gap-2">
-                    <span className="w-[75px] text-xs text-muted-foreground shrink-0">
-                      {format(date, 'EEE d MMM', { locale: dateLocale })}
-                    </span>
-                    <Input
-                      value={scheduleTexts?.[key] ?? ''}
-                      onChange={e => handlePerDayTextChange(key, e.target.value)}
-                      placeholder={t('schedulePlaceholder')}
-                      className="text-sm h-8"
-                      disabled={disabled}
-                    />
+                  <div key={key} className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-[75px] text-xs text-muted-foreground shrink-0">
+                        {format(date, 'EEE d MMM', { locale: dateLocale })}
+                      </span>
+                      <div className="relative flex-1">
+                        <Input
+                          value={scheduleTexts?.[key] ?? ''}
+                          onChange={e => handlePerDayTextChange(key, e.target.value)}
+                          onBlur={() => onParseScheduleText?.(key, scheduleTexts?.[key] ?? '')}
+                          placeholder={t('schedulePlaceholder')}
+                          className="text-sm h-8 pr-7"
+                          disabled={disabled}
+                        />
+                        {isParsing && (
+                          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        )}
+                        {!isParsing && sessions && sessions.length > 0 && (
+                          <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                        )}
+                      </div>
+                    </div>
+                    {sessions && sessions.length > 0 && (
+                      <div className="ml-[83px] flex flex-wrap gap-1">
+                        {sessions.map((s, i) => (
+                          <span key={i} className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">
+                            {s.label && <span className="font-medium">{s.label} </span>}
+                            {s.start}{s.end ? `–${s.end}` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )
               })}
