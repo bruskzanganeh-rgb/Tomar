@@ -626,7 +626,7 @@ export function GigDialog({
                     setFormData({ ...formData, status: value })
                   }
                 >
-                  <SelectTrigger className="w-[170px] h-8 text-sm">
+                  <SelectTrigger className="w-[190px] h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -751,7 +751,7 @@ export function GigDialog({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-[1fr_100px] gap-3">
+                <div className="grid grid-cols-[1fr_120px] gap-3">
                   <div className="space-y-1">
                     <Label className={fieldLabel}>{t('fee')}</Label>
                     <Input
