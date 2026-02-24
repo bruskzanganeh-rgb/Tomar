@@ -3,8 +3,9 @@ import Image from 'next/image'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Användarvillkor — Amida',
-  description: 'Användarvillkor for Amida, en tjänst av Babalisk AB.',
+  title: 'Användarvillkor',
+  description: 'Användarvillkor för Amida, en tjänst av Babalisk AB.',
+  alternates: { canonical: 'https://amida.babalisk.com/terms' },
 }
 
 export default function TermsPage() {

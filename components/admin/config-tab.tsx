@@ -198,7 +198,7 @@ export function ConfigTab({ configValues, setConfigValues, savingConfig, onSave 
         configValues={configValues}
         setConfigValues={setConfigValues}
         showPricing={false}
-        showFeatures={false}
+        showFeatures={true}
       />
 
       <TierSection

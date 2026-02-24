@@ -41,7 +41,7 @@ export type TierConfig = {
 }
 
 const DEFAULT_TIER_CONFIG: TierConfig = {
-  free: { invoiceLimit: 5, receiptScanLimit: 3, storageMb: 10, priceMonthly: 0, priceYearly: 0, features: [] },
+  free: { invoiceLimit: 5, receiptScanLimit: 3, storageMb: 10, priceMonthly: 0, priceYearly: 0, features: ['unlimitedGigs', 'basicInvoicing', 'calendarView'] },
   pro: { invoiceLimit: 0, receiptScanLimit: 0, storageMb: 1024, priceMonthly: 49, priceYearly: 499, features: ['unlimitedInvoices', 'unlimitedScans', 'noBranding'] },
   team: { invoiceLimit: 0, receiptScanLimit: 0, storageMb: 5120, priceMonthly: 99, priceYearly: 999, features: ['everythingInPro', 'inviteMembers', 'sharedCalendar'] },
 }

@@ -22,8 +22,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Amida",
-  description: "Gig and invoice management for musicians",
+  title: {
+    default: "Amida — Gig & invoice management for musicians",
+    template: "%s — Amida",
+  },
+  description: "Gig and invoice management for freelance musicians. Track gigs, generate invoices, scan receipts — all in one place.",
   metadataBase: new URL('https://amida.babalisk.com'),
   openGraph: {
     title: 'Amida',
