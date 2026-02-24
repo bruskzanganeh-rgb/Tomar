@@ -123,6 +123,7 @@ export function GigDialog({
   const [scheduleFile, setScheduleFile] = useState<File | null>(null)
   const scheduleFileRef = useRef<HTMLInputElement>(null)
   const [draftGigId, setDraftGigId] = useState<string | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   const supabase = createClient()
 
@@ -610,7 +611,7 @@ export function GigDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-7xl" style={{ maxWidth: 1280 }} onInteractOutside={(e) => e.preventDefault()}>
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+        <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
             <DialogHeader>
@@ -887,48 +888,36 @@ export function GigDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => { (document.activeElement as HTMLElement)?.blur(); setStep(1) }}
+                onClick={() => setStep(1)}
               >
                 {tc('back')}
               </Button>
             )}
             <div className="flex-1" />
-            {!isLg && step === 1 ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancel}
-                  disabled={loading}
-                >
-                  {tc('cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => { (document.activeElement as HTMLElement)?.blur(); setStep(2) }}
-                >
-                  {tc('next')}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancel}
-                  disabled={loading}
-                >
-                  {tc('cancel')}
-                </Button>
-                <Button type="submit" size="sm" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                  {isEditing ? t('saveChanges') : t('createGig')}
-                </Button>
-              </>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              {tc('cancel')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={loading}
+              onClick={() => {
+                if (!isLg && step === 1) {
+                  setStep(2)
+                } else {
+                  formRef.current?.requestSubmit()
+                }
+              }}
+            >
+              {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              {!isLg && step === 1 ? tc('next') : (isEditing ? t('saveChanges') : t('createGig'))}
+            </Button>
           </div>
         </form>
       </DialogContent>
