@@ -175,12 +175,6 @@ export function MultiDayDatePicker({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="text-center mb-2">
-        <p className="text-sm font-medium">{t('dates')}</p>
-        <p className="text-xs text-muted-foreground">{t('selectDays')}</p>
-      </div>
-
       {/* Calendar */}
       <div className="p-4">
         {/* Month navigation */}

@@ -836,7 +836,7 @@ export function GigDialog({
               {effectiveGigId ? (
                 <div className={sectionCard}>
                   <p className={sectionHeader}>{t('sectionAttachments')}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
                     <GigReceipts
                       gigId={effectiveGigId}
                       gigTitle={formData.project_name || gig?.gig_type?.name}

@@ -100,12 +100,12 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="icon"
+          className="h-7 w-7"
           onClick={() => setShowUploadDialog(true)}
           disabled={disabled}
         >
-          <Plus className="h-4 w-4 mr-1" />
-          {tc('add')}
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
 

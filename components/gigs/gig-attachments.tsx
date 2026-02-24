@@ -16,14 +16,12 @@ import {
   deleteGigAttachment,
   getGigAttachments,
   getSignedUrl,
-  formatFileSize,
   type GigAttachment,
   type AttachmentCategory
 } from '@/lib/supabase/storage'
 import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCheck, CalendarDays } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useTranslations } from 'next-intl'
-import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { downloadFile } from '@/lib/download'
 
 type CategoryConfig = Record<AttachmentCategory, { label: string; description: string; color: string; icon: typeof FileText }>
@@ -47,10 +45,9 @@ type AttachmentRowProps = {
   categoryConfig: CategoryConfig
   openFileLabel: string
   deleteFileLabel: string
-  formatLocale: string
 }
 
-function AttachmentRow({ attachment, onDownload, onDelete, disabled, categoryConfig, openFileLabel, deleteFileLabel, formatLocale }: AttachmentRowProps) {
+function AttachmentRow({ attachment, onDownload, onDelete, disabled, categoryConfig, openFileLabel, deleteFileLabel }: AttachmentRowProps) {
   const category = attachment.category || 'gig_info'
   const config = categoryConfig[category]
   const Icon = config.icon
@@ -66,10 +63,7 @@ function AttachmentRow({ attachment, onDownload, onDelete, disabled, categoryCon
               {config.label}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {formatFileSize(attachment.file_size)} •{' '}
-            {new Date(attachment.uploaded_at).toLocaleDateString(formatLocale)}
-          </p>
+          {/* File size and date removed for compact view */}
         </div>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
@@ -101,7 +95,6 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   const t = useTranslations('gig')
   const tc = useTranslations('common')
   const ts = useTranslations('subscription')
-  const formatLocale = useFormatLocale()
   const [attachments, setAttachments] = useState<GigAttachment[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -229,7 +222,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
             onValueChange={(value) => setSelectedCategory(value as AttachmentCategory)}
             disabled={disabled || uploading}
           >
-            <SelectTrigger className="w-[160px] h-8 text-xs">
+            <SelectTrigger className="w-[130px] h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -265,16 +258,16 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="icon"
+            className="h-7 w-7"
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || uploading}
           >
             {uploading ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Upload className="h-4 w-4 mr-1" />
+              <Upload className="h-4 w-4" />
             )}
-            {tc('upload')}
           </Button>
         </div>
       </div>
@@ -312,7 +305,6 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                   categoryConfig={categoryConfig}
                   openFileLabel={t('openFile')}
                   deleteFileLabel={t('deleteFile')}
-                  formatLocale={formatLocale}
                 />
               ))}
             </div>
@@ -335,7 +327,6 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                   categoryConfig={categoryConfig}
                   openFileLabel={t('openFile')}
                   deleteFileLabel={t('deleteFile')}
-                  formatLocale={formatLocale}
                 />
               ))}
             </div>
@@ -358,7 +349,6 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
                   categoryConfig={categoryConfig}
                   openFileLabel={t('openFile')}
                   deleteFileLabel={t('deleteFile')}
-                  formatLocale={formatLocale}
                 />
               ))}
             </div>
