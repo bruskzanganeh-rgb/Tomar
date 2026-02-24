@@ -474,7 +474,8 @@ export function GigDialog({
       })
 
       if (!res.ok) {
-        throw new Error('Scan failed')
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Scan failed (${res.status})`)
       }
 
       const result = await res.json()
@@ -503,8 +504,9 @@ export function GigDialog({
       setScheduleFile(file)
       toast.success(tToast('scheduleScanned') || 'Schema importerat')
     } catch (err) {
-      console.error('Schedule scan error:', err)
-      toast.error(tToast('scheduleScanError') || 'Kunde inte läsa schemat')
+      const message = err instanceof Error ? err.message : 'Okänt fel'
+      console.error('Schedule scan error:', message)
+      toast.error(message)
     } finally {
       setScanningSchedule(false)
       // Reset file input
