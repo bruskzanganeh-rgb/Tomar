@@ -30,6 +30,7 @@ import { MultiDayDatePicker } from '@/components/ui/multi-day-date-picker'
 import { format } from 'date-fns'
 import { SUPPORTED_CURRENCIES, type SupportedCurrency, getRate } from '@/lib/currency/exchange'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
 
 type Gig = {
   id: string
@@ -106,6 +107,8 @@ export function GigDialog({
   const tStatus = useTranslations('status')
   const tToast = useTranslations('toast')
   const isEditing = gig !== null
+  const isLg = useMediaQuery('(min-width: 1024px)')
+  const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
@@ -151,6 +154,7 @@ export function GigDialog({
   // Load clients, gig types and positions when dialog opens
   useEffect(() => {
     if (open) {
+      setStep(1)
       loadClients()
       loadGigTypes()
       loadPositions()
@@ -644,8 +648,8 @@ export function GigDialog({
           {/* Main 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 min-h-0 flex-1 overflow-hidden">
 
-            {/* LEFT — Form */}
-            <div className="overflow-y-auto px-5 py-4 space-y-3">
+            {/* LEFT — Form (always on desktop, step 1 on mobile) */}
+            {(isLg || step === 1) && <div className="overflow-y-auto px-5 py-4 space-y-3">
 
               {/* Section: Gig Details */}
               <div className={sectionCard}>
@@ -851,10 +855,10 @@ export function GigDialog({
                   <p className="text-xs">{t('attachmentsLoading')}</p>
                 </div>
               )}
-            </div>
+            </div>}
 
-            {/* RIGHT — Calendar */}
-            <div className="border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto">
+            {/* RIGHT — Calendar (always on desktop, step 2 on mobile) */}
+            {(isLg || step === 2) && <div className="border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto">
               <MultiDayDatePicker
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
@@ -873,24 +877,58 @@ export function GigDialog({
                 className="hidden"
                 onChange={handleScheduleFileSelected}
               />
-            </div>
+            </div>}
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-3 border-t border-border/50 flex items-center justify-end gap-2.5 shrink-0 bg-card">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              disabled={loading}
-            >
-              {tc('cancel')}
-            </Button>
-            <Button type="submit" size="sm" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-              {isEditing ? t('saveChanges') : t('createGig')}
-            </Button>
+          <div className="px-6 py-3 border-t border-border/50 flex items-center gap-2.5 shrink-0 bg-card">
+            {!isLg && step === 2 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setStep(1)}
+              >
+                {tc('back')}
+              </Button>
+            )}
+            <div className="flex-1" />
+            {!isLg && step === 1 ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={loading}
+                >
+                  {tc('cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setStep(2)}
+                >
+                  {tc('next')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  disabled={loading}
+                >
+                  {tc('cancel')}
+                </Button>
+                <Button type="submit" size="sm" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                  {isEditing ? t('saveChanges') : t('createGig')}
+                </Button>
+              </>
+            )}
           </div>
         </form>
       </DialogContent>

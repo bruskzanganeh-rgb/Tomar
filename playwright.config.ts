@@ -45,7 +45,7 @@ export default defineConfig({
     // Authenticated tests — depend on setup, run on all viewports
     {
       name: 'iPhone-auth',
-      testMatch: /ui-audit\.spec\.ts/,
+      testMatch: /ui-audit\.spec\.ts|gig-dialog-screenshots\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         viewport: { width: 390, height: 844 },
@@ -54,7 +54,7 @@ export default defineConfig({
     },
     {
       name: 'iPad-auth',
-      testMatch: /ui-audit\.spec\.ts/,
+      testMatch: /ui-audit\.spec\.ts|gig-dialog-screenshots\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         viewport: { width: 820, height: 1180 },
@@ -63,7 +63,7 @@ export default defineConfig({
     },
     {
       name: 'iPad-landscape-auth',
-      testMatch: /ui-audit\.spec\.ts/,
+      testMatch: /ui-audit\.spec\.ts|gig-dialog-screenshots\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         viewport: { width: 1180, height: 820 },
@@ -72,7 +72,7 @@ export default defineConfig({
     },
     {
       name: 'Desktop-auth',
-      testMatch: /ui-audit\.spec\.ts/,
+      testMatch: /ui-audit\.spec\.ts|gig-dialog-screenshots\.spec\.ts/,
       dependencies: ['setup'],
       use: {
         viewport: { width: 1440, height: 900 },
