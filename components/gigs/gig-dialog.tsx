@@ -528,202 +528,253 @@ export function GigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-5xl" style={{ maxWidth: 1100 }}>
-        <form onSubmit={handleSubmit}>
-          {/* Header — spans full width */}
-          <div className="px-8 pt-7 pb-2">
+      <DialogContent className="flex flex-col max-h-[92vh] p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-6xl" style={{ maxWidth: 1200 }}>
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          {/* Header */}
+          <div className="px-8 pt-6 pb-4 border-b border-gray-100 shrink-0">
             <DialogHeader>
               <DialogTitle className="text-lg font-semibold">
                 {isEditing ? t('editGig') : t('newGig')}
               </DialogTitle>
-              <DialogDescription className="text-sm">
+              <DialogDescription className="text-sm text-muted-foreground">
                 {isEditing ? t('editGigDescription') : t('createGigDescription')}
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          {/* Main layout: form fields left, calendar right */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px]">
+          {/* Main layout: form left, calendar right */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] min-h-0 flex-1 overflow-hidden">
 
-            {/* LEFT — Form fields */}
-            <div>
-              {/* Grupp 1: Vem & Vad */}
-              <div className="px-8 py-6 space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    {t('client')} {['completed', 'invoiced', 'paid'].includes(formData.status) && <span className="text-destructive">*</span>}
-                  </Label>
-                  <Select
-                    value={formData.client_id || 'none'}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, client_id: value })
-                    }
-                  >
-                    <SelectTrigger className="w-full truncate">
-                      <SelectValue placeholder={t('selectClient')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t('noClient')}</SelectItem>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* LEFT — Scrollable form */}
+            <div className="overflow-y-auto px-8 py-6">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      {t('type')} <span className="text-destructive">*</span>
-                    </Label>
-                    <Select
-                      value={formData.gig_type_id}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, gig_type_id: value })
-                      }
-                    >
-                      <SelectTrigger className="w-full truncate">
-                        <SelectValue placeholder={t('selectType')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {gigTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>
-                            {type.name} ({type.vat_rate}%)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {positions.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">{t('position')}</Label>
+              {/* Section: Uppdrag */}
+              <div className="mb-8">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('type')}</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">
+                        {t('type')} <span className="text-destructive">*</span>
+                      </Label>
                       <Select
-                        value={formData.position_id}
+                        value={formData.gig_type_id}
                         onValueChange={(value) =>
-                          setFormData({ ...formData, position_id: value })
+                          setFormData({ ...formData, gig_type_id: value })
                         }
                       >
                         <SelectTrigger className="w-full truncate">
-                          <SelectValue placeholder={t('selectPosition')} />
+                          <SelectValue placeholder={t('selectType')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">{t('none')}</SelectItem>
-                          {positions.map((pos) => (
-                            <SelectItem key={pos.id} value={pos.id}>
-                              {pos.name}
+                          {gigTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.name} ({type.vat_rate}%)
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  )}
+                    {positions.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">{t('position')}</Label>
+                        <Select
+                          value={formData.position_id}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, position_id: value })
+                          }
+                        >
+                          <SelectTrigger className="w-full truncate">
+                            <SelectValue placeholder={t('selectPosition')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t('none')}</SelectItem>
+                            {positions.map((pos) => (
+                              <SelectItem key={pos.id} value={pos.id}>
+                                {pos.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">{t('projectName')}</Label>
+                      <Input
+                        placeholder={t('projectNamePlaceholder')}
+                        value={formData.project_name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, project_name: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">{t('venue')}</Label>
+                      <Input
+                        placeholder={t('venuePlaceholder')}
+                        value={formData.venue}
+                        onChange={(e) =>
+                          setFormData({ ...formData, venue: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Grupp 2: Var */}
-              <div className="px-8 py-6 border-t border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('projectName')}</Label>
-                    <Input
-                      placeholder={t('projectNamePlaceholder')}
-                      value={formData.project_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, project_name: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('venue')}</Label>
-                    <Input
-                      placeholder={t('venuePlaceholder')}
-                      value={formData.venue}
-                      onChange={(e) =>
-                        setFormData({ ...formData, venue: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Grupp 3: Ekonomi & Status */}
-              <div className="px-8 py-6 border-t border-gray-100 space-y-4">
-                <div className="grid grid-cols-[1fr_auto] gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('fee')}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0"
-                      value={formData.fee}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fee: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('currency')}</Label>
+              {/* Section: Kund & Ekonomi */}
+              <div className="mb-8">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('client')}</p>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">
+                      {t('client')} {['completed', 'invoiced', 'paid'].includes(formData.status) && <span className="text-destructive">*</span>}
+                    </Label>
                     <Select
-                      value={formData.currency}
+                      value={formData.client_id || 'none'}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, currency: value })
+                        setFormData({ ...formData, client_id: value })
                       }
                     >
-                      <SelectTrigger className="w-[90px]">
-                        <SelectValue />
+                      <SelectTrigger className="w-full truncate">
+                        <SelectValue placeholder={t('selectClient')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {SUPPORTED_CURRENCIES.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">{t('status')}</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, status: value })
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        <SelectItem value="none">{t('noClient')}</SelectItem>
+                        {clients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  {(formData.status === 'pending' || formData.status === 'tentative') && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">{t('responseDeadline')}</Label>
+
+                  <div className="grid grid-cols-[1fr_120px] gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">{t('fee')}</Label>
                       <Input
-                        type="date"
-                        value={formData.response_deadline}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0"
+                        value={formData.fee}
                         onChange={(e) =>
-                          setFormData({ ...formData, response_deadline: e.target.value })
+                          setFormData({ ...formData, fee: e.target.value })
                         }
                       />
                     </div>
-                  )}
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">{t('currency')}</Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, currency: value })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SUPPORTED_CURRENCIES.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium">{t('status')}</Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, status: value })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {(formData.status === 'pending' || formData.status === 'tentative') && (
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium">{t('responseDeadline')}</Label>
+                        <Input
+                          type="date"
+                          value={formData.response_deadline}
+                          onChange={(e) =>
+                            setFormData({ ...formData, response_deadline: e.target.value })
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
+              {/* Section: Anteckningar */}
+              <div className="mb-8">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('notes')}</p>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">{t('notes')}</Label>
+                    <Textarea
+                      placeholder={t('notesPlaceholder')}
+                      value={formData.notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                      }
+                      rows={4}
+                      className="resize-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">{t('invoiceNotes')}</Label>
+                    <Textarea
+                      placeholder={t('invoiceNotesPlaceholder')}
+                      value={formData.invoice_notes}
+                      onChange={(e) =>
+                        setFormData({ ...formData, invoice_notes: e.target.value })
+                      }
+                      rows={3}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t('invoiceNotesHint')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Kvitton & Bilagor (edit only) */}
+              {isEditing && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{tc('attachments')}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <GigReceipts
+                      gigId={gig.id}
+                      gigTitle={formData.project_name || gig.gig_type?.name}
+                      disabled={loading}
+                    />
+                    <GigAttachments gigId={gig.id} disabled={loading} />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* RIGHT — Calendar (always visible) */}
-            <div className="border-t md:border-t-0 md:border-l border-blue-100 bg-blue-50/40 p-6 flex flex-col">
+            {/* RIGHT — Calendar sidebar */}
+            <div className="border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50/60 p-6 flex flex-col overflow-y-auto">
               <MultiDayDatePicker
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
@@ -746,55 +797,8 @@ export function GigDialog({
             </div>
           </div>
 
-          {/* Anteckningar — full width, two columns */}
-          <div className="px-8 py-4 border-t border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">{t('notes')}</Label>
-                <Textarea
-                  placeholder={t('notesPlaceholder')}
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">{t('invoiceNotes')}</Label>
-                <Textarea
-                  placeholder={t('invoiceNotesPlaceholder')}
-                  value={formData.invoice_notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, invoice_notes: e.target.value })
-                  }
-                  rows={2}
-                  className="resize-none"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t('invoiceNotesHint')}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Kvitton & Bilagor — full width, edit only */}
-          {isEditing && (
-            <div className="px-8 py-6 border-t border-gray-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <GigReceipts
-                  gigId={gig.id}
-                  gigTitle={formData.project_name || gig.gig_type?.name}
-                  disabled={loading}
-                />
-                <GigAttachments gigId={gig.id} disabled={loading} />
-              </div>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div className="px-8 py-5 border-t flex items-center justify-end gap-3">
+          {/* Footer — sticky */}
+          <div className="px-8 py-4 border-t border-gray-200 flex items-center justify-end gap-3 shrink-0 bg-white">
             <Button
               type="button"
               variant="outline"

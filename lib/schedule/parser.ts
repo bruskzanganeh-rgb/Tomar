@@ -6,7 +6,13 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
-// Schema for a single session within a day
+// Schema for a single session within a day (lenient — AI may return nulls)
+const RawSessionSchema = z.object({
+  start: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+  end: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+  label: z.string().optional(),
+})
+
 export const SessionSchema = z.object({
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
@@ -15,20 +21,37 @@ export const SessionSchema = z.object({
 
 export type Session = z.infer<typeof SessionSchema>
 
+// Filter out sessions with null start times
+function filterValidSessions(dates: Record<string, z.infer<typeof RawSessionSchema>[]>): Record<string, Session[]> {
+  const result: Record<string, Session[]> = {}
+  for (const [date, sessions] of Object.entries(dates)) {
+    const valid = sessions.filter((s): s is Session => s.start !== null)
+    if (valid.length > 0) {
+      result[date] = valid
+    } else {
+      // Keep the date even without sessions (just with empty array)
+      result[date] = []
+    }
+  }
+  return result
+}
+
 // Schema for parsed schedule (text parsing)
 const ParsedScheduleSchema = z.object({
-  dates: z.record(z.string(), z.array(SessionSchema)),
+  dates: z.record(z.string(), z.array(RawSessionSchema)),
 })
 
 // Schema for scanned schedule (PDF/image)
 const ScannedScheduleSchema = z.object({
-  dates: z.record(z.string(), z.array(SessionSchema)),
-  project_name: z.string().optional(),
-  venue: z.string().optional(),
+  dates: z.record(z.string(), z.array(RawSessionSchema)),
+  project_name: z.string().nullable().optional(),
+  venue: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
 })
 
-export type ScannedScheduleData = z.infer<typeof ScannedScheduleSchema>
+export type ScannedScheduleData = Omit<z.infer<typeof ScannedScheduleSchema>, 'dates'> & {
+  dates: Record<string, Session[]>
+}
 
 const PARSE_PROMPT = `Du parsar schematext för en frilansmusiker.
 
@@ -146,7 +169,7 @@ export async function parseScheduleTexts(
     const parsed = JSON.parse(cleanJsonResponse(responseText))
     const validated = ParsedScheduleSchema.parse(parsed)
 
-    return validated.dates
+    return filterValidSessions(validated.dates)
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(`Ogiltigt AI-svar: ${error.message}`)
@@ -212,7 +235,10 @@ export async function parseScheduleWithVision(
     const parsed = JSON.parse(cleanJsonResponse(responseText))
     const validated = ScannedScheduleSchema.parse(parsed)
 
-    return validated
+    return {
+      ...validated,
+      dates: filterValidSessions(validated.dates),
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(`Ogiltigt AI-svar: ${error.message}`)
@@ -278,7 +304,10 @@ export async function parseScheduleWithPdf(
     const parsed = JSON.parse(cleanJsonResponse(responseText))
     const validated = ScannedScheduleSchema.parse(parsed)
 
-    return validated
+    return {
+      ...validated,
+      dates: filterValidSessions(validated.dates),
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(`Ogiltigt AI-svar: ${error.message}`)
