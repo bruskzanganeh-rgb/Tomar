@@ -59,6 +59,10 @@
   "gig": {
     "newGig": "Nytt uppdrag",
     "editGig": "Redigera uppdrag",
+    "sectionGig": "Uppdrag",
+    "sectionClientFee": "Kund & ekonomi",
+    "sectionNotes": "Anteckningar",
+    "sectionAttachments": "Kvitton & bilagor",
     "client": "Uppdragsgivare",
     "clientShort": "UppdragsG.",
     "type": "Typ",

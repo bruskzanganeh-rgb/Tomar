@@ -59,6 +59,10 @@
   "gig": {
     "newGig": "New gig",
     "editGig": "Edit gig",
+    "sectionGig": "Gig details",
+    "sectionClientFee": "Client & fees",
+    "sectionNotes": "Notes",
+    "sectionAttachments": "Receipts & attachments",
     "client": "Client",
     "clientShort": "Client",
     "type": "Type",

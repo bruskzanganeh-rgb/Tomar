@@ -550,7 +550,7 @@ export function GigDialog({
 
               {/* Section: Uppdrag */}
               <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('type')}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionGig')}</p>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -626,7 +626,7 @@ export function GigDialog({
 
               {/* Section: Kund & Ekonomi */}
               <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('client')}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionClientFee')}</p>
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium">
@@ -725,7 +725,7 @@ export function GigDialog({
 
               {/* Section: Anteckningar */}
               <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('notes')}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionNotes')}</p>
                 <div className="space-y-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium">{t('notes')}</Label>
@@ -760,8 +760,8 @@ export function GigDialog({
               {/* Section: Kvitton & Bilagor (edit only) */}
               {isEditing && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{tc('attachments')}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionAttachments')}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <GigReceipts
                       gigId={gig.id}
                       gigTitle={formData.project_name || gig.gig_type?.name}

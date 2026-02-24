@@ -166,7 +166,9 @@ export default function LandingPage() {
             <span>&copy; {new Date().getFullYear()} Amida</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:text-[#C7D2FE] transition-colors">Privacy Policy</Link>
+            <Link href="/blog" className="hover:text-[#C7D2FE] transition-colors">Blog</Link>
+            <Link href="/founding-members" className="hover:text-[#C7D2FE] transition-colors">Founding Members</Link>
+            <Link href="/privacy" className="hover:text-[#C7D2FE] transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-[#C7D2FE] transition-colors">Terms</Link>
           </div>
         </div>
