@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -16,21 +15,16 @@ import {
   deleteGigAttachment,
   getGigAttachments,
   getSignedUrl,
+  updateGigAttachmentCategory,
   type GigAttachment,
   type AttachmentCategory
 } from '@/lib/supabase/storage'
-import { FileText, Upload, Trash2, Download, Loader2, AlertCircle, Music, FileCheck, CalendarDays } from 'lucide-react'
+import { FileText, Upload, Trash2, Download, Loader2, AlertCircle } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useTranslations } from 'next-intl'
 import { downloadFile } from '@/lib/download'
 
-type CategoryConfig = Record<AttachmentCategory, { label: string; description: string; color: string; icon: typeof FileText }>
-
-const categoryColors: Record<AttachmentCategory, { color: string; icon: typeof FileText }> = {
-  gig_info: { color: 'bg-blue-100 text-blue-800', icon: Music },
-  invoice_doc: { color: 'bg-green-100 text-green-800', icon: FileCheck },
-  schedule: { color: 'bg-purple-100 text-purple-800', icon: CalendarDays },
-}
+type CategoryLabels = Record<AttachmentCategory, string>
 
 type GigAttachmentsProps = {
   gigId: string
@@ -41,50 +35,57 @@ type AttachmentRowProps = {
   attachment: GigAttachment
   onDownload: (attachment: GigAttachment) => void
   onDelete: (attachment: GigAttachment) => void
+  onCategoryChange: (attachment: GigAttachment, category: AttachmentCategory) => void
   disabled?: boolean
-  categoryConfig: CategoryConfig
+  categoryLabels: CategoryLabels
   openFileLabel: string
   deleteFileLabel: string
 }
 
-function AttachmentRow({ attachment, onDownload, onDelete, disabled, categoryConfig, openFileLabel, deleteFileLabel }: AttachmentRowProps) {
+function AttachmentRow({ attachment, onDownload, onDelete, onCategoryChange, disabled, categoryLabels, openFileLabel, deleteFileLabel }: AttachmentRowProps) {
   const category = attachment.category || 'gig_info'
-  const config = categoryConfig[category]
-  const Icon = config.icon
 
   return (
     <div className="flex items-center justify-between p-2 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        <FileText className="h-5 w-5 text-red-500 flex-shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-            <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 h-4 ${config.color}`}>
-              {config.label}
-            </Badge>
-          </div>
-          {/* File size and date removed for compact view */}
-        </div>
+        <FileText className="h-4 w-4 text-red-500 flex-shrink-0" />
+        <p className="text-sm font-medium truncate min-w-0 flex-1">{attachment.file_name}</p>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
+        <Select
+          value={category}
+          onValueChange={(value) => onCategoryChange(attachment, value as AttachmentCategory)}
+          disabled={disabled}
+        >
+          <SelectTrigger className="h-6 text-[10px] w-auto min-w-0 px-2 border-0 bg-transparent hover:bg-gray-200 gap-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="gig_info">{categoryLabels.gig_info}</SelectItem>
+            <SelectItem value="invoice_doc">{categoryLabels.invoice_doc}</SelectItem>
+            <SelectItem value="schedule">{categoryLabels.schedule}</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          className="h-7 w-7 p-0"
           onClick={() => onDownload(attachment)}
           title={openFileLabel}
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-3.5 w-3.5" />
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          className="h-7 w-7 p-0"
           onClick={() => onDelete(attachment)}
           disabled={disabled}
           title={deleteFileLabel}
         >
-          <Trash2 className="h-4 w-4 text-destructive" />
+          <Trash2 className="h-3.5 w-3.5 text-destructive" />
         </Button>
       </div>
     </div>
@@ -101,25 +102,12 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [attachmentToDelete, setAttachmentToDelete] = useState<GigAttachment | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<AttachmentCategory>('gig_info')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const categoryConfig: CategoryConfig = {
-    gig_info: {
-      label: t('gigInfo'),
-      description: t('gigInfoDescription'),
-      ...categoryColors.gig_info,
-    },
-    invoice_doc: {
-      label: t('invoiceDoc'),
-      description: t('invoiceDocDescription'),
-      ...categoryColors.invoice_doc,
-    },
-    schedule: {
-      label: t('schedule'),
-      description: t('scheduleDescription'),
-      ...categoryColors.schedule,
-    },
+  const categoryLabels: CategoryLabels = {
+    gig_info: t('gigInfo'),
+    invoice_doc: t('invoiceDoc'),
+    schedule: t('schedule'),
   }
 
   useEffect(() => {
@@ -148,19 +136,17 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
 
     try {
       for (const file of Array.from(files)) {
-        // Validate file type
         if (file.type !== 'application/pdf') {
           setError(t('onlyPdf'))
           continue
         }
 
-        // Validate file size (10 MB max)
         if (file.size > 10 * 1024 * 1024) {
           setError(t('fileTooLarge'))
           continue
         }
 
-        const attachment = await uploadGigAttachment(gigId, file, selectedCategory)
+        const attachment = await uploadGigAttachment(gigId, file)
         setAttachments(prev => [attachment, ...prev])
       }
     } catch (err) {
@@ -171,10 +157,19 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
       }
     } finally {
       setUploading(false)
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+    }
+  }
+
+  async function handleCategoryChange(attachment: GigAttachment, category: AttachmentCategory) {
+    try {
+      setError(null)
+      const updated = await updateGigAttachmentCategory(attachment.id, category)
+      setAttachments(prev => prev.map(a => a.id === updated.id ? updated : a))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('updateError'))
     }
   }
 
@@ -207,45 +202,11 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
     }
   }
 
-  // Group attachments by category
-  const gigInfoAttachments = attachments.filter(a => a.category === 'gig_info' || !a.category)
-  const invoiceDocAttachments = attachments.filter(a => a.category === 'invoice_doc')
-  const scheduleAttachments = attachments.filter(a => a.category === 'schedule')
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label>{t('attachmentsPdf')}</Label>
         <div className="flex items-center gap-2">
-          <Select
-            value={selectedCategory}
-            onValueChange={(value) => setSelectedCategory(value as AttachmentCategory)}
-            disabled={disabled || uploading}
-          >
-            <SelectTrigger className="w-[130px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="gig_info">
-                <span className="flex items-center gap-1">
-                  <Music className="h-3 w-3" />
-                  {t('gigInfo')}
-                </span>
-              </SelectItem>
-              <SelectItem value="invoice_doc">
-                <span className="flex items-center gap-1">
-                  <FileCheck className="h-3 w-3" />
-                  {t('invoiceDoc')}
-                </span>
-              </SelectItem>
-              <SelectItem value="schedule">
-                <span className="flex items-center gap-1">
-                  <CalendarDays className="h-3 w-3" />
-                  {t('schedule')}
-                </span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
           <input
             ref={fileInputRef}
             type="file"
@@ -287,72 +248,20 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
           {t('noAttachments')}
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* Gig-info section */}
-          {gigInfoAttachments.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Music className="h-3 w-3" />
-                <span>{t('gigInfo')} ({gigInfoAttachments.length})</span>
-              </div>
-              {gigInfoAttachments.map(attachment => (
-                <AttachmentRow
-                  key={attachment.id}
-                  attachment={attachment}
-                  onDownload={handleDownload}
-                  onDelete={confirmDelete}
-                  disabled={disabled}
-                  categoryConfig={categoryConfig}
-                  openFileLabel={t('openFile')}
-                  deleteFileLabel={t('deleteFile')}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Invoice documents section */}
-          {invoiceDocAttachments.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileCheck className="h-3 w-3" />
-                <span>{t('invoiceDoc')} ({invoiceDocAttachments.length})</span>
-              </div>
-              {invoiceDocAttachments.map(attachment => (
-                <AttachmentRow
-                  key={attachment.id}
-                  attachment={attachment}
-                  onDownload={handleDownload}
-                  onDelete={confirmDelete}
-                  disabled={disabled}
-                  categoryConfig={categoryConfig}
-                  openFileLabel={t('openFile')}
-                  deleteFileLabel={t('deleteFile')}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Schedule section */}
-          {scheduleAttachments.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CalendarDays className="h-3 w-3" />
-                <span>{t('schedule')} ({scheduleAttachments.length})</span>
-              </div>
-              {scheduleAttachments.map(attachment => (
-                <AttachmentRow
-                  key={attachment.id}
-                  attachment={attachment}
-                  onDownload={handleDownload}
-                  onDelete={confirmDelete}
-                  disabled={disabled}
-                  categoryConfig={categoryConfig}
-                  openFileLabel={t('openFile')}
-                  deleteFileLabel={t('deleteFile')}
-                />
-              ))}
-            </div>
-          )}
+        <div className="space-y-1.5">
+          {attachments.map(attachment => (
+            <AttachmentRow
+              key={attachment.id}
+              attachment={attachment}
+              onDownload={handleDownload}
+              onDelete={confirmDelete}
+              onCategoryChange={handleCategoryChange}
+              disabled={disabled}
+              categoryLabels={categoryLabels}
+              openFileLabel={t('openFile')}
+              deleteFileLabel={t('deleteFile')}
+            />
+          ))}
         </div>
       )}
 

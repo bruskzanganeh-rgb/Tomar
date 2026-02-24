@@ -626,7 +626,7 @@ export function GigDialog({
                     setFormData({ ...formData, status: value })
                   }
                 >
-                  <SelectTrigger className="w-[140px] h-8 text-sm">
+                  <SelectTrigger className="w-[170px] h-8 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -661,7 +661,7 @@ export function GigDialog({
                         setFormData({ ...formData, gig_type_id: value })
                       }
                     >
-                      <SelectTrigger className="h-9 truncate">
+                      <SelectTrigger className="h-9 w-full truncate">
                         <SelectValue placeholder={t('selectType')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -682,7 +682,7 @@ export function GigDialog({
                           setFormData({ ...formData, position_id: value })
                         }
                       >
-                        <SelectTrigger className="h-9 truncate">
+                        <SelectTrigger className="h-9 w-full truncate">
                           <SelectValue placeholder={t('selectPosition')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -738,7 +738,7 @@ export function GigDialog({
                       setFormData({ ...formData, client_id: value })
                     }
                   >
-                    <SelectTrigger className="h-9 truncate">
+                    <SelectTrigger className="h-9 w-full truncate">
                       <SelectValue placeholder={t('selectClient')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -774,7 +774,7 @@ export function GigDialog({
                         setFormData({ ...formData, currency: value })
                       }
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

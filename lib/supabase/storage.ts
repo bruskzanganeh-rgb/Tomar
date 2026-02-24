@@ -105,6 +105,26 @@ export async function getGigAttachments(gigId: string): Promise<GigAttachment[]>
   return data as GigAttachment[]
 }
 
+export async function updateGigAttachmentCategory(
+  attachmentId: string,
+  category: AttachmentCategory
+): Promise<GigAttachment> {
+  const supabase = createClient()
+
+  const { data, error } = await supabase
+    .from('gig_attachments')
+    .update({ category })
+    .eq('id', attachmentId)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error('Kunde inte uppdatera kategori')
+  }
+
+  return data as GigAttachment
+}
+
 export async function getGigAttachmentsByCategory(
   gigId: string,
   category: AttachmentCategory
