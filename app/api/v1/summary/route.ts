@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
         .select('id, date, project_name, venue, fee, currency, status, client:clients(name), gig_type:gig_types(name)')
         .eq('user_id', userId)
         .neq('status', 'declined')
+        .neq('status', 'draft')
         .gte('date', now.toISOString())
         .lte('date', in30Days.toISOString())
         .order('date', { ascending: true })
@@ -56,7 +57,8 @@ export async function GET(request: NextRequest) {
         .select('fee, status')
         .eq('user_id', userId)
         .gte('date', yearStart)
-        .neq('status', 'declined'),
+        .neq('status', 'declined')
+        .neq('status', 'draft'),
 
       // Year stats: invoices
       supabase

@@ -63,6 +63,7 @@
     "sectionClientFee": "Kund & ekonomi",
     "sectionNotes": "Anteckningar",
     "sectionAttachments": "Kvitton & bilagor",
+    "attachmentsLoading": "Laddar...",
     "client": "Uppdragsgivare",
     "clientShort": "UppdragsG.",
     "type": "Typ",

@@ -98,6 +98,7 @@ export default function AnalyticsPage() {
           gig_type:gig_types(name),
           position:positions(id, name)
         `)
+        .neq('status', 'draft')
         .order('date', { ascending: false }),
       supabase
         .from('invoices')

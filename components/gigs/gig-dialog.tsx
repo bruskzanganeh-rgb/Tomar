@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -21,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Upload } from 'lucide-react'
+import { Loader2, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { GigAttachments } from './gig-attachments'
@@ -30,6 +29,7 @@ import { GigReceipts } from './gig-receipts'
 import { MultiDayDatePicker } from '@/components/ui/multi-day-date-picker'
 import { format } from 'date-fns'
 import { SUPPORTED_CURRENCIES, type SupportedCurrency, getRate } from '@/lib/currency/exchange'
+import { cn } from '@/lib/utils'
 
 type Gig = {
   id: string
@@ -119,8 +119,34 @@ export function GigDialog({
   const [scanningSchedule, setScanningSchedule] = useState(false)
   const [scheduleFile, setScheduleFile] = useState<File | null>(null)
   const scheduleFileRef = useRef<HTMLInputElement>(null)
+  const [draftGigId, setDraftGigId] = useState<string | null>(null)
 
   const supabase = createClient()
+
+  // The effective gig ID — either the existing gig or the draft
+  const effectiveGigId = isEditing ? gig.id : draftGigId
+
+  // Create draft gig when dialog opens in create mode
+  const createDraft = useCallback(async () => {
+    try {
+      const res = await fetch('/api/gigs/draft', { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setDraftGigId(data.id)
+      }
+    } catch (err) {
+      console.error('Failed to create draft:', err)
+    }
+  }, [])
+
+  // Delete draft gig on cancel
+  const deleteDraft = useCallback(async (id: string) => {
+    try {
+      await fetch(`/api/gigs/draft?id=${id}`, { method: 'DELETE' })
+    } catch (err) {
+      console.error('Failed to delete draft:', err)
+    }
+  }, [])
 
   // Load clients, gig types and positions when dialog opens
   useEffect(() => {
@@ -147,6 +173,15 @@ export function GigDialog({
         setSelectedDates(initialDate ? [initialDate] : [])
         setScheduleTexts({})
         setScheduleFile(null)
+        setParsedSessions({})
+        setParsingSessions({})
+        createDraft()
+      }
+    } else {
+      // Dialog closing — clean up draft if it still exists
+      if (draftGigId) {
+        deleteDraft(draftGigId)
+        setDraftGigId(null)
       }
     }
   }, [open])
@@ -387,38 +422,72 @@ export function GigDialog({
         }
       }
     } else {
-      // Create new gig
-      const { data: newGig, error } = await supabase
-        .from('gigs')
-        .insert([gigData])
-        .select()
-        .single()
+      // Create mode — update the draft gig with real data
+      if (draftGigId) {
+        const { error } = await supabase
+          .from('gigs')
+          .update(gigData)
+          .eq('id', draftGigId)
 
-      if (error) {
-        setLoading(false)
-        console.error('Error creating gig:', error)
-        toast.error(tToast('gigCreateError', { error: error.message }))
-        return
-      }
-
-      // Insert gig_dates
-      const gigDates = buildGigDates(newGig.id)
-      const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
-      if (datesError) {
-        console.error('Error inserting gig dates:', datesError)
-      }
-
-      // Upload schedule file if imported
-      if (scheduleFile) {
-        try {
-          await uploadGigAttachment(newGig.id, scheduleFile, 'schedule')
-        } catch (err) {
-          console.error('Schedule file upload error:', err)
+        if (error) {
+          setLoading(false)
+          console.error('Error updating draft gig:', error)
+          toast.error(tToast('gigCreateError', { error: error.message }))
+          return
         }
-      }
 
-      toast.success(tToast('gigCreated'))
-      onCreated?.(newGig.id)
+        // Insert gig_dates
+        const gigDates = buildGigDates(draftGigId)
+        const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
+        if (datesError) {
+          console.error('Error inserting gig dates:', datesError)
+        }
+
+        // Upload schedule file if imported
+        if (scheduleFile) {
+          try {
+            await uploadGigAttachment(draftGigId, scheduleFile, 'schedule')
+          } catch (err) {
+            console.error('Schedule file upload error:', err)
+          }
+        }
+
+        toast.success(tToast('gigCreated'))
+        onCreated?.(draftGigId)
+        // Clear draft so closing doesn't delete it
+        setDraftGigId(null)
+      } else {
+        // Fallback: create without draft (if draft creation failed)
+        const { data: newGig, error } = await supabase
+          .from('gigs')
+          .insert([gigData])
+          .select()
+          .single()
+
+        if (error) {
+          setLoading(false)
+          console.error('Error creating gig:', error)
+          toast.error(tToast('gigCreateError', { error: error.message }))
+          return
+        }
+
+        const gigDates = buildGigDates(newGig.id)
+        const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
+        if (datesError) {
+          console.error('Error inserting gig dates:', datesError)
+        }
+
+        if (scheduleFile) {
+          try {
+            await uploadGigAttachment(newGig.id, scheduleFile, 'schedule')
+          } catch (err) {
+            console.error('Schedule file upload error:', err)
+          }
+        }
+
+        toast.success(tToast('gigCreated'))
+        onCreated?.(newGig.id)
+      }
     }
 
     setLoading(false)
@@ -509,11 +578,15 @@ export function GigDialog({
       toast.error(message)
     } finally {
       setScanningSchedule(false)
-      // Reset file input
       if (scheduleFileRef.current) {
         scheduleFileRef.current.value = ''
       }
     }
+  }
+
+  function handleCancel() {
+    // Draft cleanup happens in the useEffect when open changes to false
+    onOpenChange(false)
   }
 
   const statusOptions = [
@@ -526,255 +599,266 @@ export function GigDialog({
     { value: 'paid', label: tStatus('paid') },
   ]
 
+  const sectionHeader = "text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70"
+  const sectionCard = "rounded-lg border border-border/60 bg-card p-4 space-y-3"
+  const fieldLabel = "text-xs font-medium text-muted-foreground"
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-h-[92vh] p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-6xl" style={{ maxWidth: 1200 }}>
+      <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-7xl" style={{ maxWidth: 1280 }}>
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
           {/* Header */}
-          <div className="px-8 pt-6 pb-4 border-b border-gray-100 shrink-0">
+          <div className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
             <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">
-                {isEditing ? t('editGig') : t('newGig')}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {isEditing ? t('editGigDescription') : t('createGigDescription')}
-              </DialogDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-base font-semibold tracking-tight">
+                    {isEditing ? t('editGig') : t('newGig')}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                    {isEditing ? t('editGigDescription') : t('createGigDescription')}
+                  </DialogDescription>
+                </div>
+                {/* Status in header */}
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger className="w-[140px] h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </DialogHeader>
           </div>
 
-          {/* Main layout: form left, calendar right */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] min-h-0 flex-1 overflow-hidden">
+          {/* Main 3-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px_340px] min-h-0 flex-1 overflow-hidden">
 
-            {/* LEFT — Scrollable form */}
-            <div className="overflow-y-auto px-8 py-6">
+            {/* LEFT — Form */}
+            <div className="overflow-y-auto px-5 py-4 space-y-3">
 
-              {/* Section: Uppdrag */}
-              <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionGig')}</p>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">
-                        {t('type')} <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={formData.gig_type_id}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, gig_type_id: value })
-                        }
-                      >
-                        <SelectTrigger className="w-full truncate">
-                          <SelectValue placeholder={t('selectType')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {gigTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.name} ({type.vat_rate}%)
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {positions.length > 0 && (
-                      <div className="space-y-1.5">
-                        <Label className="text-sm font-medium">{t('position')}</Label>
-                        <Select
-                          value={formData.position_id}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, position_id: value })
-                          }
-                        >
-                          <SelectTrigger className="w-full truncate">
-                            <SelectValue placeholder={t('selectPosition')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">{t('none')}</SelectItem>
-                            {positions.map((pos) => (
-                              <SelectItem key={pos.id} value={pos.id}>
-                                {pos.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">{t('projectName')}</Label>
-                      <Input
-                        placeholder={t('projectNamePlaceholder')}
-                        value={formData.project_name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, project_name: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">{t('venue')}</Label>
-                      <Input
-                        placeholder={t('venuePlaceholder')}
-                        value={formData.venue}
-                        onChange={(e) =>
-                          setFormData({ ...formData, venue: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section: Kund & Ekonomi */}
-              <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionClientFee')}</p>
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">
-                      {t('client')} {['completed', 'invoiced', 'paid'].includes(formData.status) && <span className="text-destructive">*</span>}
+              {/* Section: Gig Details */}
+              <div className={sectionCard}>
+                <p className={sectionHeader}>{t('sectionGig')}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className={fieldLabel}>
+                      {t('type')} <span className="text-destructive">*</span>
                     </Label>
                     <Select
-                      value={formData.client_id || 'none'}
+                      value={formData.gig_type_id}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, client_id: value })
+                        setFormData({ ...formData, gig_type_id: value })
                       }
                     >
-                      <SelectTrigger className="w-full truncate">
-                        <SelectValue placeholder={t('selectClient')} />
+                      <SelectTrigger className="h-9 truncate">
+                        <SelectValue placeholder={t('selectType')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">{t('noClient')}</SelectItem>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                        {gigTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.name} ({type.vat_rate}%)
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div className="grid grid-cols-[1fr_120px] gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">{t('fee')}</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0"
-                        value={formData.fee}
-                        onChange={(e) =>
-                          setFormData({ ...formData, fee: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">{t('currency')}</Label>
+                  {positions.length > 0 ? (
+                    <div className="space-y-1">
+                      <Label className={fieldLabel}>{t('position')}</Label>
                       <Select
-                        value={formData.currency}
+                        value={formData.position_id}
                         onValueChange={(value) =>
-                          setFormData({ ...formData, currency: value })
+                          setFormData({ ...formData, position_id: value })
                         }
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
+                        <SelectTrigger className="h-9 truncate">
+                          <SelectValue placeholder={t('selectPosition')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {SUPPORTED_CURRENCIES.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-sm font-medium">{t('status')}</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, status: value })
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
+                          <SelectItem value="none">{t('none')}</SelectItem>
+                          {positions.map((pos) => (
+                            <SelectItem key={pos.id} value={pos.id}>
+                              {pos.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    {(formData.status === 'pending' || formData.status === 'tentative') && (
-                      <div className="space-y-1.5">
-                        <Label className="text-sm font-medium">{t('responseDeadline')}</Label>
-                        <Input
-                          type="date"
-                          value={formData.response_deadline}
-                          onChange={(e) =>
-                            setFormData({ ...formData, response_deadline: e.target.value })
-                          }
-                        />
-                      </div>
-                    )}
+                  ) : (
+                    <div />
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className={fieldLabel}>{t('projectName')}</Label>
+                    <Input
+                      className="h-9"
+                      placeholder={t('projectNamePlaceholder')}
+                      value={formData.project_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, project_name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className={fieldLabel}>{t('venue')}</Label>
+                    <Input
+                      className="h-9"
+                      placeholder={t('venuePlaceholder')}
+                      value={formData.venue}
+                      onChange={(e) =>
+                        setFormData({ ...formData, venue: e.target.value })
+                      }
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Section: Anteckningar */}
-              <div className="mb-8">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionNotes')}</p>
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">{t('notes')}</Label>
-                    <Textarea
-                      placeholder={t('notesPlaceholder')}
-                      value={formData.notes}
+              {/* Section: Client & Fees */}
+              <div className={sectionCard}>
+                <p className={sectionHeader}>{t('sectionClientFee')}</p>
+                <div className="space-y-1">
+                  <Label className={fieldLabel}>
+                    {t('client')} {['completed', 'invoiced', 'paid'].includes(formData.status) && <span className="text-destructive">*</span>}
+                  </Label>
+                  <Select
+                    value={formData.client_id || 'none'}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, client_id: value })
+                    }
+                  >
+                    <SelectTrigger className="h-9 truncate">
+                      <SelectValue placeholder={t('selectClient')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t('noClient')}</SelectItem>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-[1fr_100px] gap-3">
+                  <div className="space-y-1">
+                    <Label className={fieldLabel}>{t('fee')}</Label>
+                    <Input
+                      className="h-9"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={formData.fee}
                       onChange={(e) =>
-                        setFormData({ ...formData, notes: e.target.value })
+                        setFormData({ ...formData, fee: e.target.value })
                       }
-                      rows={4}
-                      className="resize-none"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-medium">{t('invoiceNotes')}</Label>
-                    <Textarea
-                      placeholder={t('invoiceNotesPlaceholder')}
-                      value={formData.invoice_notes}
-                      onChange={(e) =>
-                        setFormData({ ...formData, invoice_notes: e.target.value })
+                  <div className="space-y-1">
+                    <Label className={fieldLabel}>{t('currency')}</Label>
+                    <Select
+                      value={formData.currency}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, currency: value })
                       }
-                      rows={3}
-                      className="resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t('invoiceNotesHint')}
-                    </p>
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_CURRENCIES.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+                {(formData.status === 'pending' || formData.status === 'tentative') && (
+                  <div className="space-y-1">
+                    <Label className={fieldLabel}>{t('responseDeadline')}</Label>
+                    <Input
+                      className="h-9"
+                      type="date"
+                      value={formData.response_deadline}
+                      onChange={(e) =>
+                        setFormData({ ...formData, response_deadline: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Section: Kvitton & Bilagor (edit only) */}
-              {isEditing && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t('sectionAttachments')}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Section: Notes */}
+              <div className={sectionCard}>
+                <p className={sectionHeader}>{t('sectionNotes')}</p>
+                <div className="space-y-1">
+                  <Label className={fieldLabel}>{t('notes')}</Label>
+                  <Textarea
+                    placeholder={t('notesPlaceholder')}
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    rows={2}
+                    className="resize-none text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className={fieldLabel}>{t('invoiceNotes')}</Label>
+                  <Textarea
+                    placeholder={t('invoiceNotesPlaceholder')}
+                    value={formData.invoice_notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, invoice_notes: e.target.value })
+                    }
+                    rows={2}
+                    className="resize-none text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground/60">
+                    {t('invoiceNotesHint')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* MIDDLE — Attachments */}
+            <div className="border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/20 overflow-y-auto px-4 py-4 space-y-4">
+              {effectiveGigId ? (
+                <>
+                  <div className={cn(sectionCard, "p-3")}>
                     <GigReceipts
-                      gigId={gig.id}
-                      gigTitle={formData.project_name || gig.gig_type?.name}
+                      gigId={effectiveGigId}
+                      gigTitle={formData.project_name || gig?.gig_type?.name}
                       disabled={loading}
                     />
-                    <GigAttachments gigId={gig.id} disabled={loading} />
                   </div>
+                  <div className={cn(sectionCard, "p-3")}>
+                    <GigAttachments gigId={effectiveGigId} disabled={loading} />
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                  <Paperclip className="h-8 w-8 text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground/60">{t('sectionAttachments')}</p>
+                  <p className="text-xs text-muted-foreground/40 mt-1">{t('attachmentsLoading')}</p>
                 </div>
               )}
             </div>
 
-            {/* RIGHT — Calendar sidebar */}
-            <div className="border-t lg:border-t-0 lg:border-l border-gray-200 bg-gray-50/60 p-6 flex flex-col overflow-y-auto">
+            {/* RIGHT — Calendar */}
+            <div className="border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto">
               <MultiDayDatePicker
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
@@ -786,7 +870,6 @@ export function GigDialog({
                 parsingSessions={parsingSessions}
                 onParseScheduleText={handleParseScheduleText}
               />
-              {/* Hidden file input for schedule scan */}
               <input
                 ref={scheduleFileRef}
                 type="file"
@@ -797,18 +880,19 @@ export function GigDialog({
             </div>
           </div>
 
-          {/* Footer — sticky */}
-          <div className="px-8 py-4 border-t border-gray-200 flex items-center justify-end gap-3 shrink-0 bg-white">
+          {/* Footer */}
+          <div className="px-6 py-3 border-t border-border/50 flex items-center justify-end gap-2.5 shrink-0 bg-card">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              size="sm"
+              onClick={handleCancel}
               disabled={loading}
             >
               {tc('cancel')}
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" size="sm" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
               {isEditing ? t('saveChanges') : t('createGig')}
             </Button>
           </div>

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         gig_dates(date)
       `, { count: 'exact' })
       .eq('user_id', auth.userId)
+      .neq('status', 'draft')
 
     if (status) query = query.eq('status', status)
     if (clientId) query = query.eq('client_id', clientId)

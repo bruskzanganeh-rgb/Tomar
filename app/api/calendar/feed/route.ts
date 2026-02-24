@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
         gig_dates(date, sessions)
       `)
       .neq('status', 'declined')
+      .neq('status', 'draft')
       .order('date', { ascending: true })
 
     if (membership) {

@@ -63,6 +63,7 @@
     "sectionClientFee": "Client & fees",
     "sectionNotes": "Notes",
     "sectionAttachments": "Receipts & attachments",
+    "attachmentsLoading": "Loading...",
     "client": "Client",
     "clientShort": "Client",
     "type": "Type",

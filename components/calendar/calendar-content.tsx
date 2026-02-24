@@ -145,6 +145,7 @@ export default function CalendarPage() {
         position:positions(name),
         gig_dates(date, sessions)
       `)
+      .neq('status', 'draft')
       .order('date', { ascending: true })
 
     if (error) {

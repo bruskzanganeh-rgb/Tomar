@@ -218,6 +218,7 @@ export default function GigsPage() {
           position:positions(name),
           gig_dates(date, schedule_text, sessions)
         `)
+        .neq('status', 'draft')
         .order('date', { ascending: false })
         .limit(500)
       if (error) throw error
