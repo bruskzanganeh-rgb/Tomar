@@ -1,4 +1,4 @@
-export type ContractStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'expired' | 'cancelled'
+export type ContractStatus = 'draft' | 'sent_to_reviewer' | 'reviewed' | 'sent' | 'viewed' | 'signed' | 'expired' | 'cancelled'
 
 export type Contract = {
   id: string
@@ -15,6 +15,12 @@ export type Contract = {
   signer_name: string
   signer_email: string
   signer_title: string | null
+  reviewer_name: string | null
+  reviewer_email: string | null
+  reviewer_title: string | null
+  reviewer_token: string | null
+  reviewer_token_expires_at: string | null
+  reviewed_at: string | null
   signing_token: string | null
   token_expires_at: string | null
   status: ContractStatus
@@ -30,7 +36,7 @@ export type Contract = {
   updated_at: string
 }
 
-export type ContractAuditEvent = 'created' | 'sent' | 'viewed' | 'signed' | 'expired' | 'cancelled' | 'resent'
+export type ContractAuditEvent = 'created' | 'sent_to_reviewer' | 'reviewed' | 'approved' | 'sent' | 'resent' | 'viewed' | 'signed' | 'expired' | 'cancelled'
 
 export type ContractAudit = {
   id: string

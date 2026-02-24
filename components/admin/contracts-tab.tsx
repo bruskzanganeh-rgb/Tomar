@@ -41,6 +41,8 @@ type Company = {
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
+  sent_to_reviewer: 'bg-purple-100 text-purple-700',
+  reviewed: 'bg-indigo-100 text-indigo-700',
   sent: 'bg-blue-100 text-blue-700',
   viewed: 'bg-amber-100 text-amber-700',
   signed: 'bg-green-100 text-green-700',
@@ -71,6 +73,8 @@ export function ContractsTab() {
     signer_name: '',
     signer_email: '',
     signer_title: '',
+    reviewer_name: '',
+    reviewer_email: '',
     custom_terms: '',
   })
 
@@ -138,6 +142,8 @@ export function ContractsTab() {
           signer_name: form.signer_name,
           signer_email: form.signer_email,
           signer_title: form.signer_title || null,
+          reviewer_name: form.reviewer_name || null,
+          reviewer_email: form.reviewer_email || null,
           custom_terms: form.custom_terms
             ? { additional: form.custom_terms }
             : {},
@@ -215,6 +221,8 @@ export function ContractsTab() {
       signer_name: '',
       signer_email: '',
       signer_title: '',
+      reviewer_name: '',
+      reviewer_email: '',
       custom_terms: '',
     })
   }
@@ -244,7 +252,9 @@ export function ContractsTab() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="sent_to_reviewer">In Review</SelectItem>
+              <SelectItem value="reviewed">Reviewed</SelectItem>
+              <SelectItem value="sent">Sent to Signer</SelectItem>
               <SelectItem value="viewed">Viewed</SelectItem>
               <SelectItem value="signed">Signed</SelectItem>
               <SelectItem value="expired">Expired</SelectItem>
@@ -313,8 +323,8 @@ export function ContractsTab() {
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        {['draft', 'sent'].includes(contract.status) && (
-                          <Button variant="ghost" size="sm" onClick={() => handleSend(contract.id)} title="Send signing link">
+                        {['draft', 'sent', 'sent_to_reviewer'].includes(contract.status) && (
+                          <Button variant="ghost" size="sm" onClick={() => handleSend(contract.id)} title="Send">
                             <Send className="h-4 w-4" />
                           </Button>
                         )}
@@ -374,6 +384,21 @@ export function ContractsTab() {
             <div className="space-y-1.5">
               <Label>Signer Title</Label>
               <Input value={form.signer_title} onChange={(e) => setForm(f => ({ ...f, signer_title: e.target.value }))} placeholder="e.g. Managing Director" />
+            </div>
+
+            <div className="border-t pt-3 mt-3">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Reviewer (optional)</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">If set, the agreement is first sent to the reviewer for approval, then forwarded to the signer.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Reviewer Name</Label>
+                <Input value={form.reviewer_name} onChange={(e) => setForm(f => ({ ...f, reviewer_name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reviewer Email</Label>
+                <Input type="email" value={form.reviewer_email} onChange={(e) => setForm(f => ({ ...f, reviewer_email: e.target.value }))} />
+              </div>
             </div>
 
             <div className="border-t pt-3 mt-3">
@@ -472,7 +497,10 @@ function ContractDetail({ contract, onSend, onCancel }: {
   onSend: () => void
   onCancel: () => void
 }) {
-  const statusSteps = ['draft', 'sent', 'viewed', 'signed']
+  const hasReviewer = contract.reviewer_email
+  const statusSteps = hasReviewer
+    ? ['draft', 'sent_to_reviewer', 'reviewed', 'sent', 'viewed', 'signed']
+    : ['draft', 'sent', 'viewed', 'signed']
   const currentStep = statusSteps.indexOf(contract.status)
 
   return (
@@ -514,6 +542,16 @@ function ContractDetail({ contract, onSend, onCancel }: {
         </div>
       </div>
 
+      {/* Reviewer info */}
+      {contract.reviewer_email && (
+        <div className="text-sm bg-purple-50 rounded-lg p-3">
+          <span className="text-muted-foreground">Reviewer:</span>{' '}
+          <span className="font-medium">{contract.reviewer_name || contract.reviewer_email}</span>
+          {contract.reviewer_name && <span className="text-muted-foreground"> ({contract.reviewer_email})</span>}
+          {contract.reviewed_at && <span className="text-green-600 ml-2">Reviewed {new Date(contract.reviewed_at).toLocaleDateString('sv-SE')}</span>}
+        </div>
+      )}
+
       {/* Audit Trail */}
       {contract.audit_trail && contract.audit_trail.length > 0 && (
         <div>
@@ -535,10 +573,10 @@ function ContractDetail({ contract, onSend, onCancel }: {
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-2 border-t">
-        {['draft', 'sent'].includes(contract.status) && (
+        {['draft', 'sent', 'sent_to_reviewer'].includes(contract.status) && (
           <Button size="sm" onClick={onSend}>
             <Send className="h-3.5 w-3.5 mr-1" />
-            {contract.status === 'sent' ? 'Resend' : 'Send'}
+            {contract.status === 'draft' ? (contract.reviewer_email ? 'Send to Reviewer' : 'Send to Signer') : 'Resend'}
           </Button>
         )}
         <Button size="sm" variant="outline" onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=unsigned`, '_blank')}>

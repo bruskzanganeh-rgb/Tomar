@@ -13,6 +13,9 @@ export const createContractSchema = z.object({
   signer_name: z.string().min(1),
   signer_email: z.string().email(),
   signer_title: z.string().optional().nullable(),
+  reviewer_name: z.string().optional().nullable(),
+  reviewer_email: z.string().email().optional().nullable(),
+  reviewer_title: z.string().optional().nullable(),
 })
 
 export const updateContractSchema = createContractSchema.partial()
