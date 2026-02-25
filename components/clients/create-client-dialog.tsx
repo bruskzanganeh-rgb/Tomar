@@ -76,7 +76,7 @@ export function CreateClientDialog({
         org_number: data.org_number || null,
         email: data.email || null,
         address: data.address || null,
-        payment_terms: parseInt(data.payment_terms),
+        payment_terms: parseInt(data.payment_terms || '30'),
         reference_person: data.reference_person || null,
         notes: data.notes || null,
         invoice_language: data.invoice_language || locale,

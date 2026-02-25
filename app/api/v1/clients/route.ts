@@ -66,9 +66,19 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
+
+    // Look up company_id (admin client has no auth.uid(), so DB default won't work)
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', auth.userId)
+      .single()
+
+    if (!membership) return apiError('User has no company', 400)
+
     const { data, error } = await supabase
       .from('clients')
-      .insert({ ...parsed.data, user_id: auth.userId })
+      .insert({ ...parsed.data, user_id: auth.userId, company_id: membership.company_id })
       .select()
       .single()
 

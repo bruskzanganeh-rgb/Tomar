@@ -6,7 +6,7 @@ export const createClientSchema = z.object({
   org_number: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   address: z.string().optional(),
-  payment_terms: z.string().min(1),
+  payment_terms: z.string().optional(),
   reference_person: z.string().optional(),
   notes: z.string().optional(),
   invoice_language: z.string().optional(),
