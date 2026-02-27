@@ -123,7 +123,7 @@ export function TeamSettings() {
           {members.map(member => (
             <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{member.user_id.slice(0, 8)}...</span>
+                <span className="text-sm font-medium">{member.email || member.user_id.slice(0, 8) + '...'}</span>
                 {member.role === 'owner' && (
                   <Badge variant="secondary" className="gap-1">
                     <Crown className="h-3 w-3" />

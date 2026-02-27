@@ -24,6 +24,7 @@ export type ActivityEventType =
   | 'expenses_exported'
   | 'user_created'
   | 'user_deleted'
+  | 'user_updated'
   | 'invoice_reminder_sent'
 
 export type LogActivityParams = {

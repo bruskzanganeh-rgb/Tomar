@@ -59,6 +59,47 @@ async function deleteUserData(supabase: any, targetUserId: string) {
   await supabase.auth.admin.deleteUser(targetUserId)
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: targetUserId } = await params
+  const auth = await verifyAdmin()
+  if (auth instanceof NextResponse) return auth
+  const { userId, supabase } = auth
+
+  const body = await request.json()
+  const { email, password } = body
+
+  if (!email && !password) {
+    return NextResponse.json({ error: 'No changes provided' }, { status: 400 })
+  }
+
+  const updateData: Record<string, string> = {}
+  if (email) updateData.email = email
+  if (password) updateData.password = password
+
+  const { error } = await supabase.auth.admin.updateUserById(targetUserId, updateData)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 })
+  }
+
+  await logActivity({
+    userId,
+    eventType: 'user_updated',
+    entityType: 'user',
+    entityId: targetUserId,
+    metadata: {
+      updated_by: userId,
+      email_changed: !!email,
+      password_changed: !!password,
+    },
+  })
+
+  return NextResponse.json({ success: true })
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

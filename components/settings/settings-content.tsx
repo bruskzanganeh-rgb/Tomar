@@ -248,10 +248,14 @@ export default function SettingsPage() {
 
     setTestingEmail(true)
     try {
+      // Send test email to the logged-in user's own email, not the company email
+      const { data: { user } } = await supabase.auth.getUser()
+      const toEmail = user?.email || settings?.email
+
       const body = emailProvider === 'platform'
         ? {
             provider: 'platform',
-            to_email: settings?.email,
+            to_email: toEmail,
           }
         : {
             provider: 'smtp',
@@ -261,7 +265,7 @@ export default function SettingsPage() {
             smtp_password: settings?.smtp_password,
             smtp_from_email: settings?.smtp_from_email,
             smtp_from_name: settings?.smtp_from_name || settings?.company_name,
-            to_email: settings?.email,
+            to_email: toEmail,
           }
 
       const response = await fetch('/api/settings/test-email', {
@@ -272,7 +276,7 @@ export default function SettingsPage() {
 
       const result = await response.json()
       if (response.ok) {
-        toast.success(tToast('testEmailSent', { email: settings?.email || '' }))
+        toast.success(tToast('testEmailSent', { email: toEmail || '' }))
       } else {
         toast.error(tToast('testEmailError', { error: result.error || 'Unknown error' }))
       }

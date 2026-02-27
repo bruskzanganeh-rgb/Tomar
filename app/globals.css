@@ -150,7 +150,10 @@
 
 @media (min-width: 1280px) {
   body[data-authed] {
-    zoom: 0.65;
+    transform: scale(0.65);
+    transform-origin: top left;
+    width: calc(100% / 0.65);
+    min-height: calc(100vh / 0.65);
   }
 }
 

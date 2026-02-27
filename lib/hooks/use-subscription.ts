@@ -88,6 +88,7 @@ export function useSubscription() {
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('*')
+      .limit(1)
       .single()
 
     // Sync with Stripe if user has a Stripe customer ID
@@ -98,6 +99,7 @@ export function useSubscription() {
         const { data: refreshed } = await supabase
           .from('subscriptions')
           .select('*')
+          .limit(1)
           .single()
         if (refreshed) {
           setSubscription(refreshed)

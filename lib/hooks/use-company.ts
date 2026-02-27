@@ -40,6 +40,7 @@ export type CompanyMember = {
   user_id: string
   role: 'owner' | 'member'
   joined_at: string
+  email?: string | null
 }
 
 export function useCompany() {
@@ -65,17 +66,28 @@ export function useCompany() {
 
     if (compError || !company) return null
 
-    // Get all members
-    const { data: members } = await supabase
-      .from('company_members')
-      .select('*')
-      .eq('company_id', membership.company_id)
-      .order('joined_at')
+    // Get all members with emails via server endpoint
+    let members: CompanyMember[] = []
+    try {
+      const res = await fetch('/api/company/members')
+      if (res.ok) {
+        const json = await res.json()
+        members = json.members || []
+      }
+    } catch {
+      // Fallback to basic query without emails
+      const { data: basicMembers } = await supabase
+        .from('company_members')
+        .select('*')
+        .eq('company_id', membership.company_id)
+        .order('joined_at')
+      members = (basicMembers || []) as CompanyMember[]
+    }
 
     return {
       company: company as Company,
       membership: membership as CompanyMember,
-      members: (members || []) as CompanyMember[],
+      members,
     }
   }, {
     revalidateOnFocus: false,

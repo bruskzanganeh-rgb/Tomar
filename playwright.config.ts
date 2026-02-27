@@ -24,6 +24,10 @@ export default defineConfig({
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
     },
+    {
+      name: 'member-setup',
+      testMatch: /auth-member\.setup\.ts/,
+    },
 
     // Public pages (no auth needed)
     {
@@ -42,7 +46,7 @@ export default defineConfig({
       use: { viewport: { width: 1440, height: 900 } },
     },
 
-    // Authenticated tests — depend on setup, run on all viewports
+    // Authenticated tests (owner) — depend on setup
     {
       name: 'iPhone-auth',
       testMatch: /ui-audit\.spec\.ts|gig-dialog-screenshots\.spec\.ts/,
@@ -77,6 +81,28 @@ export default defineConfig({
       use: {
         viewport: { width: 1440, height: 900 },
         storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Functional tests (owner) — Desktop only
+    {
+      name: 'functional',
+      testMatch: /functional\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Team tests (member) — Desktop only
+    {
+      name: 'team',
+      testMatch: /team\.spec\.ts/,
+      dependencies: ['member-setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/member-state.json',
       },
     },
   ],

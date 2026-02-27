@@ -22,7 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2, UserPlus, X, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -88,6 +88,11 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
   const [inviteForm, setInviteForm] = useState({ email: '', password: '' })
   const [inviteSaving, setInviteSaving] = useState(false)
 
+  // Edit user dialog
+  const [editUserId, setEditUserId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ email: '', password: '' })
+  const [editSaving, setEditSaving] = useState(false)
+
   // Get current user ID for self-delete guard
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   useEffect(() => {
@@ -131,6 +136,43 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
     }
     setDeletingUser(null)
     setConfirmDeleteId(null)
+  }
+
+  async function handleEditUser() {
+    if (!editUserId) return
+    const { email, password } = editForm
+    if (!email && !password) {
+      toast.error('No changes')
+      return
+    }
+    setEditSaving(true)
+    const body: Record<string, string> = {}
+    if (email) body.email = email
+    if (password) body.password = password
+
+    const res = await fetch(`/api/admin/users/${editUserId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (res.ok) {
+      toast.success(t('userUpdated'))
+      if (email) {
+        // Update local state with new email
+        setUsers(prev => prev.map(u => {
+          if (u.user_id === editUserId) return { ...u, email }
+          if (u.members) {
+            return { ...u, members: u.members.map(m => m.user_id === editUserId ? { ...m, email } : m) }
+          }
+          return u
+        }))
+      }
+      setEditUserId(null)
+    } else {
+      const data = await res.json()
+      toast.error(data.error || 'Failed to update user')
+    }
+    setEditSaving(false)
   }
 
   async function handleRemoveMember(memberUserId: string, ownerUserId: string) {
@@ -359,6 +401,17 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                                 <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="text-[10px]">
                                   {m.role}
                                 </Badge>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                                  onClick={() => {
+                                    setEditUserId(m.user_id)
+                                    setEditForm({ email: m.email || '', password: '' })
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
                                 {m.role !== 'owner' && (
                                   <Button
                                     size="sm"
@@ -507,6 +560,52 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
             >
               {addSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {addMode === 'invite' ? t('inviteUser') : t('createAccount')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit user dialog */}
+      <Dialog open={!!editUserId} onOpenChange={(open) => { if (!open) setEditUserId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('editUser')}</DialogTitle>
+            <DialogDescription>
+              {t('editUserDesc')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('email')}</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="user@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('newPassword')}</Label>
+              <Input
+                type="password"
+                value={editForm.password}
+                onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="Leave empty to keep current"
+              />
+              <p className="text-xs text-muted-foreground">{t('minPassword')}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUserId(null)}>{tc('cancel')}</Button>
+            <Button
+              onClick={handleEditUser}
+              disabled={editSaving || (!editForm.email && !editForm.password)}
+            >
+              {editSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {tc('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
