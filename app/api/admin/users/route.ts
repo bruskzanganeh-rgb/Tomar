@@ -102,7 +102,9 @@ export async function POST(request: Request) {
     }
     newUserId = newUser.user.id
   } else {
-    const { data: invited, error } = await supabase.auth.admin.inviteUserByEmail(email)
+    const { data: invited, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://amida.babalisk.com'}/auth/callback`,
+    })
     if (error || !invited.user) {
       return NextResponse.json({ error: error?.message || 'Failed to invite user' }, { status: 500 })
     }
