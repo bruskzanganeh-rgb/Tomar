@@ -683,6 +683,8 @@
     "gigs": "gigs",
     "clients": "Uppdragsgivare",
     "unpaid": "Obetalda",
+    "actionRequired": "Kräver din uppmärksamhet",
+    "viewAll": "Visa alla",
     "needsResponse": "Kräver ditt svar",
     "pendingCount": "{count} uppdrag",
     "noPendingRequests": "Inga väntande förfrågningar!",

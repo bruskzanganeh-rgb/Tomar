@@ -683,6 +683,8 @@
     "gigs": "gigs",
     "clients": "Clients",
     "unpaid": "Unpaid",
+    "actionRequired": "Requires your attention",
+    "viewAll": "View all",
     "needsResponse": "Needs your response",
     "pendingCount": "{count} gigs",
     "noPendingRequests": "No pending requests!",

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, Clock, ArrowUpRight, AlertTriangle, Plus, Receipt, CalendarDays, Music } from 'lucide-react'
+import { Calendar, Plus, Receipt, CalendarDays, Music } from 'lucide-react'
 import Link from 'next/link'
 import { GigDialog } from '@/components/gigs/gig-dialog'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
@@ -13,6 +13,7 @@ import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { motion, type Variants } from 'framer-motion'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
 import { AvailableWeeks } from '@/components/dashboard/available-weeks'
+import { ActionRequiredCard, type NeedsActionGig, type PendingGig } from '@/components/dashboard/action-required-card'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { ListSkeleton } from '@/components/skeletons/list-skeleton'
@@ -42,15 +43,6 @@ type UpcomingGig = {
   fee: number | null
   client: { name: string } | null
   gig_type: { name: string } | null
-}
-
-type PendingGig = {
-  id: string
-  date: string
-  client: { name: string } | null
-  status: string
-  fee: number
-  response_deadline: string | null
 }
 
 function getDeadlineInfo(deadline: string | null, dateLocale: import('date-fns').Locale): { label: string; urgent: boolean; isKey: boolean } | null {
@@ -85,6 +77,8 @@ export default function DashboardPage() {
   const [upcomingRevenue, setUpcomingRevenue] = useState(0)
   const [upcomingDays, setUpcomingDays] = useState(0)
   const [pendingGigs, setPendingGigs] = useState<PendingGig[]>([])
+  const [needsActionGigs, setNeedsActionGigs] = useState<NeedsActionGig[]>([])
+  const [toInvoiceCount, setToInvoiceCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showGigDialog, setShowGigDialog] = useState(false)
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
@@ -153,7 +147,36 @@ export default function DashboardPage() {
       .limit(5)
 
     setPendingGigs((pending || []) as unknown as PendingGig[])
+
+    // Get past gigs needing action (accepted/pending/tentative with date < today)
+    const { data: needsAction } = await supabase
+      .from('gigs')
+      .select('id, date, fee, status, currency, total_days, start_date, end_date, project_name, client:clients(name), gig_type:gig_types(name, color)')
+      .in('status', ['accepted', 'pending', 'tentative'])
+      .lt('date', today)
+      .order('date', { ascending: false })
+
+    setNeedsActionGigs((needsAction || []) as unknown as NeedsActionGig[])
+
+    // Count completed gigs that need invoicing
+    const { data: completedGigs } = await supabase
+      .from('gigs')
+      .select('id')
+      .eq('status', 'completed')
+      .not('fee', 'is', null)
+      .not('client_id', 'is', null)
+    const { data: invoicedGigs } = await supabase
+      .from('invoice_gigs')
+      .select('gig_id')
+    const invoicedSet = new Set((invoicedGigs || []).map((g: any) => g.gig_id))
+    setToInvoiceCount((completedGigs || []).filter(g => !invoicedSet.has(g.id)).length)
+
     setLoading(false)
+  }
+
+  async function updateGigStatus(gigId: string, status: string) {
+    await supabase.from('gigs').update({ status }).eq('id', gigId)
+    loadDashboardData()
   }
 
   return (
@@ -197,7 +220,22 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* 3-Column Layout: Upcoming | Needs+Unpaid | Availability (golden ratio) */}
+      {/* Action Required Card */}
+      {!loading && (
+        <motion.div variants={itemVariants}>
+          <ActionRequiredCard
+            pendingGigs={pendingGigs}
+            needsActionGigs={needsActionGigs}
+            toInvoiceCount={toInvoiceCount}
+            dateLocale={dateLocale}
+            formatLocale={formatLocale}
+            onStatusChange={updateGigStatus}
+            getDeadlineInfo={(deadline) => getDeadlineInfo(deadline, dateLocale)}
+          />
+        </motion.div>
+      )}
+
+      {/* 3-Column Layout: Upcoming | Unpaid | Availability (golden ratio) */}
       <motion.div
         variants={itemVariants}
         className="grid gap-4"
@@ -266,66 +304,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Column 2: Needs Response + Unpaid Invoices */}
-        <div className="flex flex-col gap-4 overflow-hidden md:h-full md:min-h-0">
-          <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <CardHeader className="pb-2 pt-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  {t('needsResponse')}
-                </CardTitle>
-                <span className="text-xs text-muted-foreground">{t('pendingCount', { count: pendingGigs.length })}</span>
-              </div>
-            </CardHeader>
-            <CardContent className="pb-4 flex-1 flex flex-col" style={{ minHeight: 0 }}>
-              {loading ? (
-                <ListSkeleton items={2} />
-              ) : pendingGigs.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Clock className="h-6 w-6 mx-auto mb-1 opacity-50" />
-                  <p className="text-xs">{t('noPendingRequests')}</p>
-                </div>
-              ) : (
-                <div className="space-y-1.5 max-h-[230px] overflow-y-auto md:max-h-none md:overflow-visible">
-                  {pendingGigs.slice(0, 5).map((gig) => {
-                    const deadlineInfo = getDeadlineInfo(gig.response_deadline, dateLocale)
-                    return (
-                      <div
-                        key={gig.id}
-                        className={`flex items-center justify-between py-2 px-3 rounded-lg text-xs transition-colors ${
-                          deadlineInfo?.urgent ? 'bg-red-500/10' : 'bg-secondary/50 hover:bg-secondary'
-                        }`}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <span className="font-medium truncate block">
-                            {gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}
-                          </span>
-                          {deadlineInfo && (
-                            <span className={`text-[10px] ${deadlineInfo.urgent ? 'text-red-400' : 'text-muted-foreground'}`}>
-                              {tGig('response')}: {deadlineInfo.isKey ? t(deadlineInfo.label) : deadlineInfo.label}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="font-semibold">{gig.fee?.toLocaleString(formatLocale) || '—'} {tc('kr')}</span>
-                          <Link
-                            href="/gigs"
-                            className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 transition-colors"
-                          >
-                            <ArrowUpRight className="w-3 h-3" />
-                          </Link>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+        {/* Column 2: Unpaid Invoices */}
+        <div className="overflow-hidden md:h-full md:min-h-0">
           <ErrorBoundary>
-            <UpcomingPayments className="flex-1 flex flex-col min-h-0" />
+            <UpcomingPayments className="h-full flex flex-col min-h-0" />
           </ErrorBoundary>
         </div>
 

@@ -496,6 +496,57 @@ export default function GigsPage() {
                 {t('passedNoResponse', { count: pastUnanswered.length })}
               </div>
             )}
+            {/* Mobile card view */}
+            <div className="lg:hidden space-y-2">
+              {pastNeedingAction.map((gig) => {
+                const StatusIcon = statusConfig[gig.status as keyof typeof statusConfig]?.icon
+                return (
+                  <div key={gig.id} className="p-3 rounded-lg border border-amber-200/50 bg-white/60 dark:bg-white/5 cursor-pointer hover:bg-amber-100/30 transition-colors" onClick={() => { setSelectedGig(gig); setEditingNotes(false) }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm">{formatGigDates(gig, dateLocale)}</p>
+                        <p className="text-sm text-muted-foreground truncate">{gig.client?.name || t('notSpecified')}</p>
+                        {gig.project_name && <p className="text-xs text-muted-foreground truncate">{gig.project_name}</p>}
+                        {isSharedMode && gig.user_id !== currentUserId && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(gig.user_id)}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-semibold text-sm">{gig.fee !== null ? fmtFee(gig.fee, gig.currency) : '-'}</span>
+                        <div className="mt-0.5">
+                          <Badge className={`text-xs ${statusConfig[gig.status as keyof typeof statusConfig]?.color}`}>
+                            {StatusIcon && <StatusIcon className="h-3 w-3 mr-0.5" />}
+                            {tStatus(gig.status)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
+                        <span className="text-xs text-muted-foreground">{gig.gig_type.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {gig.status === 'accepted' ? (
+                          <Button size="sm" onClick={() => updateStatus(gig.id, 'completed')}>
+                            <Check className="h-3.5 w-3.5 mr-1" />
+                            {t('markCompleted')}
+                          </Button>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => updateStatus(gig.id, 'accepted')}><Check className="h-3.5 w-3.5 text-green-600" /></Button>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setConfirmDeclineGig(gig.id)}><X className="h-3.5 w-3.5 text-red-600" /></Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden lg:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -573,6 +624,7 @@ export default function GigsPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}
