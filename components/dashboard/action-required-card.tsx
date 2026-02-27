@@ -93,7 +93,7 @@ export function ActionRequiredCard({
           {t('actionRequired')}
         </CardTitle>
       </CardHeader>
-      <CardContent className="pb-4 space-y-4">
+      <CardContent className="pb-4 space-y-4 divide-y divide-amber-200 dark:divide-amber-800 [&>*]:pt-4 [&>*:first-child]:pt-0">
 
         {/* Section 1: Needs your response (pending/tentative) */}
         {pendingGigs.length > 0 && (
