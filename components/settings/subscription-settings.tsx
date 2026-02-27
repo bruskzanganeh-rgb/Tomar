@@ -367,7 +367,7 @@ export function SubscriptionSettings() {
                 <Badge className="text-[10px]">{t('save15')}</Badge>
               </div>
               <CardDescription>
-                <span className="text-2xl font-bold text-foreground">{tierConfig.pro.priceYearly} kr</span>
+                <span className="text-2xl font-bold text-foreground">${tierConfig.pro.priceYearly}</span>
                 <span className="text-muted-foreground"> {t('perYear')}</span>
               </CardDescription>
             </CardHeader>
@@ -443,7 +443,7 @@ export function SubscriptionSettings() {
                   <Badge className="text-[10px]">{t('save15')}</Badge>
                 </div>
                 <CardDescription>
-                  <span className="text-2xl font-bold text-foreground">{tierConfig.team.priceYearly} kr</span>
+                  <span className="text-2xl font-bold text-foreground">${tierConfig.team.priceYearly}</span>
                   <span className="text-muted-foreground"> {t('perYear')}</span>
                 </CardDescription>
               </CardHeader>
