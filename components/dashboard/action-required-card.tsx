@@ -78,6 +78,7 @@ export function ActionRequiredCard({
 }: Props) {
   const t = useTranslations('dashboard')
   const tGig = useTranslations('gig')
+  const tInvoice = useTranslations('invoice')
   const tStatus = useTranslations('status')
   const tc = useTranslations('common')
 
@@ -149,37 +150,37 @@ export function ActionRequiredCard({
                 {tGig('needsAction')}
               </span>
               <span className="text-xs text-muted-foreground">
-                {needsActionGigs.length} {tc('gigs').toLowerCase()}
+                {t('pendingCount', { count: needsActionGigs.length })}
               </span>
             </div>
             <div className="space-y-1.5">
-              {needsActionGigs.slice(0, 5).map((gig) => {
-                const StatusIcon = statusIcons[gig.status] || Clock
-                return (
+              {needsActionGigs.slice(0, 5).map((gig) => (
                   <div
                     key={gig.id}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg text-xs bg-white/60 dark:bg-white/5 transition-colors"
+                    className="py-2 px-3 rounded-lg text-xs bg-white/60 dark:bg-white/5 transition-colors"
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-muted-foreground shrink-0">
-                          {formatGigDate(gig, dateLocale)}
-                        </span>
-                        <span className="font-medium truncate">
-                          {gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}
-                        </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-muted-foreground shrink-0">
+                            {formatGigDate(gig, dateLocale)}
+                          </span>
+                          <span className="font-medium truncate">
+                            {gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}
+                          </span>
+                        </div>
                       </div>
-                      {gig.gig_type && (
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                      {gig.fee !== null && (
+                        <span className="font-semibold shrink-0">{fmtFee(gig.fee, gig.currency)}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      {gig.gig_type ? (
+                        <div className="flex items-center gap-1.5">
                           <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: gig.gig_type.color || '#9ca3af' }} />
                           <span className="text-muted-foreground">{gig.gig_type.name}</span>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {gig.fee !== null && (
-                        <span className="font-semibold">{fmtFee(gig.fee, gig.currency)}</span>
-                      )}
+                      ) : <div />}
                       {gig.status === 'accepted' ? (
                         <Button
                           size="sm"
@@ -202,8 +203,7 @@ export function ActionRequiredCard({
                       )}
                     </div>
                   </div>
-                )
-              })}
+                ))}
               {needsActionGigs.length > 5 && (
                 <Link href="/gigs" className="text-xs text-amber-600 hover:underline px-3">
                   {t('viewAll')} ({needsActionGigs.length})
@@ -219,7 +219,7 @@ export function ActionRequiredCard({
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                 <FileText className="h-3.5 w-3.5" />
-                {tGig('toInvoiceCount', { count: toInvoiceCount })}
+                {tInvoice('toInvoiceCount', { count: toInvoiceCount })}
               </span>
               <Link
                 href="/invoices"
