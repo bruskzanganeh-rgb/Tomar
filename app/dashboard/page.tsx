@@ -148,15 +148,17 @@ export default function DashboardPage() {
 
     setPendingGigs((pending || []) as unknown as PendingGig[])
 
-    // Get past gigs needing action (accepted/pending/tentative with date < today)
+    // Get past gigs needing action (accepted/pending/tentative where end_date has passed)
     const { data: needsAction } = await supabase
       .from('gigs')
       .select('id, date, fee, status, currency, total_days, start_date, end_date, project_name, client:clients(name), gig_type:gig_types(name, color)')
       .in('status', ['accepted', 'pending', 'tentative'])
-      .lt('date', today)
       .order('date', { ascending: false })
 
-    setNeedsActionGigs((needsAction || []) as unknown as NeedsActionGig[])
+    // Filter in JS: gig has passed when its last date (end_date or date) < today
+    const pastNeedingAction = ((needsAction || []) as unknown as NeedsActionGig[])
+      .filter(g => (g.end_date || g.date) < today)
+    setNeedsActionGigs(pastNeedingAction)
 
     // Count completed gigs that need invoicing
     const { data: completedGigs } = await supabase
