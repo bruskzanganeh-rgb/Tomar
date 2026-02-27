@@ -79,19 +79,22 @@ export async function POST(request: Request) {
     }
   }
 
-  // Update company_settings (personal prefs + instruments text)
-  const settingsUpdate: Record<string, unknown> = {
-    onboarding_completed: true,
-    country_code: company_info.country_code,
-  }
-  if (instruments_text !== undefined) {
-    settingsUpdate.instruments_text = instruments_text
-  }
-
+  // Upsert company_settings — ensures row is created if missing (update() silently matches 0 rows)
   const { error: settingsError } = await admin
     .from('company_settings')
-    .update(settingsUpdate)
-    .eq('user_id', user.id)
+    .upsert({
+      user_id: user.id,
+      company_name: company_info.company_name || '',
+      org_number: company_info.org_number || '',
+      address: company_info.address || '',
+      email: company_info.email || '',
+      phone: company_info.phone || '',
+      bank_account: '',
+      base_currency: company_info.base_currency || 'SEK',
+      onboarding_completed: true,
+      country_code: company_info.country_code || 'SE',
+      instruments_text: instruments_text || '',
+    }, { onConflict: 'user_id' })
 
   if (settingsError) {
     console.error('Onboarding settings error:', settingsError)
