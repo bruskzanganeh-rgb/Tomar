@@ -10,6 +10,7 @@ import { SessionTracker } from '@/components/session-tracker'
 import { createClient } from '@/lib/supabase/server'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { AuthHashHandler } from '@/components/auth-hash-handler'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -92,6 +93,7 @@ export default async function RootLayout({
               children
             )}
             <Toaster />
+            <AuthHashHandler />
           </ThemeProvider>
         </NextIntlClientProvider>
         <Analytics />
