@@ -31,6 +31,9 @@ type Member = {
   user_id: string
   role: string
   email: string | null
+  gig_count: number
+  invoice_count: number
+  expense_count: number
 }
 
 type User = {
@@ -47,6 +50,7 @@ type User = {
   email: string | null
   address: string | null
   phone: string | null
+  gig_count: number
   invoice_count: number
   client_count: number
   position_count: number
@@ -381,11 +385,12 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
 
                       {/* Stats */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <StatBox label={t('gigCount')} value={u.gig_count} />
                         <StatBox label={t('invoiceCount')} value={u.invoice_count} />
                         <StatBox label={t('clientCount')} value={u.client_count} />
+                        <StatBox label={t('expenseCount')} value={u.expense_count} />
                         <StatBox label={t('gigTypeCount')} value={u.gig_type_count} />
                         <StatBox label={t('positionCount')} value={u.position_count} />
-                        <StatBox label={t('expenseCount')} value={u.expense_count} />
                         <StatBox label={t('monthlyInvoices')} value={u.monthly_invoices} />
                         <StatBox label={t('monthlyScans')} value={u.monthly_scans} />
                       </div>
@@ -396,8 +401,11 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                           <p className="text-xs font-medium mb-1">{t('members')} ({u.members.length})</p>
                           <div className="space-y-1">
                             {u.members.map(m => (
-                              <div key={m.user_id} className="flex items-center gap-2 text-xs bg-background rounded px-2 py-1">
+                              <div key={m.user_id} className="flex items-center gap-2 text-xs bg-background rounded px-2 py-1.5">
                                 <span className="text-muted-foreground flex-1">{m.email || m.user_id.slice(0, 8)}</span>
+                                <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                                  {m.gig_count}g · {m.invoice_count}i · {m.expense_count}e
+                                </span>
                                 <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="text-[10px]">
                                   {m.role}
                                 </Badge>

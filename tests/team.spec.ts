@@ -70,17 +70,14 @@ test.describe('Team member — settings', () => {
     const teamTab = page.getByRole('tab', { name: /team/i })
     if (await teamTab.isVisible()) {
       await teamTab.click()
-      await page.waitForTimeout(1000)
 
-      const content = await page.textContent('main')
-      // Should NOT contain UUID patterns in member list
-      // Allow UUIDs in calendar URL etc, but member display should use emails
-      const memberSection = page.locator('[class*="space-y"]').first()
-      if (await memberSection.isVisible()) {
-        const memberText = await memberSection.textContent()
-        // Email pattern should be present (at least one @)
-        expect(memberText).toContain('@')
-      }
+      // Wait for member list items to load (they have bg-muted/50 class)
+      const memberItem = page.locator('.bg-muted\\/50').first()
+      await memberItem.waitFor({ state: 'visible', timeout: 10_000 })
+
+      const memberText = await memberItem.textContent()
+      // Member display should show emails, not UUIDs
+      expect(memberText).toContain('@')
     }
   })
 

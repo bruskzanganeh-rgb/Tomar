@@ -103,6 +103,7 @@ export default function SettingsPage() {
       setTimeout(() => setCalendarCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
+      toast.error(tToast('copyError'))
     }
   }
 
@@ -117,6 +118,7 @@ export default function SettingsPage() {
     const { data: personalSettings, error: psError } = await supabase
       .from('company_settings')
       .select('id, locale, calendar_token')
+      .limit(1)
       .single()
 
     if (psError) {

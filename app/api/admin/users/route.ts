@@ -51,20 +51,22 @@ export async function GET() {
   const year = now.getFullYear()
   const month = now.getMonth() + 1
 
-  const userIds = (subscriptions || []).map(s => s.user_id)
+  // Include ALL user IDs (owners + members) for stats
+  const ownerUserIds = (subscriptions || []).map(s => s.user_id)
+  const allUserIds = [...new Set([...ownerUserIds, ...(members || []).map(m => m.user_id)])]
 
   const [statsData, usageData] = await Promise.all([
-    supabase.rpc('admin_user_stats', { p_user_ids: userIds }).then(r => r.data),
+    supabase.rpc('admin_user_stats', { p_user_ids: allUserIds }).then(r => r.data),
     supabase
       .from('usage_tracking')
       .select('user_id, invoice_count, receipt_scan_count')
-      .in('user_id', userIds)
+      .in('user_id', allUserIds)
       .eq('year', year)
       .eq('month', month)
       .then(r => r.data),
   ])
 
-  const statsMap = new Map<string, { invoice_count: number; client_count: number; position_count: number; gig_type_count: number; expense_count: number }>()
+  const statsMap = new Map<string, { invoice_count: number; client_count: number; position_count: number; gig_type_count: number; expense_count: number; gig_count: number }>()
   if (statsData) {
     statsData.forEach((s: any) => statsMap.set(s.user_id, s))
   }
@@ -88,6 +90,17 @@ export async function GET() {
       const membership = userToMembership.get(sub.user_id)
       const membersList = membership ? (companyMembers.get(membership.company_id) || []) : []
 
+      // Enrich members with per-user stats
+      const enrichedMembers = membersList.map(m => {
+        const mStats = statsMap.get(m.user_id)
+        return {
+          ...m,
+          gig_count: mStats?.gig_count || 0,
+          invoice_count: mStats?.invoice_count || 0,
+          expense_count: mStats?.expense_count || 0,
+        }
+      })
+
       return {
         ...sub,
         company_name: settingsMap.get(sub.user_id)?.company_name || null,
@@ -95,6 +108,7 @@ export async function GET() {
         email: settingsMap.get(sub.user_id)?.email || null,
         address: settingsMap.get(sub.user_id)?.address || null,
         phone: settingsMap.get(sub.user_id)?.phone || null,
+        gig_count: stats?.gig_count || 0,
         invoice_count: stats?.invoice_count || 0,
         client_count: stats?.client_count || 0,
         position_count: stats?.position_count || 0,
@@ -102,7 +116,7 @@ export async function GET() {
         expense_count: stats?.expense_count || 0,
         monthly_invoices: usageMap.get(sub.user_id)?.invoices || 0,
         monthly_scans: usageMap.get(sub.user_id)?.scans || 0,
-        members: membersList,
+        members: enrichedMembers,
       }
     })
 

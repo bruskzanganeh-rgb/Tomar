@@ -155,6 +155,7 @@ export function EditExpenseDialog({
     } catch (error) {
       console.error('Error loading attachment:', error)
       setAttachmentUrl(null)
+      toast.error(tt('pdfLoadError'))
     } finally {
       setAttachmentLoading(false)
     }

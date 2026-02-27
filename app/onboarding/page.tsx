@@ -114,6 +114,7 @@ export default function OnboardingPage() {
     const { data: settings } = await supabase
       .from('company_settings')
       .select('company_name, org_number, address, email, phone, bank_account, country_code, instruments_text')
+      .limit(1)
       .single()
 
     if (settings) {

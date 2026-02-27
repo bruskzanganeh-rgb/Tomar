@@ -906,6 +906,7 @@
     "unlimitedHint": "0 = obegränsat",
     "displayPriceHint": "Visningspris — faktisk debitering styrs i Stripe",
     "brandingAndEmail": "Branding & E-post",
+    "gigCount": "Uppdrag",
     "invoiceCount": "Fakturor",
     "clientCount": "Klienter",
     "gigTypeCount": "Uppdragstyper",
@@ -1139,7 +1140,16 @@
     "receiptDeleted": "Kvitto borttaget",
     "receiptUploaded": "Kvitto uppladdat",
     "scheduleScanned": "Schema importerat",
-    "scheduleScanError": "Kunde inte läsa schemat"
+    "scheduleScanError": "Kunde inte läsa schemat",
+    "draftCreateError": "Kunde inte skapa utkast — försök igen",
+    "gigDatesError": "Vissa datum kunde inte sparas",
+    "scheduleUploadError": "Schemafil kunde inte laddas upp",
+    "scheduleParseError": "Kunde inte tolka schematext",
+    "gigLinkError": "Gigs kunde inte kopplas till faktura",
+    "attachmentLoadError": "Kunde inte ladda bilagor",
+    "expenseLoadError": "Kunde inte ladda utgifter",
+    "copyError": "Kunde inte kopiera till urklipp",
+    "pdfLoadError": "Kunde inte ladda dokument"
   },
   "gigTypes": {
     "subtitle": "Hantera typer av uppdrag med olika momssatser",

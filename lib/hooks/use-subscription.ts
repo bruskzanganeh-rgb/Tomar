@@ -119,6 +119,7 @@ export function useSubscription() {
       .select('invoice_count, receipt_scan_count')
       .eq('year', now.getFullYear())
       .eq('month', now.getMonth() + 1)
+      .limit(1)
       .single()
 
     setUsage(usageData || { invoice_count: 0, receipt_scan_count: 0 })

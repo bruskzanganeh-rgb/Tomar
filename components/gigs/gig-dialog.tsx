@@ -140,6 +140,7 @@ export function GigDialog({
       }
     } catch (err) {
       console.error('Failed to create draft:', err)
+      toast.error(tToast('draftCreateError'))
     }
   }, [])
 
@@ -321,23 +322,52 @@ export function GigDialog({
     const travelExpense = formData.travel_expense ? parseFloat(formData.travel_expense) : null
     const currency = (formData.currency || baseCurrency) as SupportedCurrency
 
-    // Convert to base currency if different
-    let feeBase = fee
-    let travelExpenseBase = travelExpense
-    let exchangeRate = 1.0
+    // Identify unparsed schedule texts early for parallel fetch
+    const unparsedEntries = Object.entries(scheduleTexts)
+      .filter(([date, text]) => text.trim() && !parsedSessions[date])
+      .map(([date, text]) => ({ date, text }))
 
-    if (currency !== baseCurrency && (fee || travelExpense)) {
-      try {
-        exchangeRate = await getRate(currency, baseCurrency, startDate)
-        if (fee) feeBase = Math.round(fee * exchangeRate * 100) / 100
-        if (travelExpense) travelExpenseBase = Math.round(travelExpense * exchangeRate * 100) / 100
-      } catch {
-        toast.warning(tToast('exchangeRateError'))
-        feeBase = fee
-        travelExpenseBase = travelExpense
-        exchangeRate = 1.0
-      }
-    }
+    // Parallelize exchange rate + schedule parsing (independent network calls)
+    const [exchangeResult, finalSessions] = await Promise.all([
+      // Exchange rate
+      (async () => {
+        if (currency !== baseCurrency && (fee || travelExpense)) {
+          try {
+            const rate = await getRate(currency, baseCurrency, startDate)
+            return {
+              exchangeRate: rate,
+              feeBase: fee ? Math.round(fee * rate * 100) / 100 : fee,
+              travelExpenseBase: travelExpense ? Math.round(travelExpense * rate * 100) / 100 : travelExpense,
+            }
+          } catch {
+            toast.warning(tToast('exchangeRateError'))
+          }
+        }
+        return { exchangeRate: 1.0, feeBase: fee, travelExpenseBase: travelExpense }
+      })(),
+      // Schedule parsing
+      (async () => {
+        if (unparsedEntries.length > 0) {
+          try {
+            const res = await fetch('/api/gigs/parse-schedule', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ entries: unparsedEntries }),
+            })
+            if (res.ok) {
+              const data = await res.json()
+              return { ...parsedSessions, ...(data.sessions || {}) }
+            }
+          } catch (err) {
+            console.error('Schedule parse error:', err)
+            toast.warning(tToast('scheduleParseError'))
+          }
+        }
+        return { ...parsedSessions }
+      })(),
+    ])
+
+    const { exchangeRate, feeBase, travelExpenseBase } = exchangeResult
 
     const gigData = {
       client_id: formData.client_id && formData.client_id !== 'none' ? formData.client_id : null,
@@ -359,28 +389,6 @@ export function GigDialog({
       invoice_notes: formData.invoice_notes || null,
       status: formData.status,
       response_deadline: formData.response_deadline || null,
-    }
-
-    // Parse any unparsed schedule texts before saving
-    const unparsedEntries = Object.entries(scheduleTexts)
-      .filter(([date, text]) => text.trim() && !parsedSessions[date])
-      .map(([date, text]) => ({ date, text }))
-
-    let finalSessions = { ...parsedSessions }
-    if (unparsedEntries.length > 0) {
-      try {
-        const res = await fetch('/api/gigs/parse-schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entries: unparsedEntries }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          finalSessions = { ...finalSessions, ...(data.sessions || {}) }
-        }
-      } catch (err) {
-        console.error('Schedule parse error:', err)
-      }
     }
 
     // Build gig_dates with schedule data
@@ -417,6 +425,7 @@ export function GigDialog({
       const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
       if (datesError) {
         console.error('Error updating gig dates:', datesError)
+        toast.warning(tToast('gigDatesError'))
       }
 
       // Upload schedule file if imported
@@ -425,6 +434,7 @@ export function GigDialog({
           await uploadGigAttachment(gig.id, scheduleFile, 'schedule')
         } catch (err) {
           console.error('Schedule file upload error:', err)
+          toast.warning(tToast('scheduleUploadError'))
         }
       }
     } else {
@@ -447,6 +457,7 @@ export function GigDialog({
         const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
         if (datesError) {
           console.error('Error inserting gig dates:', datesError)
+          toast.warning(tToast('gigDatesError'))
         }
 
         // Upload schedule file if imported
@@ -455,6 +466,7 @@ export function GigDialog({
             await uploadGigAttachment(draftGigId, scheduleFile, 'schedule')
           } catch (err) {
             console.error('Schedule file upload error:', err)
+            toast.warning(tToast('scheduleUploadError'))
           }
         }
 
@@ -481,6 +493,7 @@ export function GigDialog({
         const { error: datesError } = await supabase.from('gig_dates').insert(gigDates)
         if (datesError) {
           console.error('Error inserting gig dates:', datesError)
+          toast.warning(tToast('gigDatesError'))
         }
 
         if (scheduleFile) {
@@ -488,6 +501,7 @@ export function GigDialog({
             await uploadGigAttachment(newGig.id, scheduleFile, 'schedule')
           } catch (err) {
             console.error('Schedule file upload error:', err)
+            toast.warning(tToast('scheduleUploadError'))
           }
         }
 

@@ -278,6 +278,7 @@ export default function GigsPage() {
 
     if (error) {
       console.error('Error loading gig expenses:', error)
+      toast.error(tToast('expenseLoadError'))
     } else {
       setGigExpenses(data || [])
     }
@@ -1578,7 +1579,7 @@ export default function GigsPage() {
         onOpenChange={setConfirmBatchComplete}
         title={t('batchCompleteConfirmTitle')}
         description={t('batchCompleteConfirmDescription', { count: pastAccepted.length })}
-        confirmLabel={t('markAllCompleted')}
+        confirmLabel={t('markAllCompleted', { count: pastAccepted.length })}
         onConfirm={() => {
           batchMarkCompleted(pastAccepted.map(g => g.id))
           setConfirmBatchComplete(false)

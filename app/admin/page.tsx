@@ -35,6 +35,7 @@ type User = {
   email: string | null
   address: string | null
   phone: string | null
+  gig_count: number
   invoice_count: number
   client_count: number
   position_count: number
@@ -44,7 +45,7 @@ type User = {
   monthly_scans: number
   last_active?: string | null
   recent_activity_count?: number
-  members?: { user_id: string; role: string; email: string | null }[]
+  members?: { user_id: string; role: string; email: string | null; gig_count: number; invoice_count: number; expense_count: number }[]
 }
 
 type Sponsor = {

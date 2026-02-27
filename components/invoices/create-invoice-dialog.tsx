@@ -109,6 +109,7 @@ export function CreateInvoiceDialog({
   const tc = useTranslations('common')
   const tg = useTranslations('gig')
   const te = useTranslations('expense')
+  const tToast = useTranslations('toast')
   const { canCreateInvoice, isPro, usage, limits } = useSubscription()
   const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
@@ -459,6 +460,7 @@ export function CreateInvoiceDialog({
 
       if (linkError) {
         console.error('Error linking gigs:', linkError)
+        toast.warning(tToast('gigLinkError'))
       }
 
       await supabase

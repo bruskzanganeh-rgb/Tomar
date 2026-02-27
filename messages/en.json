@@ -906,6 +906,7 @@
     "unlimitedHint": "0 = unlimited",
     "displayPriceHint": "Display price only — actual billing is set in Stripe",
     "brandingAndEmail": "Branding & Email",
+    "gigCount": "Gigs",
     "invoiceCount": "Invoices",
     "clientCount": "Clients",
     "gigTypeCount": "Gig types",
@@ -1139,7 +1140,16 @@
     "receiptDeleted": "Receipt deleted",
     "receiptUploaded": "Receipt uploaded",
     "scheduleScanned": "Schedule imported",
-    "scheduleScanError": "Could not read the schedule"
+    "scheduleScanError": "Could not read the schedule",
+    "draftCreateError": "Could not create draft — please try again",
+    "gigDatesError": "Some dates could not be saved",
+    "scheduleUploadError": "Schedule file could not be uploaded",
+    "scheduleParseError": "Could not parse schedule text",
+    "gigLinkError": "Gigs could not be linked to invoice",
+    "attachmentLoadError": "Could not load attachments",
+    "expenseLoadError": "Could not load expenses",
+    "copyError": "Could not copy to clipboard",
+    "pdfLoadError": "Could not load document"
   },
   "gigTypes": {
     "subtitle": "Manage gig types with different VAT rates",

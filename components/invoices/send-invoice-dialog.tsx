@@ -63,6 +63,7 @@ export function SendInvoiceDialog({
 }: SendInvoiceDialogProps) {
   const t = useTranslations('invoice')
   const tc = useTranslations('common')
+  const tToast = useTranslations('toast')
   const { isPro } = useSubscription()
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
@@ -131,6 +132,7 @@ export function SendInvoiceDialog({
 
     if (receiptsError) {
       console.error('Error loading receipts:', receiptsError)
+      toast.error(tToast('attachmentLoadError'))
     } else {
       setReceipts(receiptsData || [])
     }
@@ -145,6 +147,7 @@ export function SendInvoiceDialog({
 
     if (docsError) {
       console.error('Error loading invoice docs:', docsError)
+      toast.error(tToast('attachmentLoadError'))
     } else {
       setInvoiceDocs(docsData || [])
     }

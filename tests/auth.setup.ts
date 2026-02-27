@@ -19,10 +19,11 @@ setup('authenticate', async ({ page }) => {
     )
   }
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' })
+  await page.goto('/login', { waitUntil: 'networkidle' })
 
-  // Wait for the client-rendered login form to appear
-  await page.locator('#email').waitFor({ timeout: 30_000 })
+  // Wait for the client-rendered login form to appear and hydrate
+  await page.locator('#email').waitFor({ state: 'visible', timeout: 30_000 })
+  await page.waitForTimeout(500)
 
   await page.locator('#email').fill(email)
   await page.locator('#password').fill(password)

@@ -15,14 +15,16 @@ setup('authenticate-member', async ({ page }) => {
     )
   }
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' })
-  await page.locator('#email').waitFor({ timeout: 30_000 })
+  await page.goto('/login', { waitUntil: 'networkidle' })
+  await page.locator('#email').waitFor({ state: 'visible', timeout: 30_000 })
+  // Small delay to ensure React hydration is complete
+  await page.waitForTimeout(500)
 
   await page.locator('#email').fill(email)
   await page.locator('#password').fill(password)
   await page.locator('button[type="submit"]').click()
 
-  await page.waitForURL(/\/(dashboard|onboarding|setup-member)/, { timeout: 30_000 })
+  await page.waitForURL(/\/(dashboard|onboarding|settings|setup-member)/, { timeout: 30_000 })
 
   await page.context().storageState({ path: AUTH_FILE })
 })
