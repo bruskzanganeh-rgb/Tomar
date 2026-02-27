@@ -63,8 +63,7 @@ export default function SetupMemberPage() {
     }
 
     toast.success(t('setupComplete'))
-    router.push('/dashboard')
-    router.refresh()
+    window.location.href = '/dashboard'
   }
 
   const steps = [t('setPassword'), t('yourInfo')]
