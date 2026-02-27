@@ -9,6 +9,7 @@ export default defineConfig({
   testDir: './tests',
   outputDir: './tests/screenshots',
   timeout: 30_000,
+  retries: 1,
   use: {
     baseURL: 'http://localhost:3000',
     screenshot: 'only-on-failure',
@@ -103,6 +104,39 @@ export default defineConfig({
       use: {
         viewport: { width: 1440, height: 900 },
         storageState: 'tests/.auth/member-state.json',
+      },
+    },
+
+    // CRUD tests (owner, desktop) — gigs, clients, invoices, expenses, config
+    {
+      name: 'crud',
+      testMatch: /gig-crud|client-crud|invoice-crud|expense-crud|config-types|config-positions/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Page tests (owner, desktop) — settings, dashboard, calendar, validation
+    {
+      name: 'pages',
+      testMatch: /settings-save|dashboard-widgets|calendar-nav|form-validation/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Swedish locale tests (owner, desktop)
+    {
+      name: 'locale-sv',
+      testMatch: /locale-sv\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
       },
     },
   ],

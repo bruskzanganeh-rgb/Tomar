@@ -646,7 +646,7 @@ export function GigDialog({
                     setFormData({ ...formData, status: value })
                   }
                 >
-                  <SelectTrigger className="w-[190px] h-8 text-sm">
+                  <SelectTrigger className="w-[190px] h-8 text-sm" data-testid="gig-status-select">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -681,7 +681,7 @@ export function GigDialog({
                         setFormData({ ...formData, gig_type_id: value })
                       }
                     >
-                      <SelectTrigger className="h-9 w-full truncate">
+                      <SelectTrigger className="h-9 w-full truncate" data-testid="gig-type-select">
                         <SelectValue placeholder={t('selectType')} />
                       </SelectTrigger>
                       <SelectContent>

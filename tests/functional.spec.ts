@@ -276,13 +276,12 @@ test.describe('Calendar', () => {
   test('availability tab shows week grid', async ({ page }) => {
     await loadPage(page, '/calendar')
     const availabilityTab = page.getByRole('tab', { name: /availability|tillgänglighet/i }).first()
-    if (await availabilityTab.isVisible()) {
-      await availabilityTab.click()
-      await page.waitForTimeout(1000)
-      // Should show week labels (V1, V2, etc. or W1, W2)
-      const content = await page.textContent('main')
-      expect(content).toMatch(/V\d|W\d|Free|Ledig|Full/)
-    }
+    await expect(availabilityTab).toBeVisible({ timeout: 5000 })
+    await availabilityTab.click()
+    await page.waitForTimeout(2000)
+    // Should show week labels (V1, V2, etc. or W1, W2) or status words
+    const content = await page.textContent('main')
+    expect(content).toMatch(/V\d|W\d|vecka|week|ledig|free|upptagen|busy/i)
   })
 })
 
