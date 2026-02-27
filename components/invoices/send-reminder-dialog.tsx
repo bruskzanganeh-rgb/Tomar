@@ -76,6 +76,7 @@ export function SendReminderDialog({
     const { data: membership } = await supabase
       .from('company_members')
       .select('company_id')
+      .limit(1)
       .single()
 
     let companyName = ''
