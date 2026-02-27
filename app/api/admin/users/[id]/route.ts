@@ -2,36 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/admin'
 import { logActivity } from '@/lib/activity'
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id: targetUserId } = await params
-  const auth = await verifyAdmin()
-  if (auth instanceof NextResponse) return auth
-  const { userId, supabase } = auth
-
-  // Prevent self-deletion
-  if (targetUserId === userId) {
-    return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
-  }
-
-  // Log before deletion
-  await logActivity({
-    userId,
-    eventType: 'user_deleted',
-    entityType: 'user',
-    entityId: targetUserId,
-    metadata: { deleted_by: userId },
-  })
-
+async function deleteUserData(supabase: any, targetUserId: string) {
   // Delete user data in correct order (foreign key constraints)
   // 1. gig_dates (references gigs)
   const { data: userGigs } = await supabase
     .from('gigs')
     .select('id')
     .eq('user_id', targetUserId)
-  const gigIds = (userGigs || []).map(g => g.id)
+  const gigIds = (userGigs || []).map((g: any) => g.id)
   if (gigIds.length > 0) {
     await supabase.from('gig_dates').delete().in('gig_id', gigIds)
     await supabase.from('gig_attachments').delete().in('gig_id', gigIds)
@@ -42,7 +20,7 @@ export async function DELETE(
     .from('invoices')
     .select('id')
     .eq('user_id', targetUserId)
-  const invoiceIds = (userInvoices || []).map(i => i.id)
+  const invoiceIds = (userInvoices || []).map((i: any) => i.id)
   if (invoiceIds.length > 0) {
     await supabase.from('invoice_lines').delete().in('invoice_id', invoiceIds)
   }
@@ -60,6 +38,7 @@ export async function DELETE(
     supabase.from('activity_events').delete().eq('user_id', targetUserId),
     supabase.from('usage_tracking').delete().eq('user_id', targetUserId),
     supabase.from('organization_members').delete().eq('user_id', targetUserId),
+    supabase.from('company_members').delete().eq('user_id', targetUserId),
     supabase.from('sponsor_impressions').delete().eq('user_id', targetUserId),
     supabase.from('ai_usage_logs').delete().eq('user_id', targetUserId),
     supabase.from('exchange_rates').delete().eq('user_id', targetUserId),
@@ -77,10 +56,78 @@ export async function DELETE(
   ])
 
   // 6. Delete auth user
-  const { error: authError } = await supabase.auth.admin.deleteUser(targetUserId)
-  if (authError) {
-    console.error('Error deleting auth user:', authError)
-    return NextResponse.json({ error: 'Failed to delete auth user' }, { status: 500 })
+  await supabase.auth.admin.deleteUser(targetUserId)
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: targetUserId } = await params
+  const auth = await verifyAdmin()
+  if (auth instanceof NextResponse) return auth
+  const { userId, supabase } = auth
+
+  // Prevent self-deletion
+  if (targetUserId === userId) {
+    return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
+  }
+
+  const deleteCompany = request.nextUrl.searchParams.get('company') === 'true'
+
+  if (deleteCompany) {
+    // Delete entire company: find all members, delete each, then delete the company
+    const { data: membership } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', targetUserId)
+      .single()
+
+    if (membership) {
+      const { data: allMembers } = await supabase
+        .from('company_members')
+        .select('user_id')
+        .eq('company_id', membership.company_id)
+
+      // Delete all members' data
+      for (const m of (allMembers || [])) {
+        if (m.user_id === userId) continue // Don't delete admin
+        await logActivity({
+          userId,
+          eventType: 'user_deleted',
+          entityType: 'user',
+          entityId: m.user_id,
+          metadata: { deleted_by: userId, company_deleted: true },
+        })
+        await deleteUserData(supabase, m.user_id)
+      }
+
+      // Delete company-level data
+      await supabase.from('gig_types').delete().eq('company_id', membership.company_id)
+      await supabase.from('positions').delete().eq('company_id', membership.company_id)
+      await supabase.from('company_invitations').delete().eq('company_id', membership.company_id)
+      await supabase.from('companies').delete().eq('id', membership.company_id)
+    } else {
+      // No company — just delete the user
+      await logActivity({
+        userId,
+        eventType: 'user_deleted',
+        entityType: 'user',
+        entityId: targetUserId,
+        metadata: { deleted_by: userId },
+      })
+      await deleteUserData(supabase, targetUserId)
+    }
+  } else {
+    // Delete single user only
+    await logActivity({
+      userId,
+      eventType: 'user_deleted',
+      entityType: 'user',
+      entityId: targetUserId,
+      metadata: { deleted_by: userId },
+    })
+    await deleteUserData(supabase, targetUserId)
   }
 
   return NextResponse.json({ success: true })

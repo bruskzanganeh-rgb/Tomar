@@ -22,7 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2, UserPlus } from 'lucide-react'
+import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2, UserPlus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -113,24 +113,45 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
     setChangingTier(null)
   }
 
-  async function handleDeleteUser(userId: string) {
-    if (userId === currentUserId) {
+  async function handleDeleteCompany(ownerUserId: string) {
+    if (ownerUserId === currentUserId) {
       toast.error(t('cannotDeleteSelf'))
       return
     }
-    setDeletingUser(userId)
-    const res = await fetch(`/api/admin/users/${userId}`, {
+    setDeletingUser(ownerUserId)
+    const res = await fetch(`/api/admin/users/${ownerUserId}?company=true`, {
       method: 'DELETE',
     })
     if (res.ok) {
-      setUsers(prev => prev.filter(u => u.user_id !== userId))
-      toast.success(t('userDeleted'))
+      setUsers(prev => prev.filter(u => u.user_id !== ownerUserId))
+      toast.success(t('companyDeleted'))
     } else {
       const data = await res.json()
-      toast.error(data.error || 'Failed to delete user')
+      toast.error(data.error || 'Failed to delete')
     }
     setDeletingUser(null)
     setConfirmDeleteId(null)
+  }
+
+  async function handleRemoveMember(memberUserId: string, ownerUserId: string) {
+    if (memberUserId === currentUserId) {
+      toast.error(t('cannotDeleteSelf'))
+      return
+    }
+    const res = await fetch(`/api/admin/users/${memberUserId}`, {
+      method: 'DELETE',
+    })
+    if (res.ok) {
+      setUsers(prev => prev.map(u =>
+        u.user_id === ownerUserId
+          ? { ...u, members: u.members?.filter(m => m.user_id !== memberUserId) }
+          : u
+      ))
+      toast.success(t('memberRemoved'))
+    } else {
+      const data = await res.json()
+      toast.error(data.error || 'Failed to remove member')
+    }
   }
 
   async function handleAddUser() {
@@ -328,16 +349,26 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                       </div>
 
                       {/* Members */}
-                      {u.members && u.members.length > 1 && (
+                      {u.members && u.members.length > 0 && (
                         <div>
                           <p className="text-xs font-medium mb-1">{t('members')} ({u.members.length})</p>
                           <div className="space-y-1">
                             {u.members.map(m => (
                               <div key={m.user_id} className="flex items-center gap-2 text-xs bg-background rounded px-2 py-1">
-                                <span className="text-muted-foreground">{m.email || m.user_id.slice(0, 8)}</span>
+                                <span className="text-muted-foreground flex-1">{m.email || m.user_id.slice(0, 8)}</span>
                                 <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="text-[10px]">
                                   {m.role}
                                 </Badge>
+                                {m.role !== 'owner' && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                                    onClick={() => handleRemoveMember(m.user_id, u.user_id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -361,10 +392,10 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                         </Button>
                       </div>
 
-                      {/* Delete */}
+                      {/* Delete company */}
                       {confirmDeleteId === u.user_id ? (
                         <div className="flex items-center gap-2 p-2 rounded bg-red-50 border border-red-200">
-                          <p className="text-xs text-red-700 flex-1">{t('deleteUserConfirm')}</p>
+                          <p className="text-xs text-red-700 flex-1">{t('deleteCompanyConfirm')}</p>
                           <Button
                             size="sm"
                             variant="outline"
@@ -377,7 +408,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                             size="sm"
                             variant="destructive"
                             className="h-7 text-xs"
-                            onClick={() => handleDeleteUser(u.user_id)}
+                            onClick={() => handleDeleteCompany(u.user_id)}
                             disabled={deletingUser === u.user_id}
                           >
                             {deletingUser === u.user_id && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
@@ -392,7 +423,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                           onClick={() => setConfirmDeleteId(u.user_id)}
                         >
                           <Trash2 className="h-3 w-3 mr-1" />
-                          {t('deleteUser')}
+                          {t('deleteCompany')}
                         </Button>
                       )}
                     </div>
