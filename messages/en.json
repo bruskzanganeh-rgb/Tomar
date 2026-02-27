@@ -919,6 +919,7 @@
     "registeredAt": "Registered",
     "inviteMember": "Invite member",
     "inviteMemberDesc": "Add a new user to this company",
+    "members": "Members",
     "deleteUser": "Delete user",
     "deleteUserConfirm": "Are you sure? All data (gigs, invoices, receipts) will be permanently deleted.",
     "userDeleted": "User deleted",

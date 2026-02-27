@@ -44,6 +44,7 @@ type User = {
   monthly_scans: number
   last_active?: string | null
   recent_activity_count?: number
+  members?: { user_id: string; role: string; email: string | null }[]
 }
 
 type Sponsor = {

@@ -8,24 +8,49 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth
   const { supabase } = auth
 
-  // Fetch all subscriptions with company info
-  const { data: subscriptions } = await supabase
-    .from('subscriptions')
-    .select('user_id, plan, status, stripe_customer_id, stripe_price_id, current_period_end, cancel_at_period_end, created_at')
-    .order('created_at', { ascending: false })
-
-  // Fetch company settings for all users
-  const { data: settings } = await supabase
-    .from('company_settings')
-    .select('user_id, company_name, org_number, email, address, phone')
+  // Fetch all data in parallel
+  const [
+    { data: subscriptions },
+    { data: settings },
+    { data: members },
+  ] = await Promise.all([
+    supabase
+      .from('subscriptions')
+      .select('user_id, plan, status, stripe_customer_id, stripe_price_id, current_period_end, cancel_at_period_end, created_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('company_settings')
+      .select('user_id, company_name, org_number, email, address, phone'),
+    supabase
+      .from('company_members')
+      .select('user_id, company_id, role'),
+  ])
 
   const settingsMap = new Map((settings || []).map(s => [s.user_id, s]))
+
+  // Build membership maps
+  const userToMembership = new Map<string, { company_id: string; role: string }>()
+  const companyMembers = new Map<string, { user_id: string; role: string; email: string | null }[]>()
+  for (const m of (members || [])) {
+    userToMembership.set(m.user_id, { company_id: m.company_id, role: m.role })
+    if (!companyMembers.has(m.company_id)) companyMembers.set(m.company_id, [])
+    companyMembers.get(m.company_id)!.push({
+      user_id: m.user_id,
+      role: m.role,
+      email: settingsMap.get(m.user_id)?.email || null,
+    })
+  }
+
+  // Set of user_ids that are non-owner members (they'll be nested under their company's owner)
+  const nonOwnerMemberIds = new Set<string>()
+  for (const m of (members || [])) {
+    if (m.role !== 'owner') nonOwnerMemberIds.add(m.user_id)
+  }
 
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
 
-  // Fetch per-user stats with consolidated RPC (1 query instead of 5)
   const userIds = (subscriptions || []).map(s => s.user_id)
 
   const [statsData, usageData] = await Promise.all([
@@ -39,7 +64,6 @@ export async function GET() {
       .then(r => r.data),
   ])
 
-  // Build lookup maps
   const statsMap = new Map<string, { invoice_count: number; client_count: number; position_count: number; gig_type_count: number; expense_count: number }>()
   if (statsData) {
     statsData.forEach((s: any) => statsMap.set(s.user_id, s))
@@ -55,24 +79,32 @@ export async function GET() {
     })
   }
 
-  const users = (subscriptions || []).map(sub => {
-    const stats = statsMap.get(sub.user_id)
-    return {
-      ...sub,
-      company_name: settingsMap.get(sub.user_id)?.company_name || null,
-      org_number: settingsMap.get(sub.user_id)?.org_number || null,
-      email: settingsMap.get(sub.user_id)?.email || null,
-      address: settingsMap.get(sub.user_id)?.address || null,
-      phone: settingsMap.get(sub.user_id)?.phone || null,
-      invoice_count: stats?.invoice_count || 0,
-      client_count: stats?.client_count || 0,
-      position_count: stats?.position_count || 0,
-      gig_type_count: stats?.gig_type_count || 0,
-      expense_count: stats?.expense_count || 0,
-      monthly_invoices: usageMap.get(sub.user_id)?.invoices || 0,
-      monthly_scans: usageMap.get(sub.user_id)?.scans || 0,
-    }
-  })
+  // Only show owners and users without a company (legacy/not onboarded)
+  // Non-owner members are nested under their company's owner
+  const users = (subscriptions || [])
+    .filter(sub => !nonOwnerMemberIds.has(sub.user_id))
+    .map(sub => {
+      const stats = statsMap.get(sub.user_id)
+      const membership = userToMembership.get(sub.user_id)
+      const membersList = membership ? (companyMembers.get(membership.company_id) || []) : []
+
+      return {
+        ...sub,
+        company_name: settingsMap.get(sub.user_id)?.company_name || null,
+        org_number: settingsMap.get(sub.user_id)?.org_number || null,
+        email: settingsMap.get(sub.user_id)?.email || null,
+        address: settingsMap.get(sub.user_id)?.address || null,
+        phone: settingsMap.get(sub.user_id)?.phone || null,
+        invoice_count: stats?.invoice_count || 0,
+        client_count: stats?.client_count || 0,
+        position_count: stats?.position_count || 0,
+        gig_type_count: stats?.gig_type_count || 0,
+        expense_count: stats?.expense_count || 0,
+        monthly_invoices: usageMap.get(sub.user_id)?.invoices || 0,
+        monthly_scans: usageMap.get(sub.user_id)?.scans || 0,
+        members: membersList,
+      }
+    })
 
   return NextResponse.json({ users })
 }

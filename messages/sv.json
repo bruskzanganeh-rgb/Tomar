@@ -919,6 +919,7 @@
     "registeredAt": "Registrerad",
     "inviteMember": "Bjud in medlem",
     "inviteMemberDesc": "Lägg till en ny användare i detta företag",
+    "members": "Medlemmar",
     "deleteUser": "Ta bort användare",
     "deleteUserConfirm": "Är du säker? All data (gigs, fakturor, kvitton) raderas permanent.",
     "userDeleted": "Användare borttagen",

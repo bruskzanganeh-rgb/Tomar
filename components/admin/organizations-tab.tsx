@@ -27,6 +27,12 @@ import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
+type Member = {
+  user_id: string
+  role: string
+  email: string | null
+}
+
 type User = {
   user_id: string
   plan: string
@@ -50,6 +56,7 @@ type User = {
   monthly_scans: number
   last_active?: string | null
   recent_activity_count?: number
+  members?: Member[]
 }
 
 type Props = {
@@ -319,6 +326,23 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                         <StatBox label={t('monthlyInvoices')} value={u.monthly_invoices} />
                         <StatBox label={t('monthlyScans')} value={u.monthly_scans} />
                       </div>
+
+                      {/* Members */}
+                      {u.members && u.members.length > 1 && (
+                        <div>
+                          <p className="text-xs font-medium mb-1">{t('members')} ({u.members.length})</p>
+                          <div className="space-y-1">
+                            {u.members.map(m => (
+                              <div key={m.user_id} className="flex items-center gap-2 text-xs bg-background rounded px-2 py-1">
+                                <span className="text-muted-foreground">{m.email || m.user_id.slice(0, 8)}</span>
+                                <Badge variant={m.role === 'owner' ? 'default' : 'secondary'} className="text-[10px]">
+                                  {m.role}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Actions */}
                       <div className="flex items-center gap-2">
