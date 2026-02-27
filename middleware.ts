@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require auth
-  const publicPaths = ['/login', '/signup', '/auth/callback', '/forgot-password', '/reset-password', '/privacy', '/terms', '/blog', '/founding-members', '/sign', '/review']
+  const publicPaths = ['/login', '/signup', '/auth/callback', '/auth/confirm', '/forgot-password', '/reset-password', '/privacy', '/terms', '/blog', '/founding-members', '/sign', '/review']
   const isPublicPath = publicPaths.some(p => pathname.startsWith(p))
   const isLandingPage = pathname === '/'
   const isApiPath = pathname.startsWith('/api/')
@@ -51,8 +51,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // If logged in and on login/signup, redirect to dashboard (but allow reset-password)
-  if (user && isPublicPath && !pathname.startsWith('/reset-password')) {
+  // If logged in and on login/signup, redirect to dashboard (but allow reset-password and auth/confirm)
+  if (user && isPublicPath && !pathname.startsWith('/reset-password') && !pathname.startsWith('/auth/confirm')) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
