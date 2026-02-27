@@ -24,6 +24,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient()
 
   let companyId: string | null = null
+  let isOwner = true
 
   // Check if user already has a company (joining via invite)
   const { data: existingMembership } = await admin
@@ -42,7 +43,9 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
       .single()
 
-    if (member?.role === 'owner') {
+    isOwner = member?.role === 'owner'
+
+    if (isOwner) {
       await admin
         .from('companies')
         .update(company_info)
@@ -101,8 +104,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not save settings' }, { status: 500 })
   }
 
-  // Insert gig types
-  if (gig_types && gig_types.length > 0 && companyId) {
+  // Insert gig types (only for owners — members share the company's existing data)
+  if (isOwner && gig_types && gig_types.length > 0 && companyId) {
     const { error: gtError } = await admin
       .from('gig_types')
       .insert(
@@ -120,8 +123,8 @@ export async function POST(request: Request) {
     }
   }
 
-  // Insert positions
-  if (positions && positions.length > 0 && companyId) {
+  // Insert positions (only for owners — members share the company's existing data)
+  if (isOwner && positions && positions.length > 0 && companyId) {
     const { error: posError } = await admin
       .from('positions')
       .insert(
