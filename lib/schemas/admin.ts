@@ -11,7 +11,7 @@ export const createUserSchema = z.object({
 )
 
 export const changeTierSchema = z.object({
-  plan: z.enum(['free', 'pro']),
+  plan: z.enum(['free', 'pro', 'team']),
 })
 
 export const configSchema = z.object({

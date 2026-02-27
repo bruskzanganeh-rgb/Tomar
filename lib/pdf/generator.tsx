@@ -19,6 +19,9 @@ type CompanySettings = {
   email: string
   phone: string
   bank_account: string
+  bankgiro?: string | null
+  iban?: string | null
+  bic?: string | null
   logo_url: string | null
   vat_registration_number?: string | null
   late_payment_interest_text?: string | null
@@ -85,6 +88,9 @@ const PDF_LABELS: Record<string, Record<string, string>> = {
     paymentTerms: 'Betalningsvillkor',
     daysNet: 'dagar netto',
     bankAccount: 'Bankgiro',
+    bankgiro: 'Bankgiro',
+    iban: 'IBAN',
+    bic: 'BIC',
     description: 'Beskrivning',
     amount: 'Belopp',
     subtotal: 'Summa',
@@ -113,6 +119,9 @@ const PDF_LABELS: Record<string, Record<string, string>> = {
     paymentTerms: 'Payment terms',
     daysNet: 'days net',
     bankAccount: 'Bank account',
+    bankgiro: 'Bankgiro',
+    iban: 'IBAN',
+    bic: 'BIC',
     description: 'Description',
     amount: 'Amount',
     subtotal: 'Subtotal',
@@ -571,12 +580,37 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
                 </Text>
               </View>
             )}
-            <View style={styles.invoiceDetailItem}>
-              <Text>
-                <Text style={styles.invoiceDetailLabel}>{l.bankAccount} </Text>
-                <Text style={styles.invoiceDetailValue}>{company.bank_account}</Text>
-              </Text>
-            </View>
+            {company.bankgiro ? (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.bankgiro} </Text>
+                  <Text style={styles.invoiceDetailValue}>{company.bankgiro}</Text>
+                </Text>
+              </View>
+            ) : company.bank_account ? (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.bankAccount} </Text>
+                  <Text style={styles.invoiceDetailValue}>{company.bank_account}</Text>
+                </Text>
+              </View>
+            ) : null}
+            {company.iban && (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.iban} </Text>
+                  <Text style={styles.invoiceDetailValue}>{company.iban}</Text>
+                </Text>
+              </View>
+            )}
+            {company.bic && (
+              <View style={styles.invoiceDetailItem}>
+                <Text>
+                  <Text style={styles.invoiceDetailLabel}>{l.bic} </Text>
+                  <Text style={styles.invoiceDetailValue}>{company.bic}</Text>
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -679,8 +713,29 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
 
             {/* Column 4: Payment info */}
             <View style={styles.footerColumnRight}>
-              <Text style={styles.footerLabel}>{l.bankAccount}</Text>
-              <Text style={styles.footerValueBold}>{company.bank_account}</Text>
+              {company.bankgiro ? (
+                <>
+                  <Text style={styles.footerLabel}>{l.bankgiro}</Text>
+                  <Text style={styles.footerValueBold}>{company.bankgiro}</Text>
+                </>
+              ) : company.bank_account ? (
+                <>
+                  <Text style={styles.footerLabel}>{l.bankAccount}</Text>
+                  <Text style={styles.footerValueBold}>{company.bank_account}</Text>
+                </>
+              ) : null}
+              {company.iban && (
+                <>
+                  <Text style={styles.footerLabel}>{l.iban}</Text>
+                  <Text style={styles.footerValue}>{company.iban}</Text>
+                </>
+              )}
+              {company.bic && (
+                <>
+                  <Text style={styles.footerLabel}>{l.bic}</Text>
+                  <Text style={styles.footerValue}>{company.bic}</Text>
+                </>
+              )}
               {company.vat_registration_number && (
                 <>
                   <Text style={styles.footerLabel}>{l.vatRegNumber}</Text>

@@ -36,6 +36,9 @@ type CompanySettings = {
   email: string
   phone: string
   bank_account: string
+  bankgiro: string
+  iban: string
+  bic: string
   logo_url: string | null
   vat_registration_number: string | null
   late_payment_interest_text: string | null
@@ -145,6 +148,9 @@ export default function SettingsPage() {
           email: company.email,
           phone: company.phone,
           bank_account: company.bank_account,
+          bankgiro: company.bankgiro || '',
+          iban: company.iban || '',
+          bic: company.bic || '',
           logo_url: company.logo_url,
           vat_registration_number: company.vat_registration_number,
           late_payment_interest_text: company.late_payment_interest_text,
@@ -187,6 +193,9 @@ export default function SettingsPage() {
           email: settings.email,
           phone: settings.phone,
           bank_account: settings.bank_account,
+          bankgiro: settings.bankgiro,
+          iban: settings.iban,
+          bic: settings.bic,
           logo_url: logoPreview,
           vat_registration_number: settings.vat_registration_number,
           late_payment_interest_text: settings.late_payment_interest_text,
@@ -483,20 +492,61 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bank_account">{locale === 'sv' ? countryConfig.bankLabel.sv : countryConfig.bankLabel.en}</Label>
-              <Input
-                id="bank_account"
-                value={settings?.bank_account || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, bank_account: e.target.value } : null)
-                }
-                placeholder={countryConfig.bankPlaceholder}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('bankAccountHint')}
-              </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bankgiro">{t('bankgiro')}</Label>
+                <Input
+                  id="bankgiro"
+                  value={settings?.bankgiro || ''}
+                  onChange={(e) =>
+                    setSettings(s => s ? { ...s, bankgiro: e.target.value } : null)
+                  }
+                  placeholder="XXXX-XXXX"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bank_account">{locale === 'sv' ? countryConfig.bankLabel.sv : countryConfig.bankLabel.en}</Label>
+                <Input
+                  id="bank_account"
+                  value={settings?.bank_account || ''}
+                  onChange={(e) =>
+                    setSettings(s => s ? { ...s, bank_account: e.target.value } : null)
+                  }
+                  placeholder={countryConfig.bankPlaceholder}
+                />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="iban">IBAN</Label>
+                <Input
+                  id="iban"
+                  value={settings?.iban || ''}
+                  onChange={(e) =>
+                    setSettings(s => s ? { ...s, iban: e.target.value } : null)
+                  }
+                  placeholder="SE00 0000 0000 0000 0000 0000"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bic">BIC / SWIFT</Label>
+                <Input
+                  id="bic"
+                  value={settings?.bic || ''}
+                  onChange={(e) =>
+                    setSettings(s => s ? { ...s, bic: e.target.value } : null)
+                  }
+                  placeholder="XXXXSESS"
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {t('bankAccountHint')}
+            </p>
 
             <div className="space-y-2">
               <Label htmlFor="vat_registration_number">{t('vatRegNumber')}</Label>

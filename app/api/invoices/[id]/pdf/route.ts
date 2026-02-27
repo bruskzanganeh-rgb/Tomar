@@ -59,7 +59,7 @@ export async function GET(
 
     const { data: company, error: companyError } = await supabase
       .from('companies')
-      .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
+      .select('company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
       .eq('id', membership?.company_id)
       .single()
 

@@ -24,6 +24,9 @@ const LABELS: Record<string, Record<string, string>> = {
     yourReference: 'Er referens',
     daysNet: 'dagar netto',
     bankAccount: 'Bankgiro',
+    bankgiro: 'Bankgiro',
+    iban: 'IBAN',
+    bic: 'BIC',
     description: 'Beskrivning',
     amount: 'Belopp',
     subtotal: 'Summa',
@@ -48,6 +51,9 @@ const LABELS: Record<string, Record<string, string>> = {
     yourReference: 'Your reference',
     daysNet: 'days net',
     bankAccount: 'Bank account',
+    bankgiro: 'Bankgiro',
+    iban: 'IBAN',
+    bic: 'BIC',
     description: 'Description',
     amount: 'Amount',
     subtotal: 'Subtotal',
@@ -75,6 +81,9 @@ type CompanySettings = {
   email: string
   phone: string
   bank_account: string
+  bankgiro?: string | null
+  iban?: string | null
+  bic?: string | null
   logo_url: string | null
   vat_registration_number?: string | null
   late_payment_interest_text?: string | null
@@ -272,10 +281,34 @@ export function InvoicePreview({
                 <span style={{ color: colors.secondary }}>{client.payment_terms} {l.daysNet}</span>
               </div>
             )}
-            <div style={{ minWidth: '140px' }}>
-              <span style={{ color: colors.secondary }}>{l.bankAccount} </span>
-              <span style={{ fontWeight: 'bold' }}>{company?.bank_account || '-'}</span>
-            </div>
+            {company?.bankgiro ? (
+              <div style={{ minWidth: '140px' }}>
+                <span style={{ color: colors.secondary }}>{l.bankgiro} </span>
+                <span style={{ fontWeight: 'bold' }}>{company.bankgiro}</span>
+              </div>
+            ) : company?.bank_account ? (
+              <div style={{ minWidth: '140px' }}>
+                <span style={{ color: colors.secondary }}>{l.bankAccount} </span>
+                <span style={{ fontWeight: 'bold' }}>{company.bank_account}</span>
+              </div>
+            ) : (
+              <div style={{ minWidth: '140px' }}>
+                <span style={{ color: colors.secondary }}>{l.bankAccount} </span>
+                <span style={{ fontWeight: 'bold' }}>-</span>
+              </div>
+            )}
+            {company?.iban && (
+              <div style={{ minWidth: '140px' }}>
+                <span style={{ color: colors.secondary }}>{l.iban} </span>
+                <span style={{ fontWeight: 'bold' }}>{company.iban}</span>
+              </div>
+            )}
+            {company?.bic && (
+              <div style={{ minWidth: '140px' }}>
+                <span style={{ color: colors.secondary }}>{l.bic} </span>
+                <span style={{ fontWeight: 'bold' }}>{company.bic}</span>
+              </div>
+            )}
           </div>
 
           {/* Line Items Table - matches PDF table */}
@@ -389,8 +422,29 @@ export function InvoicePreview({
 
                 {/* Column 4: Payment info */}
                 <div style={{ flex: 1, textAlign: 'right' }}>
-                  <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.bankAccount}</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company?.bank_account || '-'}</div>
+                  {company?.bankgiro ? (
+                    <>
+                      <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.bankgiro}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company.bankgiro}</div>
+                    </>
+                  ) : company?.bank_account ? (
+                    <>
+                      <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.bankAccount}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company.bank_account}</div>
+                    </>
+                  ) : null}
+                  {company?.iban && (
+                    <>
+                      <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.iban}</div>
+                      <div style={{ fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company.iban}</div>
+                    </>
+                  )}
+                  {company?.bic && (
+                    <>
+                      <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.bic}</div>
+                      <div style={{ fontSize: '7px', color: colors.primary, marginBottom: '3px' }}>{company.bic}</div>
+                    </>
+                  )}
                   {company?.vat_registration_number && (
                     <>
                       <div style={{ fontSize: '7px', color: colors.secondary, marginBottom: '1px' }}>{l.vatRegNumber}</div>

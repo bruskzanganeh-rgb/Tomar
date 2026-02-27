@@ -249,7 +249,7 @@ export function CreateInvoiceDialog({
     if (membership) {
       const { data } = await supabase
         .from('companies')
-        .select('company_name, org_number, address, email, phone, bank_account, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code')
+        .select('company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code')
         .eq('id', membership.company_id)
         .single()
       setCompanySettings(data)

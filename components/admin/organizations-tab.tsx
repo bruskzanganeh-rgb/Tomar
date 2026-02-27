@@ -22,7 +22,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2 } from 'lucide-react'
+import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -74,6 +74,12 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
   const [addMode, setAddMode] = useState<'invite' | 'create'>('invite')
   const [addForm, setAddForm] = useState({ email: '', password: '', company_name: '' })
   const [addSaving, setAddSaving] = useState(false)
+
+  // Invite member dialog
+  const [inviteForUserId, setInviteForUserId] = useState<string | null>(null)
+  const [inviteMode, setInviteMode] = useState<'invite' | 'create'>('invite')
+  const [inviteForm, setInviteForm] = useState({ email: '', password: '' })
+  const [inviteSaving, setInviteSaving] = useState(false)
 
   // Get current user ID for self-delete guard
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -148,6 +154,33 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
     setAddSaving(false)
   }
 
+  async function handleInviteMember() {
+    if (!inviteForUserId || !inviteForm.email) return
+    if (inviteMode === 'create' && inviteForm.password.length < 6) return
+
+    setInviteSaving(true)
+    const res = await fetch(`/api/admin/users/${inviteForUserId}/invite-member`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: inviteForm.email,
+        password: inviteMode === 'create' ? inviteForm.password : undefined,
+        mode: inviteMode,
+      }),
+    })
+
+    if (res.ok) {
+      toast.success(inviteMode === 'invite' ? t('inviteSent') : t('userCreated'))
+      setInviteForUserId(null)
+      setInviteForm({ email: '', password: '' })
+      onReload()
+    } else {
+      const data = await res.json()
+      toast.error(data.error || 'Failed')
+    }
+    setInviteSaving(false)
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -197,8 +230,8 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                           {t('lastActive')}: {new Date(u.last_active).toLocaleDateString(formatLocale)}
                         </span>
                       )}
-                      <Badge variant={u.plan === 'pro' ? 'default' : 'secondary'} className="text-xs">
-                        {u.plan === 'pro' ? tSub('pro') : tSub('free')}
+                      <Badge variant={u.plan === 'free' ? 'secondary' : 'default'} className="text-xs">
+                        {tSub(u.plan)}
                       </Badge>
                       <span className="text-xs text-muted-foreground hidden sm:inline">
                         {new Date(u.created_at).toLocaleDateString(formatLocale)}
@@ -222,7 +255,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                       </div>
 
                       {/* Subscription details */}
-                      {u.plan === 'pro' && (
+                      {(u.plan === 'pro' || u.plan === 'team') && (
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <Crown className="h-3 w-3 text-yellow-500" />
                           <Badge variant="outline" className="text-[10px]">
@@ -271,6 +304,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                           <SelectContent>
                             <SelectItem value="free">{tSub('free')}</SelectItem>
                             <SelectItem value="pro">{tSub('pro')}</SelectItem>
+                            <SelectItem value="team">{tSub('team')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -284,6 +318,23 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                         <StatBox label={t('expenseCount')} value={u.expense_count} />
                         <StatBox label={t('monthlyInvoices')} value={u.monthly_invoices} />
                         <StatBox label={t('monthlyScans')} value={u.monthly_scans} />
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setInviteForUserId(u.user_id)
+                            setInviteForm({ email: '', password: '' })
+                            setInviteMode('invite')
+                          }}
+                        >
+                          <UserPlus className="h-3 w-3 mr-1" />
+                          {t('inviteMember')}
+                        </Button>
                       </div>
 
                       {/* Delete */}
@@ -401,6 +452,73 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
             >
               {addSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {addMode === 'invite' ? t('inviteUser') : t('createAccount')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite member dialog */}
+      <Dialog open={!!inviteForUserId} onOpenChange={(open) => { if (!open) setInviteForUserId(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('inviteMember')}</DialogTitle>
+            <DialogDescription>
+              {t('inviteMemberDesc')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={inviteMode === 'invite' ? 'default' : 'outline'}
+                onClick={() => setInviteMode('invite')}
+                className="flex-1"
+              >
+                {t('inviteUser')}
+              </Button>
+              <Button
+                size="sm"
+                variant={inviteMode === 'create' ? 'default' : 'outline'}
+                onClick={() => setInviteMode('create')}
+                className="flex-1"
+              >
+                {t('createAccount')}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('email')}</Label>
+              <Input
+                type="email"
+                value={inviteForm.email}
+                onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="user@example.com"
+              />
+            </div>
+
+            {inviteMode === 'create' && (
+              <div className="space-y-2">
+                <Label>{t('password')}</Label>
+                <Input
+                  type="password"
+                  value={inviteForm.password}
+                  onChange={e => setInviteForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="••••••"
+                />
+                <p className="text-xs text-muted-foreground">{t('minPassword')}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteForUserId(null)}>{tc('cancel')}</Button>
+            <Button
+              onClick={handleInviteMember}
+              disabled={inviteSaving || !inviteForm.email || (inviteMode === 'create' && inviteForm.password.length < 6)}
+            >
+              {inviteSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {inviteMode === 'invite' ? t('inviteUser') : t('createAccount')}
             </Button>
           </DialogFooter>
         </DialogContent>

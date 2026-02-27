@@ -109,11 +109,17 @@ export async function POST(request: Request) {
     newUserId = invited.user.id
   }
 
-  // Create company_settings
+  // Create company_settings (all NOT NULL text columns need empty-string defaults)
   await supabase.from('company_settings').insert({
     user_id: newUserId,
-    company_name: company_name || null,
+    company_name: company_name || '',
+    org_number: '',
+    address: '',
     email,
+    phone: '',
+    bank_account: '',
+    base_currency: 'SEK',
+    onboarding_completed: false,
   })
 
   // Create subscription (free plan)

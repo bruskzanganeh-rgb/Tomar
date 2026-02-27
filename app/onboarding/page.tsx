@@ -7,31 +7,24 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Music, Building2, Guitar, Users, ChevronRight, ChevronLeft, Check, Plus, X, Loader2, Sparkles, Globe, MapPin } from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { toast } from 'sonner'
 import { COUNTRY_CONFIGS, getCountryConfig } from '@/lib/country-config'
 
-type InstrumentCategory = {
-  id: string
+type GigTypeLocal = {
+  tempId: string
   name: string
-  slug: string
-  sort_order: number
-  instruments: { id: string; name: string; sort_order: number }[]
-}
-
-type GigType = {
-  id: string
-  name: string
+  name_en: string
   vat_rate: number
   color: string
 }
 
-type Position = {
-  id: string
+type PositionLocal = {
+  tempId: string
   name: string
   sort_order: number
 }
@@ -58,6 +51,11 @@ function getGigTypePresets(locale: string, countryCode: string): { name: string;
 const POSITION_PRESETS: Record<string, string[]> = {
   sv: ['1:a konsertmästare', 'Stämledare', 'Tutti'],
   en: ['1st concertmaster', 'Section leader', 'Tutti'],
+}
+
+let tempIdCounter = 0
+function nextTempId() {
+  return `temp_${++tempIdCounter}`
 }
 
 export default function OnboardingPage() {
@@ -91,19 +89,20 @@ export default function OnboardingPage() {
   const [address, setAddress] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [bankAccount, setBankAccount] = useState('')
+  const [bankgiro, setBankgiro] = useState('')
+  const [iban, setIban] = useState('')
+  const [bic, setBic] = useState('')
 
-  // Step 2: Instruments
-  const [categories, setCategories] = useState<InstrumentCategory[]>([])
-  const [selectedInstruments, setSelectedInstruments] = useState<string[]>([])
+  // Step 3: Instruments (free text)
+  const [instrumentsText, setInstrumentsText] = useState('')
 
-  // Step 3: Gig types
-  const [gigTypes, setGigTypes] = useState<GigType[]>([])
+  // Step 4: Gig types (local state only — saved on complete)
+  const [gigTypes, setGigTypes] = useState<GigTypeLocal[]>([])
   const [newGigTypeName, setNewGigTypeName] = useState('')
   const [newGigTypeVat, setNewGigTypeVat] = useState('')
 
-  // Step 4: Positions
-  const [positions, setPositions] = useState<Position[]>([])
+  // Step 5: Positions (local state only — saved on complete)
+  const [positions, setPositions] = useState<PositionLocal[]>([])
   const [newPositionName, setNewPositionName] = useState('')
 
   useEffect(() => {
@@ -114,7 +113,7 @@ export default function OnboardingPage() {
     // Load company settings (pre-filled from signup)
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('company_name, org_number, address, email, phone, bank_account, country_code')
+      .select('company_name, org_number, address, email, phone, bank_account, country_code, instruments_text')
       .single()
 
     if (settings) {
@@ -123,117 +122,57 @@ export default function OnboardingPage() {
       setAddress(settings.address || '')
       setEmail(settings.email || '')
       setPhone(settings.phone || '')
-      setBankAccount(settings.bank_account || '')
       if (settings.country_code) setCountryCode(settings.country_code)
+      setInstrumentsText(settings.instruments_text || '')
     }
-
-    // Load instrument categories + instruments
-    const { data: cats } = await supabase
-      .from('instrument_categories')
-      .select('id, name, slug, sort_order')
-      .order('sort_order')
-
-    if (cats) {
-      const categoriesWithInstruments: InstrumentCategory[] = []
-      for (const cat of cats) {
-        const { data: instruments } = await supabase
-          .from('instruments')
-          .select('id, name, sort_order')
-          .eq('category_id', cat.id)
-          .order('sort_order')
-
-        categoriesWithInstruments.push({
-          ...cat,
-          instruments: instruments || [],
-        })
-      }
-      setCategories(categoriesWithInstruments)
-    }
-
-    // Load existing gig types
-    const { data: types } = await supabase
-      .from('gig_types')
-      .select('id, name, vat_rate, color')
-      .order('name')
-
-    if (types) setGigTypes(types)
-
-    // Load existing positions
-    const { data: pos } = await supabase
-      .from('positions')
-      .select('id, name, sort_order')
-      .order('sort_order')
-
-    if (pos) setPositions(pos)
   }
 
-  function toggleInstrument(instrumentId: string) {
-    setSelectedInstruments(prev =>
-      prev.includes(instrumentId)
-        ? prev.filter(id => id !== instrumentId)
-        : [...prev, instrumentId]
-    )
-  }
-
-  async function addGigType() {
+  function addGigType() {
     if (!newGigTypeName.trim()) return
-    const { data, error } = await supabase
-      .from('gig_types')
-      .insert({ name: newGigTypeName.trim(), vat_rate: parseFloat(newGigTypeVat) || 0, color: '#6b7280' })
-      .select()
-      .single()
-
-    if (data) {
-      setGigTypes(prev => [...prev, data])
-      setNewGigTypeName('')
-      setNewGigTypeVat('')
-    }
-    if (error) toast.error(tToast('onboardingGigTypeError'))
+    setGigTypes(prev => [...prev, {
+      tempId: nextTempId(),
+      name: newGigTypeName.trim(),
+      name_en: '',
+      vat_rate: parseFloat(newGigTypeVat) || 0,
+      color: '#6b7280',
+    }])
+    setNewGigTypeName('')
+    setNewGigTypeVat('')
   }
 
-  async function removeGigType(id: string) {
-    await supabase.from('gig_types').delete().eq('id', id)
-    setGigTypes(prev => prev.filter(t => t.id !== id))
+  function removeGigType(tempId: string) {
+    setGigTypes(prev => prev.filter(t => t.tempId !== tempId))
   }
 
-  async function addPosition() {
+  function addPosition() {
     if (!newPositionName.trim()) return
     const sortOrder = positions.length + 1
-    const { data, error } = await supabase
-      .from('positions')
-      .insert({ name: newPositionName.trim(), sort_order: sortOrder })
-      .select()
-      .single()
-
-    if (data) {
-      setPositions(prev => [...prev, data])
-      setNewPositionName('')
-    }
-    if (error) toast.error(tToast('onboardingPositionError'))
+    setPositions(prev => [...prev, {
+      tempId: nextTempId(),
+      name: newPositionName.trim(),
+      sort_order: sortOrder,
+    }])
+    setNewPositionName('')
   }
 
-  async function removePosition(id: string) {
-    await supabase.from('positions').delete().eq('id', id)
-    setPositions(prev => prev.filter(p => p.id !== id))
+  function removePosition(tempId: string) {
+    setPositions(prev => prev.filter(p => p.tempId !== tempId))
   }
 
-  async function quickAddGigType(preset: { name: string; name_en: string; vat_rate: number; color: string }) {
-    const { data, error } = await supabase
-      .from('gig_types')
-      .insert({ name: preset.name, name_en: preset.name_en, vat_rate: preset.vat_rate, color: preset.color })
-      .select()
-      .single()
-    if (data) setGigTypes(prev => [...prev, data])
+  function quickAddGigType(preset: { name: string; name_en: string; vat_rate: number; color: string }) {
+    setGigTypes(prev => [...prev, {
+      tempId: nextTempId(),
+      ...preset,
+    }])
   }
 
-  async function quickAddPosition(name: string) {
+  function quickAddPosition(name: string) {
     const sortOrder = positions.length + 1
-    const { data, error } = await supabase
-      .from('positions')
-      .insert({ name, sort_order: sortOrder })
-      .select()
-      .single()
-    if (data) setPositions(prev => [...prev, data])
+    setPositions(prev => [...prev, {
+      tempId: nextTempId(),
+      name,
+      sort_order: sortOrder,
+    }])
   }
 
   const gigTypePresets = getGigTypePresets(locale, countryCode)
@@ -255,11 +194,23 @@ export default function OnboardingPage() {
             address,
             email,
             phone,
-            bank_account: bankAccount,
+            bankgiro,
+            iban,
+            bic,
             country_code: countryCode,
             base_currency: countryConfig.currency,
           },
-          instruments: selectedInstruments,
+          instruments_text: instrumentsText,
+          gig_types: gigTypes.map(gt => ({
+            name: gt.name,
+            name_en: gt.name_en,
+            vat_rate: gt.vat_rate,
+            color: gt.color,
+          })),
+          positions: positions.map(p => ({
+            name: p.name,
+            sort_order: p.sort_order,
+          })),
         }),
       })
 
@@ -430,8 +381,10 @@ export default function OnboardingPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address">{tSettings('address')}</Label>
-                <Input
+                <Textarea
                   id="address"
+                  rows={3}
+                  className="resize-none"
                   value={address}
                   onChange={e => setAddress(e.target.value)}
                 />
@@ -455,19 +408,40 @@ export default function OnboardingPage() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="bankAccount">{tSettings('bankAccount')}</Label>
-                <Input
-                  id="bankAccount"
-                  value={bankAccount}
-                  onChange={e => setBankAccount(e.target.value)}
-                />
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bankgiro">{tSettings('bankgiro')}</Label>
+                  <Input
+                    id="bankgiro"
+                    value={bankgiro}
+                    onChange={e => setBankgiro(e.target.value)}
+                    placeholder="XXXX-XXXX"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="iban">IBAN</Label>
+                  <Input
+                    id="iban"
+                    value={iban}
+                    onChange={e => setIban(e.target.value)}
+                    placeholder="SE00 0000 0000 0000 0000 0000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bic">BIC / SWIFT</Label>
+                  <Input
+                    id="bic"
+                    value={bic}
+                    onChange={e => setBic(e.target.value)}
+                    placeholder="XXXXSESS"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 3: Instruments */}
+        {/* Step 3: Instruments (free text) */}
         {step === 3 && (
           <Card>
             <CardHeader>
@@ -480,37 +454,12 @@ export default function OnboardingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {categories.map(cat => (
-                  <div key={cat.id}>
-                    <h3 className="text-sm font-semibold mb-2">{cat.name}</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {cat.instruments.map(inst => {
-                        const selected = selectedInstruments.includes(inst.id)
-                        return (
-                          <button
-                            key={inst.id}
-                            onClick={() => toggleInstrument(inst.id)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
-                              selected
-                                ? 'border-primary bg-primary/10 text-primary font-medium'
-                                : 'border-border hover:bg-secondary'
-                            }`}
-                          >
-                            <Checkbox checked={selected} className="pointer-events-none" />
-                            {inst.name}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {selectedInstruments.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-4">
-                  {t('instrumentsSelected', { count: selectedInstruments.length })}
-                </p>
-              )}
+              <Textarea
+                rows={4}
+                value={instrumentsText}
+                onChange={e => setInstrumentsText(e.target.value)}
+                placeholder={locale === 'sv' ? 'T.ex. Violin, Viola, Piano' : 'E.g. Violin, Viola, Piano'}
+              />
             </CardContent>
           </Card>
         )}
@@ -531,7 +480,7 @@ export default function OnboardingPage() {
               <div className="space-y-2 mb-4">
                 {gigTypes.map(type => (
                   <div
-                    key={type.id}
+                    key={type.tempId}
                     className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/50"
                   >
                     <div className="flex items-center gap-2">
@@ -547,7 +496,7 @@ export default function OnboardingPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeGigType(type.id)}
+                      onClick={() => removeGigType(type.tempId)}
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -619,14 +568,14 @@ export default function OnboardingPage() {
               <div className="space-y-2 mb-4">
                 {positions.map(pos => (
                   <div
-                    key={pos.id}
+                    key={pos.tempId}
                     className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/50"
                   >
                     <span className="text-sm font-medium">{pos.name}</span>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removePosition(pos.id)}
+                      onClick={() => removePosition(pos.tempId)}
                       className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-3.5 w-3.5" />

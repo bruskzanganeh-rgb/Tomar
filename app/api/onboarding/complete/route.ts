@@ -17,7 +17,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid data', details: parsed.error.flatten().fieldErrors }, { status: 400 })
   }
 
-  const { company_info, instruments } = parsed.data
+  const { company_info, instruments_text, gig_types, positions } = parsed.data
+
+  let companyId: string | null = null
 
   // Check if user already has a company (joining via invite)
   const { data: existingMembership } = await supabase
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
     .single()
 
   if (existingMembership) {
+    companyId = existingMembership.company_id
     // User already belongs to a company (joined via invite) — just update company info if owner
     const { data: member } = await supabase
       .from('company_members')
@@ -56,6 +59,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Could not create company' }, { status: 500 })
     }
 
+    companyId = newCompany.id
+
     // Make user the company owner
     const { error: memberError } = await supabase
       .from('company_members')
@@ -70,13 +75,18 @@ export async function POST(request: Request) {
     }
   }
 
-  // Update company_settings (personal prefs only)
+  // Update company_settings (personal prefs + instruments text)
+  const settingsUpdate: Record<string, unknown> = {
+    onboarding_completed: true,
+    country_code: company_info.country_code,
+  }
+  if (instruments_text !== undefined) {
+    settingsUpdate.instruments_text = instruments_text
+  }
+
   const { error: settingsError } = await supabase
     .from('company_settings')
-    .update({
-      onboarding_completed: true,
-      country_code: company_info.country_code,
-    })
+    .update(settingsUpdate)
     .eq('user_id', user.id)
 
   if (settingsError) {
@@ -84,30 +94,43 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not save settings' }, { status: 500 })
   }
 
-  // Insert user instruments
-  if (instruments && instruments.length > 0) {
-    const { error: instrError } = await supabase
-      .from('user_instruments')
-      .upsert(
-        instruments.map((instrument_id: string) => ({
-          user_id: user.id,
-          instrument_id,
-        })),
-        { onConflict: 'user_id,instrument_id' }
+  // Insert gig types (now that company_id is available via company_members)
+  if (gig_types && gig_types.length > 0 && companyId) {
+    const { error: gtError } = await supabase
+      .from('gig_types')
+      .insert(
+        gig_types.map(gt => ({
+          name: gt.name,
+          name_en: gt.name_en || '',
+          vat_rate: gt.vat_rate ?? 0,
+          color: gt.color || '#6b7280',
+          company_id: companyId,
+        }))
       )
 
-    if (instrError) {
-      console.error('Error saving instruments:', instrError)
+    if (gtError) {
+      console.error('Error saving gig types:', gtError)
+    }
+  }
+
+  // Insert positions (now that company_id is available via company_members)
+  if (positions && positions.length > 0 && companyId) {
+    const { error: posError } = await supabase
+      .from('positions')
+      .insert(
+        positions.map(p => ({
+          name: p.name,
+          sort_order: p.sort_order,
+          company_id: companyId,
+        }))
+      )
+
+    if (posError) {
+      console.error('Error saving positions:', posError)
     }
   }
 
   // Ensure subscription exists (free plan) — linked to user's company
-  const { data: membership } = await supabase
-    .from('company_members')
-    .select('company_id')
-    .eq('user_id', user.id)
-    .single()
-
   const { data: existingSub } = await supabase
     .from('subscriptions')
     .select('id')
@@ -119,7 +142,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       plan: 'free',
       status: 'active',
-      company_id: membership?.company_id || null,
+      company_id: companyId,
     })
   }
 
