@@ -758,7 +758,15 @@
     "updatePassword": "Update password",
     "linkExpired": "Link expired?",
     "requestNewLink": "Request a new one",
-    "repeatPassword": "Repeat your password"
+    "repeatPassword": "Repeat your password",
+    "welcomeMember": "Welcome to the team!",
+    "welcomeMemberDesc": "Set up your password and personal info to get started.",
+    "setPassword": "Set password",
+    "yourInfo": "Your info",
+    "fullName": "Full name",
+    "phone": "Phone",
+    "completeSetup": "Complete setup",
+    "setupComplete": "Account setup complete!"
   },
   "onboarding": {
     "companyInfo": "Company info",

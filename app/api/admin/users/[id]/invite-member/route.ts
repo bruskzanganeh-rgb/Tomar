@@ -69,7 +69,7 @@ export async function POST(
     phone: '',
     bank_account: '',
     base_currency: 'SEK',
-    onboarding_completed: true,
+    onboarding_completed: false,
   })
 
   // Add as member of the same company

@@ -758,7 +758,15 @@
     "updatePassword": "Uppdatera lösenord",
     "linkExpired": "Länken utgången?",
     "requestNewLink": "Begär en ny",
-    "repeatPassword": "Upprepa ditt lösenord"
+    "repeatPassword": "Upprepa ditt lösenord",
+    "welcomeMember": "Välkommen till teamet!",
+    "welcomeMemberDesc": "Ange ditt lösenord och fyll i dina uppgifter för att komma igång.",
+    "setPassword": "Ange lösenord",
+    "yourInfo": "Dina uppgifter",
+    "fullName": "Fullständigt namn",
+    "phone": "Telefon",
+    "completeSetup": "Slutför",
+    "setupComplete": "Kontot är klart!"
   },
   "onboarding": {
     "companyInfo": "Företagsinfo",

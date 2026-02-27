@@ -59,15 +59,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // Onboarding redirect: if logged in but hasn't completed onboarding
-  if (user && !pathname.startsWith('/onboarding') && !isApiPath) {
+  if (user && !pathname.startsWith('/onboarding') && !pathname.startsWith('/setup-member') && !isApiPath) {
     const { data: settings } = await supabase
       .from('company_settings')
       .select('onboarding_completed, locale')
       .single()
 
     if (!settings || settings.onboarding_completed === false) {
+      // Check if user is an invited member (has company_members with role='member')
+      const { data: membership } = await supabase
+        .from('company_members')
+        .select('role')
+        .single()
+
       const url = request.nextUrl.clone()
-      url.pathname = '/onboarding'
+      url.pathname = membership?.role === 'member' ? '/setup-member' : '/onboarding'
       return NextResponse.redirect(url)
     }
 
