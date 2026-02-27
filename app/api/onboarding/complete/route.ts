@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import { logActivity } from '@/lib/activity'
 import { completeOnboardingSchema } from '@/lib/schemas/onboarding'
@@ -19,10 +20,13 @@ export async function POST(request: Request) {
 
   const { company_info, instruments_text, gig_types, positions } = parsed.data
 
+  // Use admin client for company/members/data creation (bypasses RLS)
+  const admin = createAdminClient()
+
   let companyId: string | null = null
 
   // Check if user already has a company (joining via invite)
-  const { data: existingMembership } = await supabase
+  const { data: existingMembership } = await admin
     .from('company_members')
     .select('company_id')
     .eq('user_id', user.id)
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
   if (existingMembership) {
     companyId = existingMembership.company_id
     // User already belongs to a company (joined via invite) — just update company info if owner
-    const { data: member } = await supabase
+    const { data: member } = await admin
       .from('company_members')
       .select('role')
       .eq('company_id', existingMembership.company_id)
@@ -39,14 +43,14 @@ export async function POST(request: Request) {
       .single()
 
     if (member?.role === 'owner') {
-      await supabase
+      await admin
         .from('companies')
         .update(company_info)
         .eq('id', existingMembership.company_id)
     }
   } else {
     // Create new company
-    const { data: newCompany, error: compError } = await supabase
+    const { data: newCompany, error: compError } = await admin
       .from('companies')
       .insert({
         ...company_info,
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
     companyId = newCompany.id
 
     // Make user the company owner
-    const { error: memberError } = await supabase
+    const { error: memberError } = await admin
       .from('company_members')
       .insert({
         company_id: newCompany.id,
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
     settingsUpdate.instruments_text = instruments_text
   }
 
-  const { error: settingsError } = await supabase
+  const { error: settingsError } = await admin
     .from('company_settings')
     .update(settingsUpdate)
     .eq('user_id', user.id)
@@ -94,9 +98,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not save settings' }, { status: 500 })
   }
 
-  // Insert gig types (now that company_id is available via company_members)
+  // Insert gig types
   if (gig_types && gig_types.length > 0 && companyId) {
-    const { error: gtError } = await supabase
+    const { error: gtError } = await admin
       .from('gig_types')
       .insert(
         gig_types.map(gt => ({
@@ -113,9 +117,9 @@ export async function POST(request: Request) {
     }
   }
 
-  // Insert positions (now that company_id is available via company_members)
+  // Insert positions
   if (positions && positions.length > 0 && companyId) {
-    const { error: posError } = await supabase
+    const { error: posError } = await admin
       .from('positions')
       .insert(
         positions.map(p => ({
@@ -131,14 +135,14 @@ export async function POST(request: Request) {
   }
 
   // Ensure subscription exists (free plan) — linked to user's company
-  const { data: existingSub } = await supabase
+  const { data: existingSub } = await admin
     .from('subscriptions')
     .select('id')
     .eq('user_id', user.id)
     .single()
 
   if (!existingSub) {
-    await supabase.from('subscriptions').insert({
+    await admin.from('subscriptions').insert({
       user_id: user.id,
       plan: 'free',
       status: 'active',
