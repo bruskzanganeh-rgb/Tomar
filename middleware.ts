@@ -70,6 +70,7 @@ export async function middleware(request: NextRequest) {
       const { data: membership } = await supabase
         .from('company_members')
         .select('role')
+        .eq('user_id', user.id)
         .single()
 
       const url = request.nextUrl.clone()
