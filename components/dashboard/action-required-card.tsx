@@ -222,7 +222,7 @@ export function ActionRequiredCard({
                 {tInvoice('toInvoiceCount', { count: toInvoiceCount })}
               </span>
               <Link
-                href="/invoices"
+                href="/finance"
                 className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
               >
                 {t('viewAll')} <ArrowUpRight className="w-3 h-3" />
