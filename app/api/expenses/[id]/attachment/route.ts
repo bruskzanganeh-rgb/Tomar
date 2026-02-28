@@ -18,61 +18,47 @@ function extractFilePath(attachmentUrl: string): string | null {
 }
 
 // GET - Hämta signerad URL för kvittobild
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id } = await params
-    const serviceSupabase = createAdminClient()
 
-    // Hämta expense - verifiera ägarskap (service role för att undvika RLS-problem)
-    const { data: expense, error: fetchError } = await serviceSupabase
+    // RLS-skyddad query — säkerställer att användaren tillhör samma company
+    const { data: expense, error: fetchError } = await supabase
       .from('expenses')
       .select('attachment_url')
       .eq('id', id)
-      .eq('user_id', user.id)
       .single()
 
     if (fetchError || !expense) {
-      return NextResponse.json(
-        { error: 'Expense not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
     }
 
     if (!expense.attachment_url) {
-      return NextResponse.json(
-        { error: 'No receipt image exists' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'No receipt image exists' }, { status: 404 })
     }
 
     const filePath = extractFilePath(expense.attachment_url)
     if (!filePath) {
-      return NextResponse.json(
-        { error: 'Could not read file path' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Could not read file path' }, { status: 400 })
     }
 
     // Skapa signerad URL - needs service role for storage
+    const serviceSupabase = createAdminClient()
     const { data: signedData, error: signError } = await serviceSupabase.storage
       .from('expenses')
       .createSignedUrl(filePath, 3600)
 
     if (signError || !signedData) {
       console.error('Signed URL error:', signError)
-      return NextResponse.json(
-        { error: 'Could not create signed URL' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not create signed URL' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -81,21 +67,17 @@ export async function GET(
     })
   } catch (error) {
     console.error('Attachment GET error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'An error occurred' }, { status: 500 })
   }
 }
 
 // POST - Ladda upp ny kvittobild
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -106,10 +88,7 @@ export async function POST(
     const file = formData.get('file') as File
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file attached' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No file attached' }, { status: 400 })
     }
 
     // Check storage quota
@@ -117,7 +96,7 @@ export async function POST(
     if (!quota.allowed) {
       return NextResponse.json(
         { error: 'Storage quota exceeded. Upgrade your plan for more storage.' },
-        { status: 403 }
+        { status: 403 },
       )
     }
 
@@ -130,10 +109,7 @@ export async function POST(
       .single()
 
     if (fetchError || !expense) {
-      return NextResponse.json(
-        { error: 'Expense not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
     }
 
     // Ta bort gammal fil om den finns
@@ -153,25 +129,18 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    const { error: uploadError } = await serviceSupabase.storage
-      .from('expenses')
-      .upload(filePath, buffer, {
-        contentType: file.type,
-        upsert: false,
-      })
+    const { error: uploadError } = await serviceSupabase.storage.from('expenses').upload(filePath, buffer, {
+      contentType: file.type,
+      upsert: false,
+    })
 
     if (uploadError) {
       console.error('Upload error:', uploadError)
-      return NextResponse.json(
-        { error: 'Could not upload file' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not upload file' }, { status: 500 })
     }
 
     // Hämta public URL
-    const { data: urlData } = serviceSupabase.storage
-      .from('expenses')
-      .getPublicUrl(filePath)
+    const { data: urlData } = serviceSupabase.storage.from('expenses').getPublicUrl(filePath)
 
     // Uppdatera expense med ny attachment_url och file_size
     const { error: updateError } = await serviceSupabase
@@ -182,16 +151,11 @@ export async function POST(
 
     if (updateError) {
       console.error('Update error:', updateError)
-      return NextResponse.json(
-        { error: 'Could not update expense' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not update expense' }, { status: 500 })
     }
 
     // Returnera signerad URL för visning
-    const { data: signedData } = await serviceSupabase.storage
-      .from('expenses')
-      .createSignedUrl(filePath, 3600)
+    const { data: signedData } = await serviceSupabase.storage.from('expenses').createSignedUrl(filePath, 3600)
 
     return NextResponse.json({
       success: true,
@@ -199,21 +163,17 @@ export async function POST(
     })
   } catch (error) {
     console.error('Attachment POST error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'An error occurred' }, { status: 500 })
   }
 }
 
 // DELETE - Ta bort kvittobild
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -230,25 +190,17 @@ export async function DELETE(
       .single()
 
     if (fetchError || !expense) {
-      return NextResponse.json(
-        { error: 'Expense not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Expense not found' }, { status: 404 })
     }
 
     if (!expense.attachment_url) {
-      return NextResponse.json(
-        { error: 'No receipt image to delete' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'No receipt image to delete' }, { status: 404 })
     }
 
     // Ta bort fil från storage
     const filePath = extractFilePath(expense.attachment_url)
     if (filePath) {
-      const { error: removeError } = await serviceSupabase.storage
-        .from('expenses')
-        .remove([filePath])
+      const { error: removeError } = await serviceSupabase.storage.from('expenses').remove([filePath])
 
       if (removeError) {
         console.error('Remove error:', removeError)
@@ -264,18 +216,12 @@ export async function DELETE(
 
     if (updateError) {
       console.error('Update error:', updateError)
-      return NextResponse.json(
-        { error: 'Could not update expense' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not update expense' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Attachment DELETE error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'An error occurred' }, { status: 500 })
   }
 }
