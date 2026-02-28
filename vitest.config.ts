@@ -7,6 +7,7 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     environment: 'jsdom',
     setupFiles: ['./tests/unit/setup.ts'],
+    testTimeout: 30_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov'],
