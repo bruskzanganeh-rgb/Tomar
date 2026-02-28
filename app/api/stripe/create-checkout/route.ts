@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 import { createCheckoutSchema } from '@/lib/schemas/stripe'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
@@ -9,7 +9,9 @@ export async function POST(request: Request) {
   const { success } = rateLimit(`checkout:${ip}`, 5, 60_000)
   if (!success) return rateLimitResponse()
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -33,16 +35,13 @@ export async function POST(request: Request) {
   let customerId = subscription?.stripe_customer_id
 
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await getStripe().customers.create({
       email: user.email,
       metadata: { user_id: user.id },
     })
     customerId = customer.id
 
-    await supabase
-      .from('subscriptions')
-      .update({ stripe_customer_id: customerId })
-      .eq('user_id', user.id)
+    await supabase.from('subscriptions').update({ stripe_customer_id: customerId }).eq('user_id', user.id)
   }
 
   // For team plan, verify the user is a company owner
@@ -61,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   // Create Checkout Session
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     payment_method_types: ['card'],

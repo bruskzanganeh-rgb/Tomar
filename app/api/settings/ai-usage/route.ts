@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/admin'
-import { getUsageTypeLabel } from '@/lib/ai/usage-logger'
+import { getUsageTypeLabel, type UsageType } from '@/lib/ai/usage-logger'
 
 type UsageBreakdown = {
   [key: string]: {
@@ -64,10 +64,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Failed to fetch AI usage logs:', error)
-      return NextResponse.json(
-        { error: 'Could not fetch AI usage data' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not fetch AI usage data' }, { status: 500 })
     }
 
     // Beräkna totaler och uppdelning
@@ -78,23 +75,27 @@ export async function GET(request: NextRequest) {
 
     for (const log of logs || []) {
       totalCalls++
-      totalCostUsd += parseFloat(log.estimated_cost_usd) || 0
+      const costValue =
+        typeof log.estimated_cost_usd === 'string'
+          ? parseFloat(log.estimated_cost_usd)
+          : Number(log.estimated_cost_usd) || 0
+      totalCostUsd += costValue
 
-      const type = log.usage_type
+      const type = String(log.usage_type)
       if (!breakdown[type]) {
         breakdown[type] = {
           calls: 0,
           cost: 0,
-          label: getUsageTypeLabel(type),
+          label: getUsageTypeLabel(type as UsageType),
         }
       }
       breakdown[type].calls++
-      breakdown[type].cost += parseFloat(log.estimated_cost_usd) || 0
+      breakdown[type].cost += costValue
 
-      const dateStr = new Date(log.created_at).toISOString().split('T')[0]
+      const dateStr = log.created_at ? new Date(log.created_at).toISOString().split('T')[0] : 'unknown'
       const existing = dailyMap.get(dateStr) || { cost: 0, calls: 0 }
       dailyMap.set(dateStr, {
-        cost: existing.cost + (parseFloat(log.estimated_cost_usd) || 0),
+        cost: existing.cost + costValue,
         calls: existing.calls + 1,
       })
     }
@@ -103,17 +104,18 @@ export async function GET(request: NextRequest) {
       .map(([date, data]) => ({ date, ...data }))
       .sort((a, b) => a.date.localeCompare(b.date))
 
-    const recentCalls: RecentCall[] = (logs || [])
-      .slice(0, 10)
-      .map((log) => ({
-        id: log.id,
-        created_at: log.created_at,
-        usage_type: log.usage_type,
-        model: log.model,
-        input_tokens: log.input_tokens,
-        output_tokens: log.output_tokens,
-        estimated_cost_usd: parseFloat(log.estimated_cost_usd) || 0,
-      }))
+    const recentCalls: RecentCall[] = (logs || []).slice(0, 10).map((log) => ({
+      id: log.id,
+      created_at: log.created_at ?? '',
+      usage_type: String(log.usage_type),
+      model: log.model,
+      input_tokens: log.input_tokens,
+      output_tokens: log.output_tokens,
+      estimated_cost_usd:
+        typeof log.estimated_cost_usd === 'string'
+          ? parseFloat(log.estimated_cost_usd) || 0
+          : Number(log.estimated_cost_usd) || 0,
+    }))
 
     return NextResponse.json({
       period,
@@ -125,9 +127,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('AI usage API error:', error)
-    return NextResponse.json(
-      { error: 'An error occurred' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'An error occurred' }, { status: 500 })
   }
 }

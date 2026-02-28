@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe, getPlanFromPriceId } from '@/lib/stripe'
+import { getStripe, getPlanFromPriceId } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
@@ -63,6 +63,7 @@ export async function POST(request: Request) {
   const isDowngrade = currentPlan === 'team' && targetPlan === 'pro'
 
   try {
+    const stripe = getStripe()
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
     const itemId = stripeSub.items.data[0]?.id
 

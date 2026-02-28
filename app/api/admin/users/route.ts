@@ -49,8 +49,20 @@ export async function GET() {
   const ownerUserIds = (subscriptions || []).map((s) => s.user_id)
   const allUserIds = [...new Set([...ownerUserIds, ...(members || []).map((m) => m.user_id)])]
 
+  type UserStats = {
+    user_id: string
+    invoice_count: number
+    client_count: number
+    position_count: number
+    gig_type_count: number
+    expense_count: number
+    gig_count: number
+  }
+
   const [statsData, usageData] = await Promise.all([
-    supabase.rpc('admin_user_stats', { p_user_ids: allUserIds }).then((r) => r.data),
+    supabase
+      .rpc('admin_user_stats' as never, { p_user_ids: allUserIds } as never)
+      .then((r: { data: UserStats[] | null }) => r.data),
     supabase
       .from('usage_tracking')
       .select('user_id, invoice_count, receipt_scan_count')
@@ -72,29 +84,19 @@ export async function GET() {
     }
   >()
   if (statsData) {
-    statsData.forEach((s: Record<string, number | string>) =>
-      statsMap.set(
-        s.user_id as string,
-        s as unknown as {
-          invoice_count: number
-          client_count: number
-          position_count: number
-          gig_type_count: number
-          expense_count: number
-          gig_count: number
-        },
-      ),
-    )
+    for (const s of statsData) {
+      statsMap.set(s.user_id, s)
+    }
   }
 
   const usageMap = new Map<string, { invoices: number; scans: number }>()
   if (usageData) {
-    usageData.forEach((u: Record<string, number | string>) => {
-      usageMap.set(String(u.user_id), {
-        invoices: Number(u.invoice_count) || 0,
-        scans: Number(u.receipt_scan_count) || 0,
+    for (const u of usageData) {
+      usageMap.set(u.user_id, {
+        invoices: u.invoice_count || 0,
+        scans: u.receipt_scan_count || 0,
       })
-    })
+    }
   }
 
   // Only show owners and users without a company (legacy/not onboarded)

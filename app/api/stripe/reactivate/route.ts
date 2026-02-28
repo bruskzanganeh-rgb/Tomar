@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
 export async function POST() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -20,14 +22,11 @@ export async function POST() {
     return NextResponse.json({ error: 'No Stripe subscription found' }, { status: 400 })
   }
 
-  await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+  await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
     cancel_at_period_end: false,
   })
 
-  await supabase
-    .from('subscriptions')
-    .update({ cancel_at_period_end: false })
-    .eq('user_id', user.id)
+  await supabase.from('subscriptions').update({ cancel_at_period_end: false }).eq('user_id', user.id)
 
   return NextResponse.json({ success: true })
 }

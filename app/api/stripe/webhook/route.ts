@@ -1,16 +1,14 @@
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
-import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
-import { getPlanFromPriceId } from '@/lib/stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-01-28.clover',
-})
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+import type Stripe from 'stripe'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { getStripe, getPlanFromPriceId } from '@/lib/stripe'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(request: Request) {
+  const stripe = getStripe()
+  const supabase = createAdminClient()
+
   const body = await request.text()
   const signature = (await headers()).get('stripe-signature')
 
@@ -29,20 +27,20 @@ export async function POST(request: Request) {
 
   switch (event.type) {
     case 'checkout.session.completed':
-      await handleCheckoutComplete(event.data.object as Stripe.Checkout.Session)
+      await handleCheckoutComplete(stripe, supabase, event.data.object as Stripe.Checkout.Session)
       break
     case 'customer.subscription.updated':
-      await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
+      await handleSubscriptionUpdate(stripe, supabase, event.data.object as Stripe.Subscription)
       break
     case 'customer.subscription.deleted':
-      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+      await handleSubscriptionDeleted(supabase, event.data.object as Stripe.Subscription)
       break
   }
 
   return NextResponse.json({ received: true })
 }
 
-async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
+async function handleCheckoutComplete(stripe: Stripe, supabase: SupabaseClient, session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id
   if (!userId) return
 
@@ -68,7 +66,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     .eq('user_id', userId)
 }
 
-async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdate(stripe: Stripe, supabase: SupabaseClient, subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string
 
   const { data: sub } = await supabase
@@ -107,7 +105,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .eq('user_id', sub.user_id)
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+async function handleSubscriptionDeleted(supabase: SupabaseClient, subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string
 
   const { data: sub } = await supabase

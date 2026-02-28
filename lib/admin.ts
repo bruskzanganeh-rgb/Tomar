@@ -1,17 +1,15 @@
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-type AdminAuth = { userId: string; supabase: typeof supabaseAdmin }
+type AdminAuth = { userId: string; supabase: ReturnType<typeof createAdminClient> }
 
 export async function verifyAdmin(): Promise<AdminAuth | NextResponse> {
+  const supabaseAdmin = createAdminClient()
   const serverClient = await createServerClient()
-  const { data: { user } } = await serverClient.auth.getUser()
+  const {
+    data: { user },
+  } = await serverClient.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

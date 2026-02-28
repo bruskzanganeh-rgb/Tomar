@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe, getPlanFromPriceId } from '@/lib/stripe'
+import { getStripe, getPlanFromPriceId } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
 export async function POST() {
@@ -23,7 +23,7 @@ export async function POST() {
   }
 
   // Fetch active subscriptions from Stripe
-  const stripeSubs = await stripe.subscriptions.list({
+  const stripeSubs = await getStripe().subscriptions.list({
     customer: subscription.stripe_customer_id,
     status: 'active',
     limit: 1,

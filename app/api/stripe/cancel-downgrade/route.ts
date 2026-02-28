@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
@@ -28,6 +28,7 @@ export async function POST() {
 
   try {
     // Find and cancel the subscription schedule
+    const stripe = getStripe()
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
 
     if (stripeSub.schedule) {
