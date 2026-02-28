@@ -12,7 +12,7 @@ import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { motion, type Variants } from 'framer-motion'
 import { UpcomingPayments } from '@/components/dashboard/upcoming-payments'
-import { AvailableWeeks } from '@/components/dashboard/available-weeks'
+import { MiniCalendar } from '@/components/dashboard/mini-calendar'
 import { ActionRequiredCard, type NeedsActionGig, type PendingGig } from '@/components/dashboard/action-required-card'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -341,10 +341,10 @@ export default function DashboardPage() {
             </ErrorBoundary>
           </div>
 
-          {/* Column 3: Availability — spans both columns on tablet (2-col grid), single column on desktop (3-col grid) */}
+          {/* Column 3: Mini Calendar — spans both columns on tablet (2-col grid), single column on desktop (3-col grid) */}
           <div className="md:col-span-2 xl:col-span-1 min-h-0">
             <ErrorBoundary>
-              <AvailableWeeks />
+              <MiniCalendar />
             </ErrorBoundary>
           </div>
         </motion.div>
