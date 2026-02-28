@@ -115,7 +115,7 @@ export default function InvoicesTab() {
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
   const { company, members } = useCompany()
-  const { shouldFilter, currentUserId: filterUserId } = useGigFilter()
+  const { shouldFilter, currentUserId: filterUserId, loaded: filterLoaded } = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
@@ -153,6 +153,8 @@ export default function InvoicesTab() {
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')
+    const member = members.find((m) => m.user_id === userId)
+    if (member?.email) return member.email.split('@')[0]
     return userId.slice(0, 6)
   }
 
@@ -162,7 +164,7 @@ export default function InvoicesTab() {
     isLoading: loading,
     mutate: mutateInvoices,
   } = useSWR(
-    ['invoices-with-reminders', shouldFilter, filterUserId],
+    filterLoaded ? ['invoices-with-reminders', shouldFilter, filterUserId] : null,
     async () => {
       // Mark overdue invoices
       const today = new Date().toISOString().split('T')[0]

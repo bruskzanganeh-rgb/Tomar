@@ -64,7 +64,7 @@ export default function ExpensesTab() {
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
   const { company, members } = useCompany()
-  const { shouldFilter, currentUserId: filterUserId } = useGigFilter()
+  const { shouldFilter, currentUserId: filterUserId, loaded: filterLoaded } = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
@@ -92,6 +92,8 @@ export default function ExpensesTab() {
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')
+    const member = members.find((m) => m.user_id === userId)
+    if (member?.email) return member.email.split('@')[0]
     return userId.slice(0, 6)
   }
 
@@ -100,7 +102,7 @@ export default function ExpensesTab() {
     isLoading: loading,
     mutate: mutateExpenses,
   } = useSWR<Expense[]>(
-    ['expenses-with-gigs', shouldFilter, filterUserId],
+    filterLoaded ? ['expenses-with-gigs', shouldFilter, filterUserId] : null,
     async () => {
       let query = supabase.from('expenses').select('*, gig:gigs(id, project_name, date, client:clients(name))')
       if (shouldFilter && filterUserId) query = query.eq('user_id', filterUserId)
@@ -112,7 +114,7 @@ export default function ExpensesTab() {
   )
 
   const { data: gigs = [] } = useSWR<Gig[]>(
-    ['gigs-for-expenses', shouldFilter, filterUserId],
+    filterLoaded ? ['gigs-for-expenses', shouldFilter, filterUserId] : null,
     async () => {
       let query = supabase
         .from('gigs')

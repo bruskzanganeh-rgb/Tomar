@@ -19,6 +19,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 
 type MonthlyRevenue = {
   month: string
@@ -72,6 +73,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
   const [viewMode, setViewMode] = useState<ViewMode>('invoice')
   const [chartMode, setChartMode] = useState<ChartMode>('timeline')
   const supabase = createClient()
+  const { shouldFilter, currentUserId } = useGigFilter()
 
   // Sync with external year prop
   useEffect(() => {
@@ -89,7 +91,8 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
 
   useEffect(() => {
     loadAvailableYears()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldFilter, currentUserId])
 
   useEffect(() => {
     if (selectedYear) {
@@ -99,15 +102,20 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
         loadWorkdayData(selectedYear)
       }
     }
-  }, [selectedYear, viewMode, clientId, positionId])
+  }, [selectedYear, viewMode, clientId, positionId, shouldFilter, currentUserId])
 
   async function loadAvailableYears() {
-    const { data: invoices } = await supabase
-      .from('invoices')
-      .select('invoice_date')
-      .order('invoice_date', { ascending: true })
+    let invQuery = supabase.from('invoices').select('invoice_date').order('invoice_date', { ascending: true })
+    if (shouldFilter && currentUserId) invQuery = invQuery.eq('user_id', currentUserId)
+    const { data: invoices } = await invQuery
 
-    const { data: gigDates } = await supabase.from('gig_dates').select('date').order('date', { ascending: true })
+    let gdQuery = supabase.from('gig_dates').select('date, gig:gigs(user_id)').order('date', { ascending: true })
+    const { data: rawGigDates } = await gdQuery
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gigDates =
+      shouldFilter && currentUserId
+        ? (rawGigDates || []).filter((gd: any) => gd.gig?.user_id === currentUserId)
+        : rawGigDates
 
     const invoiceYears = invoices?.map((inv) => new Date(inv.invoice_date).getFullYear().toString()) || []
 
@@ -171,6 +179,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
     if (clientId && clientId !== 'all') {
       query = query.eq('client_id', clientId)
     }
+    if (shouldFilter && currentUserId) query = query.eq('user_id', currentUserId)
 
     const { data: rawInvoices } = (await query) as unknown as { data: InvoiceRow[] | null }
 
@@ -279,6 +288,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
         gigQuery = gigQuery.eq('position_id', positionId)
       }
     }
+    if (shouldFilter && currentUserId) gigQuery = gigQuery.eq('user_id', currentUserId)
 
     const { data: gigs } = (await gigQuery) as unknown as { data: GigRow[] | null }
 

@@ -198,6 +198,8 @@ export default function CalendarPage() {
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')
+    const member = members.find((m) => m.user_id === userId)
+    if (member?.email) return member.email.split('@')[0]
     return userId.slice(0, 6)
   }
 
