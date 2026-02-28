@@ -5,12 +5,20 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
-    // Unit tests run in jsdom; integration tests need node environment
-    environmentMatchGlobs: [
-      ['tests/integration/**', 'node'],
-    ],
     environment: 'jsdom',
     setupFiles: ['./tests/unit/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'lcov'],
+      include: ['lib/**/*.ts', 'app/api/**/*.ts'],
+      exclude: ['lib/types/**', '**/*.d.ts'],
+      thresholds: {
+        lines: 40,
+        functions: 40,
+        branches: 40,
+        statements: 40,
+      },
+    },
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, '.') },

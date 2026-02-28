@@ -4,6 +4,9 @@ import { apiSuccess, apiError, apiValidationError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createInvoiceSchema } from '@/lib/schemas/invoice'
+import type { Database } from '@/lib/types/supabase'
+
+type InvoiceStatus = Database['public']['Enums']['invoice_status']
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -26,13 +29,16 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient()
     let query = supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name, email)
-      `, { count: 'exact' })
+      `,
+        { count: 'exact' },
+      )
       .eq('user_id', auth.userId)
 
-    if (status) query = query.eq('status', status)
+    if (status) query = query.eq('status', status as InvoiceStatus)
     if (clientId) query = query.eq('client_id', clientId)
 
     query = query.order('invoice_number', { ascending: false }).range(offset, offset + limit - 1)
@@ -88,8 +94,7 @@ export async function POST(request: NextRequest) {
     const total = subtotal + vatAmount
 
     const invoiceDate = new Date().toISOString().split('T')[0]
-    const dueDate = new Date(Date.now() + parsed.data.payment_terms * 24 * 60 * 60 * 1000)
-      .toISOString().split('T')[0]
+    const dueDate = new Date(Date.now() + parsed.data.payment_terms * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
@@ -110,12 +115,11 @@ export async function POST(request: NextRequest) {
 
     if (invoiceError) throw invoiceError
 
-    // Insert lines
+    // Insert lines — DB schema uses `amount` (not quantity/unit_price)
     const invoiceLines = lines.map((line, i) => ({
       invoice_id: invoice.id,
       description: line.description,
-      quantity: line.quantity,
-      unit_price: line.unit_price,
+      amount: line.quantity * line.unit_price,
       vat_rate: line.vat_rate,
       sort_order: i + 1,
     }))
@@ -125,11 +129,13 @@ export async function POST(request: NextRequest) {
     // Fetch complete invoice
     const { data: fullInvoice } = await supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name, email),
         invoice_lines(*)
-      `)
+      `,
+      )
       .eq('id', invoice.id)
       .single()
 

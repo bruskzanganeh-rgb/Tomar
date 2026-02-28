@@ -3,6 +3,7 @@ import { validateApiKey, requireScope } from '@/lib/api-auth'
 import { apiSuccess, apiError, apiValidationError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Database } from '@/lib/types/supabase'
 import { createClientSchema } from '@/lib/schemas/client'
 
 export async function GET(request: NextRequest) {
@@ -23,10 +24,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     const supabase = createAdminClient()
-    let query = supabase
-      .from('clients')
-      .select('*', { count: 'exact' })
-      .eq('user_id', auth.userId)
+    let query = supabase.from('clients').select('*', { count: 'exact' }).eq('user_id', auth.userId)
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,org_number.ilike.%${search}%,email.ilike.%${search}%`)
@@ -76,9 +74,15 @@ export async function POST(request: NextRequest) {
 
     if (!membership) return apiError('User has no company', 400)
 
+    const { payment_terms, ...restClient } = parsed.data
     const { data, error } = await supabase
       .from('clients')
-      .insert({ ...parsed.data, user_id: auth.userId, company_id: membership.company_id })
+      .insert({
+        ...restClient,
+        ...(payment_terms !== undefined ? { payment_terms: parseInt(payment_terms, 10) || null } : {}),
+        user_id: auth.userId,
+        company_id: membership.company_id,
+      } as Database['public']['Tables']['clients']['Insert'])
       .select()
       .single()
 

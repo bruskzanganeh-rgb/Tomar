@@ -1,25 +1,14 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import { Badge } from '@/components/ui/badge'
@@ -68,8 +57,25 @@ type CreateInvoiceDialogProps = {
   initialGigs?: InitialGig[]
 }
 
-type Client = { id: string; name: string; org_number: string | null; address: string | null; payment_terms: number; reference_person: string | null; invoice_language: string | null; country_code: string | null; vat_number: string | null }
-type Gig = { id: string; date: string; fee: number | null; travel_expense: number | null; client: { name: string }; gig_type: { vat_rate: number } }
+type Client = {
+  id: string
+  name: string
+  org_number: string | null
+  address: string | null
+  payment_terms: number | null
+  reference_person: string | null
+  invoice_language: string | null
+  country_code: string | null
+  vat_number: string | null
+}
+type Gig = {
+  id: string
+  date: string
+  fee: number | null
+  travel_expense: number | null
+  client: { name: string }
+  gig_type: { vat_rate: number }
+}
 type GigType = { id: string; name: string; name_en: string | null; vat_rate: number }
 type CompanySettings = {
   company_name: string
@@ -81,7 +87,11 @@ type CompanySettings = {
   logo_url: string | null
   vat_registration_number: string | null
   late_payment_interest_text: string | null
-  country_code: string
+  country_code: string | null
+  show_logo_on_invoice: boolean | null
+  bankgiro: string | null
+  iban: string | null
+  bic: string | null
 }
 
 type InvoiceLine = {
@@ -92,10 +102,9 @@ type InvoiceLine = {
 }
 
 function findGigType(types: GigType[], ...names: string[]) {
-  return types.find(t => names.some(n =>
-    t.name.toLowerCase() === n.toLowerCase() ||
-    t.name_en?.toLowerCase() === n.toLowerCase()
-  ))
+  return types.find((t) =>
+    names.some((n) => t.name.toLowerCase() === n.toLowerCase() || t.name_en?.toLowerCase() === n.toLowerCase()),
+  )
 }
 
 export function CreateInvoiceDialog({
@@ -125,9 +134,7 @@ export function CreateInvoiceDialog({
     reference_person: '',
     notes: '',
   })
-  const [lines, setLines] = useState<InvoiceLine[]>([
-    { description: '', amount: '', gig_type_id: '' },
-  ])
+  const [lines, setLines] = useState<InvoiceLine[]>([{ description: '', amount: '', gig_type_id: '' }])
   const [selectedGigIds, setSelectedGigIds] = useState<Set<string>>(new Set())
   const [clientGigs, setClientGigs] = useState<InitialGig[]>([])
   const initializedRef = useRef(false)
@@ -143,7 +150,7 @@ export function CreateInvoiceDialog({
 
   // Get selected client for preview
   const selectedClient = useMemo(() => {
-    return clients.find(c => c.id === formData.client_id) || null
+    return clients.find((c) => c.id === formData.client_id) || null
   }, [clients, formData.client_id])
 
   // Auto-detect reverse charge
@@ -154,9 +161,9 @@ export function CreateInvoiceDialog({
 
   // Calculate totals for preview
   const { previewLines, subtotal, vatAmount, total, primaryVatRate } = useMemo(() => {
-    const linesWithVat = lines.map(line => {
+    const linesWithVat = lines.map((line) => {
       const amount = parseFloat(line.amount) || 0
-      const gigType = gigTypes.find(t => t.id === line.gig_type_id)
+      const gigType = gigTypes.find((t) => t.id === line.gig_type_id)
       const vatRate = gigType?.vat_rate || 0
       return {
         description: line.description,
@@ -167,9 +174,9 @@ export function CreateInvoiceDialog({
 
     const subtotal = linesWithVat.reduce((sum, l) => sum + l.amount, 0)
     // If reverse charge, VAT is 0
-    const vatAmount = isReverseCharge ? 0 : linesWithVat.reduce((sum, l) => sum + (l.amount * l.vat_rate / 100), 0)
+    const vatAmount = isReverseCharge ? 0 : linesWithVat.reduce((sum, l) => sum + (l.amount * l.vat_rate) / 100, 0)
     const total = subtotal + vatAmount
-    const primaryVatRate = isReverseCharge ? 0 : (linesWithVat.find(l => l.vat_rate > 0)?.vat_rate || 25)
+    const primaryVatRate = isReverseCharge ? 0 : linesWithVat.find((l) => l.vat_rate > 0)?.vat_rate || 25
 
     return { previewLines: linesWithVat, subtotal, vatAmount, total, primaryVatRate }
   }, [lines, gigTypes, isReverseCharge])
@@ -193,8 +200,11 @@ export function CreateInvoiceDialog({
     if (!gigs || gigs.length === 0) return
 
     const firstGig = gigs[0]
-    const client = clients.find(c => c.id === firstGig.client_id)
-    const combinedNotes = gigs.map(g => g.invoice_notes).filter(Boolean).join('\n')
+    const client = clients.find((c) => c.id === firstGig.client_id)
+    const combinedNotes = gigs
+      .map((g) => g.invoice_notes)
+      .filter(Boolean)
+      .join('\n')
 
     setFormData({
       client_id: firstGig.client_id,
@@ -204,7 +214,7 @@ export function CreateInvoiceDialog({
       notes: combinedNotes,
     })
 
-    setSelectedGigIds(new Set(gigs.map(g => g.id)))
+    setSelectedGigIds(new Set(gigs.map((g) => g.id)))
     setClientGigs(gigs)
     setLines(buildLinesFromGigs(gigs))
     initializedRef.current = true
@@ -213,7 +223,9 @@ export function CreateInvoiceDialog({
   async function loadClients() {
     const { data } = await supabase
       .from('clients')
-      .select('id, name, org_number, address, payment_terms, reference_person, invoice_language, country_code, vat_number')
+      .select(
+        'id, name, org_number, address, payment_terms, reference_person, invoice_language, country_code, vat_number',
+      )
       .order('name')
     setClients(data || [])
   }
@@ -221,37 +233,34 @@ export function CreateInvoiceDialog({
   async function loadCompletedGigs() {
     const { data } = await supabase
       .from('gigs')
-      .select(`
+      .select(
+        `
         id,
         date,
         fee,
         travel_expense,
         client:clients(name),
         gig_type:gig_types(vat_rate)
-      `)
+      `,
+      )
       .in('status', ['accepted', 'completed'])
       .order('date', { ascending: false })
     setCompletedGigs((data || []) as unknown as Gig[])
   }
 
   async function loadGigTypes() {
-    const { data } = await supabase
-      .from('gig_types')
-      .select('id, name, name_en, vat_rate')
-      .order('name')
+    const { data } = await supabase.from('gig_types').select('id, name, name_en, vat_rate').order('name')
     setGigTypes(data || [])
   }
 
   async function loadCompanySettings() {
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .limit(1)
-      .single()
+    const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
     if (membership) {
       const { data } = await supabase
         .from('companies')
-        .select('company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code')
+        .select(
+          'company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code',
+        )
         .eq('id', membership.company_id)
         .single()
       setCompanySettings(data)
@@ -271,7 +280,7 @@ export function CreateInvoiceDialog({
   }
 
   function buildLinesFromGigs(gigs: InitialGig[]): InvoiceLine[] {
-    const client = clients.find(c => c.id === formData.client_id)
+    const client = clients.find((c) => c.id === formData.client_id)
     const useEnglish = client?.invoice_language === 'en'
     const newLines: InvoiceLine[] = []
     for (const gig of gigs) {
@@ -306,19 +315,19 @@ export function CreateInvoiceDialog({
   }
 
   async function loadClientGigs(clientId: string) {
-    const { data: linkedGigs } = await supabase
-      .from('invoice_gigs')
-      .select('gig_id')
+    const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id')
     const linkedGigIds = new Set((linkedGigs || []).map((g: any) => g.gig_id))
 
     const { data } = await supabase
       .from('gigs')
-      .select(`
+      .select(
+        `
         id, fee, travel_expense, date, start_date, end_date, total_days,
         project_name, invoice_notes, client_id,
         client:clients(name, payment_terms),
         gig_type:gig_types(id, name, name_en, vat_rate)
-      `)
+      `,
+      )
       .eq('client_id', clientId)
       .eq('status', 'completed')
       .not('fee', 'is', null)
@@ -357,14 +366,14 @@ export function CreateInvoiceDialog({
     }
     setSelectedGigIds(newIds)
 
-    const selectedGigs = clientGigs.filter(g => newIds.has(g.id))
+    const selectedGigs = clientGigs.filter((g) => newIds.has(g.id))
     setLines(buildLinesFromGigs(selectedGigs))
 
     const combinedNotes = selectedGigs
-      .map(g => g.invoice_notes)
+      .map((g) => g.invoice_notes)
       .filter(Boolean)
       .join('\n')
-    setFormData(prev => ({ ...prev, notes: combinedNotes }))
+    setFormData((prev) => ({ ...prev, notes: combinedNotes }))
   }
 
   function addLine() {
@@ -391,10 +400,9 @@ export function CreateInvoiceDialog({
     setLoading(true)
 
     // Save reference_person_override if different from client default
-    const client = clients.find(c => c.id === formData.client_id)
-    const referencePersonOverride = formData.reference_person !== (client?.reference_person || '')
-      ? formData.reference_person || null
-      : null
+    const client = clients.find((c) => c.id === formData.client_id)
+    const referencePersonOverride =
+      formData.reference_person !== (client?.reference_person || '') ? formData.reference_person || null : null
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
@@ -416,7 +424,7 @@ export function CreateInvoiceDialog({
           reference_person_override: referencePersonOverride,
           notes: formData.notes || null,
           reverse_charge: isReverseCharge,
-          customer_vat_number: isReverseCharge ? (client?.vat_number || null) : null,
+          customer_vat_number: isReverseCharge ? client?.vat_number || null : null,
         },
       ])
       .select()
@@ -437,9 +445,7 @@ export function CreateInvoiceDialog({
       sort_order: index,
     }))
 
-    const { error: linesError } = await supabase
-      .from('invoice_lines')
-      .insert(linesData)
+    const { error: linesError } = await supabase.from('invoice_lines').insert(linesData)
 
     if (linesError) {
       console.error('Error creating invoice lines:', linesError)
@@ -451,22 +457,19 @@ export function CreateInvoiceDialog({
     // Link gigs via junction table and update their status
     const gigIdsArray = Array.from(selectedGigIds)
     if (gigIdsArray.length > 0) {
-      const { error: linkError } = await supabase
-        .from('invoice_gigs')
-        .insert(gigIdsArray.map(gigId => ({
+      const { error: linkError } = await supabase.from('invoice_gigs').insert(
+        gigIdsArray.map((gigId) => ({
           invoice_id: invoice.id,
           gig_id: gigId,
-        })))
+        })),
+      )
 
       if (linkError) {
         console.error('Error linking gigs:', linkError)
         toast.warning(tToast('gigLinkError'))
       }
 
-      await supabase
-        .from('gigs')
-        .update({ status: 'invoiced' })
-        .in('id', gigIdsArray)
+      await supabase.from('gigs').update({ status: 'invoiced' }).in('id', gigIdsArray)
     }
 
     // Track usage
@@ -507,13 +510,21 @@ export function CreateInvoiceDialog({
             <div className="flex-1 flex items-start justify-center">
               <div className="w-full">
                 <InvoicePreview
-                  company={companySettings}
-                  client={selectedClient ? {
-                    name: selectedClient.name,
-                    org_number: selectedClient.org_number,
-                    address: selectedClient.address,
-                    payment_terms: selectedClient.payment_terms,
-                  } : null}
+                  company={
+                    companySettings
+                      ? { ...companySettings, show_logo_on_invoice: companySettings.show_logo_on_invoice ?? undefined }
+                      : null
+                  }
+                  client={
+                    selectedClient
+                      ? {
+                          name: selectedClient.name,
+                          org_number: selectedClient.org_number,
+                          address: selectedClient.address,
+                          payment_terms: selectedClient.payment_terms ?? undefined,
+                        }
+                      : null
+                  }
                   invoiceNumber={nextInvoiceNumber}
                   invoiceDate={formData.invoice_date}
                   dueDate={dueDate}
@@ -536,7 +547,9 @@ export function CreateInvoiceDialog({
             {/* Header */}
             <div className="px-6 py-4 border-b">
               <h2 className="text-lg font-semibold">{t('newInvoice')}</h2>
-              <p className="text-sm text-muted-foreground">{t('invoiceNumber')} #{nextInvoiceNumber}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('invoiceNumber')} #{nextInvoiceNumber}
+              </p>
             </div>
 
             {/* Scrollable Content */}
@@ -544,15 +557,17 @@ export function CreateInvoiceDialog({
               <div className="space-y-5">
                 {/* Kund */}
                 <div className="space-y-2">
-                  <Label>{t('customer')} <span className="text-destructive">*</span></Label>
+                  <Label>
+                    {t('customer')} <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={formData.client_id}
                     onValueChange={(value) => {
-                      const client = clients.find(c => c.id === value)
+                      const client = clients.find((c) => c.id === value)
                       setFormData({
                         ...formData,
                         client_id: value,
-                        payment_terms: client?.payment_terms.toString() || '30',
+                        payment_terms: client?.payment_terms?.toString() || '30',
                         reference_person: client?.reference_person || '',
                       })
                       if (!initialGig && !initialGigs) {
@@ -576,9 +591,7 @@ export function CreateInvoiceDialog({
                   </Select>
                   {isReverseCharge && (
                     <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
-                      <span className="text-xs font-medium">
-                        {t('reverseChargeNotice')}
-                      </span>
+                      <span className="text-xs font-medium">{t('reverseChargeNotice')}</span>
                     </div>
                   )}
                 </div>
@@ -588,11 +601,12 @@ export function CreateInvoiceDialog({
                   <div className="space-y-2">
                     <Label>{t('gigsToInvoice')}</Label>
                     <div className="space-y-1.5 border rounded-lg p-3 bg-muted/30">
-                      {clientGigs.map(gig => {
+                      {clientGigs.map((gig) => {
                         const isSelected = selectedGigIds.has(gig.id)
-                        const dateStr = gig.total_days > 1 && gig.start_date && gig.end_date
-                          ? `${new Date(gig.start_date).toLocaleDateString(formatLocale)} - ${new Date(gig.end_date).toLocaleDateString(formatLocale)}`
-                          : new Date(gig.date).toLocaleDateString(formatLocale)
+                        const dateStr =
+                          gig.total_days > 1 && gig.start_date && gig.end_date
+                            ? `${new Date(gig.start_date).toLocaleDateString(formatLocale)} - ${new Date(gig.end_date).toLocaleDateString(formatLocale)}`
+                            : new Date(gig.date).toLocaleDateString(formatLocale)
                         return (
                           <div
                             key={gig.id}
@@ -624,9 +638,10 @@ export function CreateInvoiceDialog({
                           <span>{t('gigsSelected', { count: selectedGigIds.size })}</span>
                           <span className="font-medium">
                             {clientGigs
-                              .filter(g => selectedGigIds.has(g.id))
+                              .filter((g) => selectedGigIds.has(g.id))
                               .reduce((sum, g) => sum + g.fee + (g.travel_expense || 0), 0)
-                              .toLocaleString(formatLocale)} {tc('kr')}
+                              .toLocaleString(formatLocale)}{' '}
+                            {tc('kr')}
                           </span>
                         </div>
                       )}
@@ -641,9 +656,7 @@ export function CreateInvoiceDialog({
                     <Input
                       type="date"
                       value={formData.invoice_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, invoice_date: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, invoice_date: e.target.value })}
                       required
                     />
                   </div>
@@ -653,9 +666,7 @@ export function CreateInvoiceDialog({
                       type="number"
                       min="1"
                       value={formData.payment_terms}
-                      onChange={(e) =>
-                        setFormData({ ...formData, payment_terms: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
                       required
                     />
                   </div>
@@ -667,13 +678,9 @@ export function CreateInvoiceDialog({
                   <Input
                     placeholder={t('contactPersonPlaceholder')}
                     value={formData.reference_person}
-                    onChange={(e) =>
-                      setFormData({ ...formData, reference_person: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, reference_person: e.target.value })}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t('referencePrefilledHint')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('referencePrefilledHint')}</p>
                 </div>
 
                 {/* Fakturarader */}
@@ -742,22 +749,16 @@ export function CreateInvoiceDialog({
                   <Textarea
                     placeholder={t('optionalMessagePlaceholder')}
                     value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={2}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {t('prefilledFromNotes')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('prefilledFromNotes')}</p>
                 </div>
 
                 {/* Kopplade kvitton */}
                 {(() => {
                   const allGigs = initialGigs || (initialGig ? [initialGig] : [])
-                  const allExpenses = allGigs
-                    .filter(g => selectedGigIds.has(g.id))
-                    .flatMap(g => g.expenses || [])
+                  const allExpenses = allGigs.filter((g) => selectedGigIds.has(g.id)).flatMap((g) => g.expenses || [])
                   if (allExpenses.length === 0) return null
                   return (
                     <div className="space-y-3 pt-3 border-t">
@@ -767,12 +768,15 @@ export function CreateInvoiceDialog({
                           {t('addReceiptsAsLines')}
                         </Label>
                         <span className="text-sm text-muted-foreground">
-                          {allExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0).toLocaleString(formatLocale)} {tc('kr')}
+                          {allExpenses
+                            .reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
+                            .toLocaleString(formatLocale)}{' '}
+                          {tc('kr')}
                         </span>
                       </div>
                       <div className="space-y-1.5">
-                        {allExpenses.map(expense => {
-                          const isAdded = lines.some(line => line.expenseId === expense.id)
+                        {allExpenses.map((expense) => {
+                          const isAdded = lines.some((line) => line.expenseId === expense.id)
                           return (
                             <div
                               key={expense.id}
@@ -796,7 +800,7 @@ export function CreateInvoiceDialog({
                                     }
                                     setLines([...lines, newLine])
                                   } else {
-                                    setLines(lines.filter(line => line.expenseId !== expense.id))
+                                    setLines(lines.filter((line) => line.expenseId !== expense.id))
                                   }
                                 }}
                               />
@@ -824,12 +828,7 @@ export function CreateInvoiceDialog({
 
             {/* Footer */}
             <DialogFooter className="px-6 py-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
                 {tc('cancel')}
               </Button>
               <Button type="submit" disabled={loading || !formData.client_id}>

@@ -10,8 +10,9 @@ type Subscription = {
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   current_period_end: string | null
-  cancel_at_period_end: boolean
+  cancel_at_period_end: boolean | null
   pending_plan: string | null
+  admin_override: boolean | null
 }
 
 type Usage = {
@@ -41,9 +42,30 @@ export type TierConfig = {
 }
 
 const DEFAULT_TIER_CONFIG: TierConfig = {
-  free: { invoiceLimit: 5, receiptScanLimit: 3, storageMb: 10, priceMonthly: 0, priceYearly: 0, features: ['unlimitedGigs', 'basicInvoicing', 'calendarView'] },
-  pro: { invoiceLimit: 0, receiptScanLimit: 0, storageMb: 1024, priceMonthly: 5, priceYearly: 50, features: ['unlimitedInvoices', 'unlimitedScans', 'noBranding'] },
-  team: { invoiceLimit: 0, receiptScanLimit: 0, storageMb: 5120, priceMonthly: 10, priceYearly: 100, features: ['everythingInPro', 'inviteMembers', 'sharedCalendar'] },
+  free: {
+    invoiceLimit: 5,
+    receiptScanLimit: 3,
+    storageMb: 10,
+    priceMonthly: 0,
+    priceYearly: 0,
+    features: ['unlimitedGigs', 'basicInvoicing', 'calendarView'],
+  },
+  pro: {
+    invoiceLimit: 0,
+    receiptScanLimit: 0,
+    storageMb: 1024,
+    priceMonthly: 5,
+    priceYearly: 50,
+    features: ['unlimitedInvoices', 'unlimitedScans', 'noBranding'],
+  },
+  team: {
+    invoiceLimit: 0,
+    receiptScanLimit: 0,
+    storageMb: 5120,
+    priceMonthly: 10,
+    priceYearly: 100,
+    features: ['everythingInPro', 'inviteMembers', 'sharedCalendar'],
+  },
 }
 
 export function useSubscription() {
@@ -85,22 +107,14 @@ export function useSubscription() {
   }
 
   async function loadSubscription() {
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .limit(1)
-      .single()
+    const { data: sub } = await supabase.from('subscriptions').select('*').limit(1).single()
 
     // Sync with Stripe if user has a Stripe customer ID
     if (sub?.stripe_customer_id) {
       try {
         await fetch('/api/stripe/sync', { method: 'POST' })
         // Re-fetch after sync to get updated data
-        const { data: refreshed } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .limit(1)
-          .single()
+        const { data: refreshed } = await supabase.from('subscriptions').select('*').limit(1).single()
         if (refreshed) {
           setSubscription(refreshed)
         } else {

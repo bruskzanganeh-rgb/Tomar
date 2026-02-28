@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { updateContractSchema } from '@/lib/contracts/schemas'
+import type { Database } from '@/lib/types/supabase'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 async function requireAdmin(supabase: ReturnType<typeof createClient> extends Promise<infer T> ? T : never) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return null
   const { data: isAdmin } = await supabase.rpc('is_admin', { uid: user.id })
   if (!isAdmin) return null
@@ -13,10 +16,7 @@ async function requireAdmin(supabase: ReturnType<typeof createClient> extends Pr
 }
 
 // GET /api/contracts/[id] — Get contract with audit trail
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const { success } = rateLimit(`contract-get:${ip}`, 30, 60_000)
   if (!success) return rateLimitResponse()
@@ -49,10 +49,7 @@ export async function GET(
 }
 
 // PATCH /api/contracts/[id] — Update draft contract
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const { success } = rateLimit(`contract-update:${ip}`, 10, 60_000)
   if (!success) return rateLimitResponse()
@@ -65,11 +62,7 @@ export async function PATCH(
   const adminClient = createAdminClient()
 
   // Check current status
-  const { data: existing } = await adminClient
-    .from('contracts')
-    .select('status')
-    .eq('id', id)
-    .single()
+  const { data: existing } = await adminClient.from('contracts').select('status').eq('id', id).single()
 
   if (!existing) return NextResponse.json({ error: 'Contract not found' }, { status: 404 })
   if (existing.status !== 'draft') {
@@ -84,7 +77,10 @@ export async function PATCH(
 
   const { data: updated, error } = await adminClient
     .from('contracts')
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
+    .update({
+      ...parsed.data,
+      updated_at: new Date().toISOString(),
+    } as Database['public']['Tables']['contracts']['Update'])
     .eq('id', id)
     .select()
     .single()

@@ -1,25 +1,14 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import type { Database, Json } from '@/lib/types/supabase'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Paperclip } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
@@ -117,7 +106,9 @@ export function GigDialog({
   const [formData, setFormData] = useState({ ...defaultFormData })
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('SEK')
   const [scheduleTexts, setScheduleTexts] = useState<Record<string, string>>({})
-  const [parsedSessions, setParsedSessions] = useState<Record<string, { start: string; end: string | null; label?: string }[]>>({})
+  const [parsedSessions, setParsedSessions] = useState<
+    Record<string, { start: string; end: string | null; label?: string }[]>
+  >({})
   const [parsingSessions, setParsingSessions] = useState<Record<string, boolean>>({})
   const [scanningSchedule, setScanningSchedule] = useState(false)
   const [scheduleFile, setScheduleFile] = useState<File | null>(null)
@@ -166,15 +157,17 @@ export function GigDialog({
       if (!gig) {
         setFormData({
           ...defaultFormData,
-          ...(initialValues ? {
-            client_id: initialValues.client_id || '',
-            gig_type_id: initialValues.gig_type_id || '',
-            position_id: initialValues.position_id || '',
-            fee: initialValues.fee || '',
-            currency: initialValues.currency || 'SEK',
-            venue: initialValues.venue || '',
-            project_name: initialValues.project_name || '',
-          } : {}),
+          ...(initialValues
+            ? {
+                client_id: initialValues.client_id || '',
+                gig_type_id: initialValues.gig_type_id || '',
+                position_id: initialValues.position_id || '',
+                fee: initialValues.fee || '',
+                currency: initialValues.currency || 'SEK',
+                venue: initialValues.venue || '',
+                project_name: initialValues.project_name || '',
+              }
+            : {}),
         })
         setSelectedDates(initialDate ? [initialDate] : [])
         setScheduleTexts({})
@@ -216,45 +209,28 @@ export function GigDialog({
   }, [gig, open])
 
   async function loadClients() {
-    const { data } = await supabase
-      .from('clients')
-      .select('id, name')
-      .order('name')
+    const { data } = await supabase.from('clients').select('id, name').order('name')
     setClients(data || [])
   }
 
   async function loadGigTypes() {
-    const { data } = await supabase
-      .from('gig_types')
-      .select('id, name, vat_rate')
-      .order('name')
+    const { data } = await supabase.from('gig_types').select('id, name, vat_rate').order('name')
     setGigTypes(data || [])
   }
 
   async function loadPositions() {
-    const { data } = await supabase
-      .from('positions')
-      .select('id, name')
-      .order('sort_order')
+    const { data } = await supabase.from('positions').select('id, name').order('sort_order')
     setPositions(data || [])
   }
 
   async function loadBaseCurrency() {
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .limit(1)
-      .single()
+    const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
     if (membership) {
-      const { data } = await supabase
-        .from('companies')
-        .select('base_currency')
-        .eq('id', membership.company_id)
-        .single()
+      const { data } = await supabase.from('companies').select('base_currency').eq('id', membership.company_id).single()
       if (data?.base_currency) {
         setBaseCurrency(data.base_currency as SupportedCurrency)
         if (!gig) {
-          setFormData(f => ({ ...f, currency: data.base_currency }))
+          setFormData((f) => ({ ...f, currency: data.base_currency! }))
         }
       }
     }
@@ -268,13 +244,13 @@ export function GigDialog({
       .order('date')
 
     if (data && data.length > 0) {
-      const dates = data.map(d => new Date(d.date + 'T12:00:00'))
+      const dates = data.map((d) => new Date(d.date + 'T12:00:00'))
       setSelectedDates(dates)
 
       // Load schedule texts and existing parsed sessions
       const texts: Record<string, string> = {}
       const sessions: Record<string, { start: string; end: string | null; label?: string }[]> = {}
-      data.forEach(d => {
+      data.forEach((d) => {
         if (d.schedule_text) texts[d.date] = d.schedule_text
         if (d.sessions && Array.isArray(d.sessions) && d.sessions.length > 0) {
           sessions[d.date] = d.sessions as { start: string; end: string | null; label?: string }[]
@@ -387,29 +363,26 @@ export function GigDialog({
       project_name: formData.project_name || null,
       notes: formData.notes || null,
       invoice_notes: formData.invoice_notes || null,
-      status: formData.status,
+      status: formData.status as Database['public']['Enums']['gig_status'],
       response_deadline: formData.response_deadline || null,
     }
 
     // Build gig_dates with schedule data
     function buildGigDates(gigId: string) {
-      return sortedDates.map(date => {
+      return sortedDates.map((date) => {
         const key = format(date, 'yyyy-MM-dd')
         return {
           gig_id: gigId,
           date: key,
           schedule_text: scheduleTexts[key] || null,
-          sessions: finalSessions[key] || [],
+          sessions: (finalSessions[key] || []) as Json,
         }
       })
     }
 
     if (isEditing) {
       // Update existing gig
-      const { error } = await supabase
-        .from('gigs')
-        .update(gigData)
-        .eq('id', gig.id)
+      const { error } = await supabase.from('gigs').update(gigData).eq('id', gig.id)
 
       if (error) {
         setLoading(false)
@@ -440,10 +413,7 @@ export function GigDialog({
     } else {
       // Create mode — update the draft gig with real data
       if (draftGigId) {
-        const { error } = await supabase
-          .from('gigs')
-          .update(gigData)
-          .eq('id', draftGigId)
+        const { error } = await supabase.from('gigs').update(gigData).eq('id', draftGigId)
 
         if (error) {
           setLoading(false)
@@ -476,11 +446,7 @@ export function GigDialog({
         setDraftGigId(null)
       } else {
         // Fallback: create without draft (if draft creation failed)
-        const { data: newGig, error } = await supabase
-          .from('gigs')
-          .insert([gigData])
-          .select()
-          .single()
+        const { data: newGig, error } = await supabase.from('gigs').insert([gigData]).select().single()
 
         if (error) {
           setLoading(false)
@@ -517,14 +483,14 @@ export function GigDialog({
 
   async function handleParseScheduleText(date: string, text: string) {
     if (!text.trim()) {
-      setParsedSessions(prev => {
+      setParsedSessions((prev) => {
         const next = { ...prev }
         delete next[date]
         return next
       })
       return
     }
-    setParsingSessions(prev => ({ ...prev, [date]: true }))
+    setParsingSessions((prev) => ({ ...prev, [date]: true }))
     try {
       const res = await fetch('/api/gigs/parse-schedule', {
         method: 'POST',
@@ -534,13 +500,13 @@ export function GigDialog({
       if (res.ok) {
         const data = await res.json()
         if (data.sessions?.[date]) {
-          setParsedSessions(prev => ({ ...prev, [date]: data.sessions[date] }))
+          setParsedSessions((prev) => ({ ...prev, [date]: data.sessions[date] }))
         }
       }
     } catch (err) {
       console.error('Schedule parse error:', err)
     } finally {
-      setParsingSessions(prev => ({ ...prev, [date]: false }))
+      setParsingSessions((prev) => ({ ...prev, [date]: false }))
     }
   }
 
@@ -573,7 +539,7 @@ export function GigDialog({
       if (result.dates) {
         const dates = Object.keys(result.dates)
           .sort()
-          .map(d => new Date(d + 'T12:00:00'))
+          .map((d) => new Date(d + 'T12:00:00'))
         setSelectedDates(dates)
       }
 
@@ -584,10 +550,10 @@ export function GigDialog({
 
       // Pre-fill project name and venue if empty
       if (result.projectName && !formData.project_name) {
-        setFormData(f => ({ ...f, project_name: result.projectName }))
+        setFormData((f) => ({ ...f, project_name: result.projectName }))
       }
       if (result.venue && !formData.venue) {
-        setFormData(f => ({ ...f, venue: result.venue }))
+        setFormData((f) => ({ ...f, venue: result.venue }))
       }
 
       setScheduleFile(file)
@@ -619,13 +585,17 @@ export function GigDialog({
     { value: 'paid', label: tStatus('paid') },
   ]
 
-  const sectionHeader = "text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70"
-  const sectionCard = "rounded-lg border border-border/60 bg-card p-4 space-y-3"
-  const fieldLabel = "text-xs font-medium text-muted-foreground"
+  const sectionHeader = 'text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70'
+  const sectionCard = 'rounded-lg border border-border/60 bg-card p-4 space-y-3'
+  const fieldLabel = 'text-xs font-medium text-muted-foreground'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-7xl" style={{ maxWidth: 1280 }} onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="flex flex-col max-h-[90vh] p-0 gap-0 w-[calc(100vw-2rem)] md:max-w-7xl"
+        style={{ maxWidth: 1280 }}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
@@ -640,12 +610,7 @@ export function GigDialog({
                   </DialogDescription>
                 </div>
                 {/* Status in header */}
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, status: value })
-                  }
-                >
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
                   <SelectTrigger className="w-[190px] h-8 text-sm" data-testid="gig-status-select">
                     <SelectValue />
                   </SelectTrigger>
@@ -663,10 +628,8 @@ export function GigDialog({
 
           {/* Main 2-column layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 min-h-0 flex-1 overflow-hidden">
-
             {/* LEFT — Form (always on desktop, step 1 on mobile) */}
-            <div className={cn("overflow-y-auto px-5 py-4 space-y-3", !isLg && step !== 1 && "hidden")}>
-
+            <div className={cn('overflow-y-auto px-5 py-4 space-y-3', !isLg && step !== 1 && 'hidden')}>
               {/* Section: Gig Details */}
               <div className={sectionCard}>
                 <p className={sectionHeader}>{t('sectionGig')}</p>
@@ -677,9 +640,7 @@ export function GigDialog({
                     </Label>
                     <Select
                       value={formData.gig_type_id}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, gig_type_id: value })
-                      }
+                      onValueChange={(value) => setFormData({ ...formData, gig_type_id: value })}
                     >
                       <SelectTrigger className="h-9 w-full truncate" data-testid="gig-type-select">
                         <SelectValue placeholder={t('selectType')} />
@@ -698,9 +659,7 @@ export function GigDialog({
                       <Label className={fieldLabel}>{t('position')}</Label>
                       <Select
                         value={formData.position_id}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, position_id: value })
-                        }
+                        onValueChange={(value) => setFormData({ ...formData, position_id: value })}
                       >
                         <SelectTrigger className="h-9 w-full truncate">
                           <SelectValue placeholder={t('selectPosition')} />
@@ -726,9 +685,7 @@ export function GigDialog({
                       className="h-9"
                       placeholder={t('projectNamePlaceholder')}
                       value={formData.project_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, project_name: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
@@ -737,9 +694,7 @@ export function GigDialog({
                       className="h-9"
                       placeholder={t('venuePlaceholder')}
                       value={formData.venue}
-                      onChange={(e) =>
-                        setFormData({ ...formData, venue: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
                     />
                   </div>
                 </div>
@@ -750,13 +705,14 @@ export function GigDialog({
                 <p className={sectionHeader}>{t('sectionClientFee')}</p>
                 <div className="space-y-1">
                   <Label className={fieldLabel}>
-                    {t('client')} {['completed', 'invoiced', 'paid'].includes(formData.status) && <span className="text-destructive">*</span>}
+                    {t('client')}{' '}
+                    {['completed', 'invoiced', 'paid'].includes(formData.status) && (
+                      <span className="text-destructive">*</span>
+                    )}
                   </Label>
                   <Select
                     value={formData.client_id || 'none'}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, client_id: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, client_id: value })}
                   >
                     <SelectTrigger className="h-9 w-full truncate">
                       <SelectValue placeholder={t('selectClient')} />
@@ -781,25 +737,23 @@ export function GigDialog({
                       step="0.01"
                       placeholder="0"
                       value={formData.fee}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fee: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className={fieldLabel}>{t('currency')}</Label>
                     <Select
                       value={formData.currency}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, currency: value })
-                      }
+                      onValueChange={(value) => setFormData({ ...formData, currency: value })}
                     >
                       <SelectTrigger className="h-9 w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {SUPPORTED_CURRENCIES.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -812,9 +766,7 @@ export function GigDialog({
                       className="h-9"
                       type="date"
                       value={formData.response_deadline}
-                      onChange={(e) =>
-                        setFormData({ ...formData, response_deadline: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, response_deadline: e.target.value })}
                     />
                   </div>
                 )}
@@ -828,9 +780,7 @@ export function GigDialog({
                   <Textarea
                     placeholder={t('notesPlaceholder')}
                     value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={2}
                     className="resize-none text-sm"
                   />
@@ -840,15 +790,11 @@ export function GigDialog({
                   <Textarea
                     placeholder={t('invoiceNotesPlaceholder')}
                     value={formData.invoice_notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, invoice_notes: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, invoice_notes: e.target.value })}
                     rows={2}
                     className="resize-none text-sm"
                   />
-                  <p className="text-[11px] text-muted-foreground/60">
-                    {t('invoiceNotesHint')}
-                  </p>
+                  <p className="text-[11px] text-muted-foreground/60">{t('invoiceNotesHint')}</p>
                 </div>
               </div>
 
@@ -874,7 +820,12 @@ export function GigDialog({
             </div>
 
             {/* RIGHT — Calendar (always on desktop, step 2 on mobile) */}
-            <div className={cn("border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto", !isLg && step !== 2 && "hidden")}>
+            <div
+              className={cn(
+                'border-t lg:border-t-0 lg:border-l border-border/40 bg-muted/30 p-4 flex flex-col overflow-y-auto',
+                !isLg && step !== 2 && 'hidden',
+              )}
+            >
               <MultiDayDatePicker
                 selectedDates={selectedDates}
                 onDatesChange={setSelectedDates}
@@ -899,23 +850,12 @@ export function GigDialog({
           {/* Footer */}
           <div className="px-6 py-3 border-t border-border/50 flex items-center gap-2.5 shrink-0 bg-card">
             {!isLg && step === 2 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setStep(1)}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => setStep(1)}>
                 {tc('back')}
               </Button>
             )}
             <div className="flex-1" />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCancel}
-              disabled={loading}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleCancel} disabled={loading}>
               {tc('cancel')}
             </Button>
             <Button
@@ -931,7 +871,7 @@ export function GigDialog({
               }}
             >
               {loading && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-              {!isLg && step === 1 ? tc('next') : (isEditing ? t('saveChanges') : t('createGig'))}
+              {!isLg && step === 1 ? tc('next') : isEditing ? t('saveChanges') : t('createGig')}
             </Button>
           </div>
         </form>

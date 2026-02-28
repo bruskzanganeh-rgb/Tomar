@@ -1,18 +1,11 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Building2, Mail, Phone, Edit, Trash2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -57,20 +50,26 @@ export default function ClientsPage() {
   const t = useTranslations('client')
   const tc = useTranslations('common')
 
-  const { data: clients = [], isLoading: loading, mutate } = useSWR<Client[]>(
+  const {
+    data: clients = [],
+    isLoading: loading,
+    mutate,
+  } = useSWR<Client[]>(
     'clients-with-invoices',
     async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select(`
+        .select(
+          `
           *,
           invoices(total)
-        `)
+        `,
+        )
         .order('name')
       if (error) throw error
-      return (data || []) as Client[]
+      return (data || []) as unknown as Client[]
     },
-    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+    { revalidateOnFocus: false, dedupingInterval: 10_000 },
   )
 
   function confirmDelete(id: string) {
@@ -79,10 +78,7 @@ export default function ClientsPage() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('clients').delete().eq('id', id)
 
     if (error) {
       console.error('Error deleting client:', error)
@@ -92,7 +88,7 @@ export default function ClientsPage() {
     }
   }
 
-  const filteredClients = clients.filter(c => {
+  const filteredClients = clients.filter((c) => {
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()
     return (
@@ -135,118 +131,113 @@ export default function ClientsPage() {
             </div>
           ) : (
             <>
-            {/* Mobile card view */}
-            <div className="lg:hidden space-y-2">
-              {filteredClients.map((client) => {
-                const invoiceCount = client.invoices?.length || 0
-                const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
-                return (
-                  <div key={client.id} className="p-3 rounded-lg border bg-card">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/clients/${client.id}`} className="font-medium text-sm hover:text-primary hover:underline">
-                          {client.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {invoiceCount} {t('invoicesColumn').toLowerCase()} · {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} ${tc('kr')}` : '-'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingClient(client)}>
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => confirmDelete(client.id)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Desktop table view */}
-            <div className="hidden lg:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('name')}</TableHead>
-                  <TableHead className="text-right">{t('invoicesColumn')}</TableHead>
-                  <TableHead className="text-right">{t('invoicedColumn')}</TableHead>
-                  <TableHead>{t('orgNumber')}</TableHead>
-                  <TableHead>{t('paymentTerms')}</TableHead>
-                  <TableHead className="text-right">{t('actionsColumn')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+              {/* Mobile card view */}
+              <div className="lg:hidden space-y-2">
                 {filteredClients.map((client) => {
                   const invoiceCount = client.invoices?.length || 0
                   const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
-
                   return (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          href={`/clients/${client.id}`}
-                          className="hover:text-primary hover:underline"
-                        >
-                          {client.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm font-medium">
-                          {invoiceCount}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-sm font-medium">
-                          {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} ${tc('kr')}` : '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {client.org_number || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {client.payment_terms} {tc('days')}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                    <div key={client.id} className="p-3 rounded-lg border bg-card">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/clients/${client.id}`}
+                            className="font-medium text-sm hover:text-primary hover:underline"
+                          >
+                            {client.name}
+                          </Link>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {invoiceCount} {t('invoicesColumn').toLowerCase()} ·{' '}
+                            {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} ${tc('kr')}` : '-'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-7 w-7"
                             onClick={() => setEditingClient(client)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-7 w-7"
                             onClick={() => confirmDelete(client.id)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   )
                 })}
-              </TableBody>
-            </Table>
-            </div>
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('name')}</TableHead>
+                      <TableHead className="text-right">{t('invoicesColumn')}</TableHead>
+                      <TableHead className="text-right">{t('invoicedColumn')}</TableHead>
+                      <TableHead>{t('orgNumber')}</TableHead>
+                      <TableHead>{t('paymentTerms')}</TableHead>
+                      <TableHead className="text-right">{t('actionsColumn')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClients.map((client) => {
+                      const invoiceCount = client.invoices?.length || 0
+                      const totalInvoiced = client.invoices?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+
+                      return (
+                        <TableRow key={client.id}>
+                          <TableCell className="font-medium">
+                            <Link href={`/clients/${client.id}`} className="hover:text-primary hover:underline">
+                              {client.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-sm font-medium">{invoiceCount}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-sm font-medium">
+                              {totalInvoiced > 0 ? `${totalInvoiced.toLocaleString('sv-SE')} ${tc('kr')}` : '-'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">{client.org_number || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">
+                              {client.payment_terms} {tc('days')}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setEditingClient(client)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => confirmDelete(client.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
         </CardContent>
       </Card>
 
-      <CreateClientDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={() => mutate()}
-      />
+      <CreateClientDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={() => mutate()} />
 
       <EditClientDialog
         client={editingClient}

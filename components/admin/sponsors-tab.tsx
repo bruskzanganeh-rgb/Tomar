@@ -6,20 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Award, Plus, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
@@ -32,8 +20,8 @@ type Sponsor = {
   tagline: string | null
   website_url: string | null
   instrument_category_id: string
-  active: boolean
-  priority: number
+  active: boolean | null
+  priority: number | null
   category_name?: string
 }
 
@@ -96,13 +84,13 @@ export function SponsorsTab({ sponsors, setSponsors, categories, onReload }: Pro
 
   async function handleDelete(id: string) {
     await supabase.from('sponsors').delete().eq('id', id)
-    setSponsors(prev => prev.filter(s => s.id !== id))
+    setSponsors((prev) => prev.filter((s) => s.id !== id))
     toast.success(tToast('sponsorDeleted'))
   }
 
-  async function handleToggle(id: string, active: boolean) {
+  async function handleToggle(id: string, active: boolean | null) {
     await supabase.from('sponsors').update({ active: !active }).eq('id', id)
-    setSponsors(prev => prev.map(s => s.id === id ? { ...s, active: !active } : s))
+    setSponsors((prev) => prev.map((s) => (s.id === id ? { ...s, active: !active } : s)))
   }
 
   return (
@@ -124,14 +112,20 @@ export function SponsorsTab({ sponsors, setSponsors, categories, onReload }: Pro
         </Card>
       ) : (
         <div className="space-y-2">
-          {sponsors.map(s => (
+          {sponsors.map((s) => (
             <Card key={s.id}>
               <CardContent className="py-3 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">{s.name}</p>
-                    <Badge variant="secondary" className="text-[10px]">{s.category_name}</Badge>
-                    {!s.active && <Badge variant="destructive" className="text-[10px]">{t('inactive')}</Badge>}
+                    <Badge variant="secondary" className="text-[10px]">
+                      {s.category_name}
+                    </Badge>
+                    {!s.active && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        {t('inactive')}
+                      </Badge>
+                    )}
                   </div>
                   {s.tagline && <p className="text-xs text-muted-foreground">{s.tagline}</p>}
                 </div>
@@ -139,7 +133,12 @@ export function SponsorsTab({ sponsors, setSponsors, categories, onReload }: Pro
                   <Button variant="outline" size="sm" onClick={() => handleToggle(s.id, s.active)}>
                     {s.active ? t('deactivate') : t('activate')}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(s.id)} className="text-destructive hover:text-destructive">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(s.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -157,38 +156,67 @@ export function SponsorsTab({ sponsors, setSponsors, categories, onReload }: Pro
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('name')}</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Pirastro" />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Pirastro"
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('instrumentCategory')}</Label>
-              <Select value={form.instrument_category_id} onValueChange={v => setForm(f => ({ ...f, instrument_category_id: v }))}>
-                <SelectTrigger><SelectValue placeholder={t('selectCategory')} /></SelectTrigger>
+              <Select
+                value={form.instrument_category_id}
+                onValueChange={(v) => setForm((f) => ({ ...f, instrument_category_id: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('selectCategory')} />
+                </SelectTrigger>
                 <SelectContent>
-                  {categories.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>{t('tagline')}</Label>
-              <Input value={form.tagline} onChange={e => setForm(f => ({ ...f, tagline: e.target.value }))} placeholder="The sound of excellence" />
+              <Input
+                value={form.tagline}
+                onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
+                placeholder="The sound of excellence"
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('website')}</Label>
-              <Input value={form.website_url} onChange={e => setForm(f => ({ ...f, website_url: e.target.value }))} placeholder="https://pirastro.com" />
+              <Input
+                value={form.website_url}
+                onChange={(e) => setForm((f) => ({ ...f, website_url: e.target.value }))}
+                placeholder="https://pirastro.com"
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('logoUrl')}</Label>
-              <Input value={form.logo_url} onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))} placeholder="https://..." />
+              <Input
+                value={form.logo_url}
+                onChange={(e) => setForm((f) => ({ ...f, logo_url: e.target.value }))}
+                placeholder="https://..."
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('priority')}</Label>
-              <Input type="number" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 0 }))} />
+              <Input
+                type="number"
+                value={form.priority}
+                onChange={(e) => setForm((f) => ({ ...f, priority: parseInt(e.target.value) || 0 }))}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>{tc('cancel')}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              {tc('cancel')}
+            </Button>
             <Button onClick={handleCreate} disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {tc('create')}

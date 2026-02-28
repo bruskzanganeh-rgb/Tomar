@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createContractSchema } from '@/lib/contracts/schemas'
+import type { Database } from '@/lib/types/supabase'
 import { generateContractNumber } from '@/lib/contracts/contract-number'
 import { generateContractPdf } from '@/lib/pdf/contract-generator'
 import { uploadContractPdf } from '@/lib/contracts/storage'
@@ -10,7 +11,9 @@ import { logContractEvent } from '@/lib/contracts/audit'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 async function requireAdmin(supabase: ReturnType<typeof createClient> extends Promise<infer T> ? T : never) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return null
   const { data: isAdmin } = await supabase.rpc('is_admin', { uid: user.id })
   if (!isAdmin) return null
@@ -67,7 +70,11 @@ export async function POST(request: NextRequest) {
   const contractNumber = await generateContractNumber(adminClient)
 
   // Fetch company info for PDF
-  let companyInfo = { company_name: null as string | null, org_number: null as string | null, address: null as string | null }
+  let companyInfo = {
+    company_name: null as string | null,
+    org_number: null as string | null,
+    address: null as string | null,
+  }
   if (parsed.data.company_id) {
     const { data: company } = await adminClient
       .from('companies')
@@ -78,10 +85,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Insert contract
+  const { custom_terms, ...restData } = parsed.data
   const { data: contract, error: insertError } = await adminClient
     .from('contracts')
     .insert({
-      ...parsed.data,
+      ...restData,
+      custom_terms: custom_terms as unknown as Database['public']['Tables']['contracts']['Insert']['custom_terms'],
       contract_number: contractNumber,
       status: 'draft',
     })
@@ -117,7 +126,7 @@ export async function POST(request: NextRequest) {
     parsed.data.company_id || null,
     contract.id,
     'unsigned.pdf',
-    pdfBuffer
+    pdfBuffer,
   )
 
   // Update contract with PDF path and hash

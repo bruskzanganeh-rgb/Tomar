@@ -85,8 +85,8 @@ type Sponsor = {
   tagline: string | null
   website_url: string | null
   instrument_category_id: string
-  active: boolean
-  priority: number
+  active: boolean | null
+  priority: number | null
   category_name?: string
 }
 
@@ -129,7 +129,31 @@ export default function AdminPage() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [categories, setCategories] = useState<InstrumentCategory[]>([])
-  const [stripeData, setStripeData] = useState<Record<string, unknown> | null>(null)
+  const [stripeData, setStripeData] = useState<{
+    metrics: {
+      mrr: number
+      arr: number
+      monthlyCount: number
+      yearlyCount: number
+      adminSetCount: number
+      activePro: number
+      cancelingCount: number
+      pastDueCount: number
+    }
+    events: {
+      id: number
+      table_name: string
+      record_id: string
+      action: string
+      old_data: Record<string, any> | null
+      new_data: Record<string, any> | null
+      changed_fields: string[] | null
+      user_id: string | null
+      created_at: string
+    }[]
+    webhookUrl: string
+    webhookConfigured: boolean
+  } | null>(null)
 
   // Config
   const [configValues, setConfigValues] = useState<Record<string, string>>({})
@@ -144,7 +168,7 @@ export default function AdminPage() {
       return
     }
 
-    const { data } = await supabase.rpc('is_admin', { uid: user.id })
+    const { data } = await (supabase.rpc as Function)('is_admin', { uid: user.id })
     if (!data) {
       router.push('/dashboard')
       return
@@ -163,9 +187,12 @@ export default function AdminPage() {
       .order('sort_order')
     if (cats)
       setCategories(
-        cats.map((c: Record<string, unknown>) => ({
-          ...c,
-          instrument_count: c.instruments?.[0]?.count || 0,
+        cats.map((c) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          sort_order: c.sort_order,
+          instrument_count: (c.instruments as unknown as { count: number }[])?.[0]?.count || 0,
         })),
       )
 
@@ -179,13 +206,22 @@ export default function AdminPage() {
     // Sponsors
     const { data: sponsorData } = await supabase
       .from('sponsors')
-      .select('*, category:instrument_categories(name)')
+      .select(
+        'id, name, logo_url, tagline, website_url, instrument_category_id, active, priority, category:instrument_categories(name)',
+      )
       .order('priority', { ascending: false })
     if (sponsorData) {
       setSponsors(
-        sponsorData.map((s: Record<string, unknown>) => ({
-          ...s,
-          category_name: s.category?.name,
+        sponsorData.map((s) => ({
+          id: s.id,
+          name: s.name,
+          logo_url: s.logo_url,
+          tagline: s.tagline,
+          website_url: s.website_url,
+          instrument_category_id: s.instrument_category_id,
+          active: s.active,
+          priority: s.priority,
+          category_name: (s.category as unknown as { name: string } | null)?.name,
         })),
       )
     }

@@ -5,7 +5,10 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function GET() {
   const supabase = await createClient()
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -33,7 +36,7 @@ export async function GET() {
   }
 
   // Fetch auth emails using admin client
-  const userIds = members.map(m => m.user_id)
+  const userIds = members.map((m) => m.user_id)
   const emailMap = new Map<string, string>()
 
   try {
@@ -51,12 +54,12 @@ export async function GET() {
       .select('user_id, email')
       .in('user_id', userIds)
     for (const s of settingsRows || []) {
-      emailMap.set(s.user_id, s.email)
+      if (s.user_id) emailMap.set(s.user_id, s.email)
     }
   }
 
   // Enrich members with emails
-  const enrichedMembers = members.map(m => ({
+  const enrichedMembers = members.map((m) => ({
     ...m,
     company_id: membership.company_id,
     email: emailMap.get(m.user_id) || null,

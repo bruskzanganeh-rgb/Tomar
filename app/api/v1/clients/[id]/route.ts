@@ -3,6 +3,7 @@ import { validateApiKey, requireScope } from '@/lib/api-auth'
 import { apiSuccess, apiError, apiValidationError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Database } from '@/lib/types/supabase'
 import { createClientSchema } from '@/lib/schemas/client'
 
 type Params = { params: Promise<{ id: string }> }
@@ -22,12 +23,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { id } = await params
     const supabase = createAdminClient()
 
-    const { data, error } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', auth.userId)
-      .single()
+    const { data, error } = await supabase.from('clients').select('*').eq('id', id).eq('user_id', auth.userId).single()
 
     if (error) {
       if (error.code === 'PGRST116') return apiError('Client not found', 404)
@@ -61,9 +57,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     const supabase = createAdminClient()
+    const { payment_terms, ...rest } = parsed.data
+    const updateData: Record<string, unknown> = {
+      ...rest,
+      ...(payment_terms !== undefined ? { payment_terms: parseInt(payment_terms, 10) || null } : {}),
+    }
     const { data, error } = await supabase
       .from('clients')
-      .update(parsed.data)
+      .update(updateData as Database['public']['Tables']['clients']['Update'])
       .eq('id', id)
       .eq('user_id', auth.userId)
       .select()
@@ -96,11 +97,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const { id } = await params
     const supabase = createAdminClient()
 
-    const { error } = await supabase
-      .from('clients')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', auth.userId)
+    const { error } = await supabase.from('clients').delete().eq('id', id).eq('user_id', auth.userId)
 
     if (error) throw error
 

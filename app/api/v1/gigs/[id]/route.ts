@@ -4,6 +4,7 @@ import { apiSuccess, apiError, apiValidationError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createGigSchema } from '@/lib/schemas/gig'
+import type { Database } from '@/lib/types/supabase'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -24,14 +25,16 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const { data, error } = await supabase
       .from('gigs')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name, email, org_number),
         gig_type:gig_types(id, name, vat_rate),
         position:positions(id, name),
         gig_dates(date),
         gig_attachments(id, file_name, category)
-      `)
+      `,
+      )
       .eq('id', id)
       .eq('user_id', auth.userId)
       .single()
@@ -87,7 +90,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (Object.keys(updateData).length > 0) {
       const { error: updateError } = await supabase
         .from('gigs')
-        .update(updateData)
+        .update(updateData as Database['public']['Tables']['gigs']['Update'])
         .eq('id', id)
         .eq('user_id', auth.userId)
 
@@ -96,10 +99,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     // Update dates if provided
     if (dates && dates.length > 0) {
-      const { error: deleteError } = await supabase
-        .from('gig_dates')
-        .delete()
-        .eq('gig_id', id)
+      const { error: deleteError } = await supabase.from('gig_dates').delete().eq('gig_id', id)
 
       if (deleteError) throw deleteError
 
@@ -126,13 +126,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     // Re-fetch the gig with all relations to return fresh data
     const { data, error } = await supabase
       .from('gigs')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name),
         gig_type:gig_types(id, name),
         position:positions(id, name),
         gig_dates(date)
-      `)
+      `,
+      )
       .eq('id', id)
       .single()
 
@@ -163,11 +165,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     // Delete gig_dates first
     await supabase.from('gig_dates').delete().eq('gig_id', id)
 
-    const { error } = await supabase
-      .from('gigs')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', auth.userId)
+    const { error } = await supabase.from('gigs').delete().eq('id', id).eq('user_id', auth.userId)
 
     if (error) throw error
 

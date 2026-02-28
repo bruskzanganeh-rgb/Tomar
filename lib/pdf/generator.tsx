@@ -1,13 +1,5 @@
 import React from 'react'
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-  renderToBuffer,
-} from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, renderToBuffer } from '@react-pdf/renderer'
 
 // Using built-in fonts: Helvetica (sans-serif), Times-Roman (serif)
 
@@ -25,7 +17,7 @@ type CompanySettings = {
   logo_url: string | null
   vat_registration_number?: string | null
   late_payment_interest_text?: string | null
-  show_logo_on_invoice?: boolean
+  show_logo_on_invoice?: boolean | null
   our_reference?: string | null
 }
 
@@ -47,14 +39,14 @@ type InvoiceData = {
   total: number
   reference_person_override?: string | null
   notes?: string | null
-  reverse_charge?: boolean
+  reverse_charge?: boolean | null
   customer_vat_number?: string | null
 }
 
 type InvoiceLine = {
   description: string
   amount: number
-  vat_rate: number
+  vat_rate: number | null
 }
 
 type SponsorData = {
@@ -136,7 +128,8 @@ const PDF_LABELS: Record<string, Record<string, string>> = {
     createdWith: 'Created with',
     poweredBy: 'Powered by',
     invoicedAmount: 'Invoiced amount',
-    reverseCharge: 'Reverse charge — VAT to be accounted for by the recipient pursuant to Article 196, Council Directive 2006/112/EC',
+    reverseCharge:
+      'Reverse charge — VAT to be accounted for by the recipient pursuant to Article 196, Council Directive 2006/112/EC',
     customerVatNumber: 'Customer VAT no.',
   },
 }
@@ -491,23 +484,37 @@ function formatDate(dateStr: string): string {
 }
 
 // PDF Document Component
-function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBranding = false, sponsor, locale = 'sv', brandingName = 'Amida' }: GeneratePdfParams) {
+function InvoicePDF({
+  invoice,
+  client,
+  company,
+  lines,
+  currency = 'SEK',
+  showBranding = false,
+  sponsor,
+  locale = 'sv',
+  brandingName = 'Amida',
+}: GeneratePdfParams) {
   const fmt = (amount: number) => formatCurrencyPdf(amount, currency)
   const l = getLabels(locale)
-  const invoiceLines = lines && lines.length > 0
-    ? lines
-    : [{ description: l.invoicedAmount, amount: invoice.subtotal, vat_rate: invoice.vat_rate }]
+  const invoiceLines =
+    lines && lines.length > 0
+      ? lines
+      : [{ description: l.invoicedAmount, amount: invoice.subtotal, vat_rate: invoice.vat_rate }]
 
   // Group lines by VAT rate and calculate underlag (base amount) for each
-  const vatGroups = invoiceLines.reduce((acc, line) => {
-    const rate = line.vat_rate
-    if (!acc[rate]) {
-      acc[rate] = { underlag: 0, vat: 0 }
-    }
-    acc[rate].underlag += line.amount
-    acc[rate].vat += line.amount * rate / 100
-    return acc
-  }, {} as Record<number, { underlag: number; vat: number }>)
+  const vatGroups = invoiceLines.reduce(
+    (acc, line) => {
+      const rate = line.vat_rate ?? 0
+      if (!acc[rate]) {
+        acc[rate] = { underlag: 0, vat: 0 }
+      }
+      acc[rate].underlag += line.amount
+      acc[rate].vat += (line.amount * rate) / 100
+      return acc
+    },
+    {} as Record<number, { underlag: number; vat: number }>,
+  )
 
   // Sort VAT rates (0% first, then ascending)
   const sortedVatRates = Object.keys(vatGroups)
@@ -521,7 +528,9 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.companyName}>{company.company_name}</Text>
-            <Text style={styles.companyDetail}>{l.orgNr} {company.org_number}</Text>
+            <Text style={styles.companyDetail}>
+              {l.orgNr} {company.org_number}
+            </Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.invoiceLabel}>{l.invoice}</Text>
@@ -535,11 +544,11 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
             <Text style={styles.label}>{l.billedTo}</Text>
             <Text style={styles.clientName}>{client.name}</Text>
             {client.org_number && (
-              <Text style={styles.clientDetail}>{l.orgNr} {client.org_number}</Text>
+              <Text style={styles.clientDetail}>
+                {l.orgNr} {client.org_number}
+              </Text>
             )}
-            {client.address && (
-              <Text style={styles.clientDetail}>{client.address}</Text>
-            )}
+            {client.address && <Text style={styles.clientDetail}>{client.address}</Text>}
           </View>
           <View style={styles.datesSection}>
             <View style={styles.dateRow}>
@@ -554,7 +563,10 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
         </View>
 
         {/* Invoice Details Section - our reference, client reference, payment terms, bankgiro */}
-        {(company.our_reference || invoice.reference_person_override || client.reference_person || client.payment_terms) && (
+        {(company.our_reference ||
+          invoice.reference_person_override ||
+          client.reference_person ||
+          client.payment_terms) && (
           <View style={styles.invoiceDetailsSection}>
             {company.our_reference && (
               <View style={styles.invoiceDetailItem}>
@@ -568,7 +580,9 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
               <View style={styles.invoiceDetailItem}>
                 <Text>
                   <Text style={styles.invoiceDetailLabel}>{l.yourReference} </Text>
-                  <Text style={styles.invoiceDetailValue}>{invoice.reference_person_override || client.reference_person}</Text>
+                  <Text style={styles.invoiceDetailValue}>
+                    {invoice.reference_person_override || client.reference_person}
+                  </Text>
                 </Text>
               </View>
             )}
@@ -576,7 +590,9 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
               <View style={styles.invoiceDetailItem}>
                 <Text>
                   <Text style={styles.invoiceDetailLabel}>{l.paymentTerms} </Text>
-                  <Text style={styles.invoiceDetailValue}>{client.payment_terms} {l.daysNet}</Text>
+                  <Text style={styles.invoiceDetailValue}>
+                    {client.payment_terms} {l.daysNet}
+                  </Text>
                 </Text>
               </View>
             )}
@@ -623,9 +639,7 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
           {invoiceLines.map((line, index) => (
             <View key={index} style={styles.tableRow}>
               <Text style={[styles.rowText, styles.descCol]}>{line.description}</Text>
-              <Text style={[styles.rowAmount, styles.amountCol]}>
-                {fmt(line.amount)}
-              </Text>
+              <Text style={[styles.rowAmount, styles.amountCol]}>{fmt(line.amount)}</Text>
             </View>
           ))}
         </View>
@@ -649,7 +663,12 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
             {sortedVatRates.map((rate) => (
               <View key={rate} style={styles.totalRow}>
                 <Text style={styles.vatUnderlag}>
-                  {l.vat} {rate}% ({l.basis} {vatGroups[rate].underlag.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                  {l.vat} {rate}% ({l.basis}{' '}
+                  {vatGroups[rate].underlag.toLocaleString('sv-SE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                  )
                 </Text>
                 <Text style={styles.totalValue}>{fmt(vatGroups[rate].vat)}</Text>
               </View>
@@ -664,9 +683,7 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
         {/* Reverse charge notice */}
         {invoice.reverse_charge && (
           <View style={{ marginTop: 8, padding: 8, backgroundColor: '#fef3c7', borderRadius: 4 }}>
-            <Text style={{ fontSize: 7.5, color: '#92400e', fontWeight: 700 }}>
-              {l.reverseCharge}
-            </Text>
+            <Text style={{ fontSize: 7.5, color: '#92400e', fontWeight: 700 }}>{l.reverseCharge}</Text>
             {invoice.customer_vat_number && (
               <Text style={{ fontSize: 7, color: '#92400e', marginTop: 2 }}>
                 {l.customerVatNumber}: {invoice.customer_vat_number}
@@ -678,9 +695,7 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
         {/* Footer - 4 column layout */}
         <View style={styles.footer}>
           {/* Payment reference text */}
-          <Text style={styles.paymentReferenceText}>
-            {l.paymentRef.replace('#{n}', `#${invoice.invoice_number}`)}
-          </Text>
+          <Text style={styles.paymentReferenceText}>{l.paymentRef.replace('#{n}', `#${invoice.invoice_number}`)}</Text>
 
           {/* Late payment interest text */}
           {company.late_payment_interest_text && (
@@ -699,7 +714,9 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
             <View style={styles.footerColumn}>
               <Text style={styles.footerValueBold}>{company.company_name}</Text>
               {company.address?.split('\n').map((line, i) => (
-                <Text key={i} style={styles.footerValue}>{line}</Text>
+                <Text key={i} style={styles.footerValue}>
+                  {line}
+                </Text>
               ))}
             </View>
 
@@ -748,30 +765,29 @@ function InvoicePDF({ invoice, client, company, lines, currency = 'SEK', showBra
 
         {/* Branding footer for free users */}
         {showBranding && (
-          <View style={{
-            position: 'absolute',
-            bottom: 15,
-            left: 0,
-            right: 0,
-            flexDirection: 'row',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 4,
-          }}>
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 15,
+              left: 0,
+              right: 0,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
             <Text style={{ fontSize: 7, color: colors.muted }}>
               {l.createdWith} {brandingName}
             </Text>
             {sponsor && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                 <Text style={{ fontSize: 7, color: colors.muted }}>
-                  {' | '}{l.poweredBy}
+                  {' | '}
+                  {l.poweredBy}
                 </Text>
-                {sponsor.logo_url && (
-                  <Image src={sponsor.logo_url} style={{ height: 10 }} />
-                )}
-                <Text style={{ fontSize: 7, color: colors.muted }}>
-                  {sponsor.name}
-                </Text>
+                {sponsor.logo_url && <Image src={sponsor.logo_url} style={{ height: 10 }} />}
+                <Text style={{ fontSize: 7, color: colors.muted }}>{sponsor.name}</Text>
               </View>
             )}
           </View>

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Json } from '@/lib/types/supabase'
 
 export type ActivityEventType =
   | 'invoice_sent'
@@ -45,7 +46,7 @@ export async function logActivity(params: LogActivityParams): Promise<void> {
       event_type: params.eventType,
       entity_type: params.entityType || null,
       entity_id: params.entityId || null,
-      metadata: params.metadata || {},
+      metadata: (params.metadata || {}) as Json,
       ip_address: params.ipAddress || null,
       user_agent: params.userAgent || null,
     })

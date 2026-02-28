@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
@@ -7,29 +7,12 @@ import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Receipt, BarChart3, Upload, Image, Download, Loader2, X, Search, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
 import { EditExpenseDialog } from '@/components/expenses/edit-expense-dialog'
 import { ExportDialog } from '@/components/expenses/export-dialog'
@@ -110,7 +93,11 @@ export default function ExpensesTab() {
     return userId.slice(0, 6)
   }
 
-  const { data: expenses = [], isLoading: loading, mutate: mutateExpenses } = useSWR<Expense[]>(
+  const {
+    data: expenses = [],
+    isLoading: loading,
+    mutate: mutateExpenses,
+  } = useSWR<Expense[]>(
     'expenses-with-gigs',
     async () => {
       const { data, error } = await supabase
@@ -118,9 +105,9 @@ export default function ExpensesTab() {
         .select('*, gig:gigs(id, project_name, date, client:clients(name))')
         .order('date', { ascending: false })
       if (error) throw error
-      return (data || []) as Expense[]
+      return (data || []) as unknown as Expense[]
     },
-    { revalidateOnFocus: false, dedupingInterval: 10_000 }
+    { revalidateOnFocus: false, dedupingInterval: 10_000 },
   )
 
   const { data: gigs = [] } = useSWR<Gig[]>(
@@ -133,7 +120,7 @@ export default function ExpensesTab() {
         .order('date', { ascending: false })
       return (data || []) as unknown as Gig[]
     },
-    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
   )
 
   async function openPreview(expenseId: string, attachmentUrl?: string) {
@@ -160,11 +147,11 @@ export default function ExpensesTab() {
     }
   }
 
-  const years = [...new Set(expenses.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a)
-  const categories = [...new Set(expenses.map(e => e.category).filter(Boolean))].sort() as string[]
-  const suppliers = [...new Set(expenses.map(e => e.supplier))].sort()
+  const years = [...new Set(expenses.map((e) => new Date(e.date).getFullYear()))].sort((a, b) => b - a)
+  const categories = [...new Set(expenses.map((e) => e.category).filter(Boolean))].sort() as string[]
+  const suppliers = [...new Set(expenses.map((e) => e.supplier))].sort()
 
-  const filteredExpenses = expenses.filter(e => {
+  const filteredExpenses = expenses.filter((e) => {
     if (yearFilter !== 'all' && new Date(e.date).getFullYear().toString() !== yearFilter) return false
     if (categoryFilter !== 'all' && e.category !== categoryFilter) return false
     if (supplierFilter !== 'all' && e.supplier !== supplierFilter) return false
@@ -182,19 +169,25 @@ export default function ExpensesTab() {
 
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
 
-  const yearlyData = years.map(year => {
-    const yearExpenses = expenses.filter(e => new Date(e.date).getFullYear() === year)
-    const total = yearExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
-    return {
-      year: year.toString(),
-      total: Math.round(total),
-      count: yearExpenses.length
-    }
-  }).sort((a, b) => parseInt(a.year) - parseInt(b.year))
+  const yearlyData = years
+    .map((year) => {
+      const yearExpenses = expenses.filter((e) => new Date(e.date).getFullYear() === year)
+      const total = yearExpenses.reduce((sum, e) => sum + (e.amount_base || e.amount), 0)
+      return {
+        year: year.toString(),
+        total: Math.round(total),
+        count: yearExpenses.length,
+      }
+    })
+    .sort((a, b) => parseInt(a.year) - parseInt(b.year))
 
   useEffect(() => {
-    function handleUpload() { setShowUploadDialog(true) }
-    function handleExport() { setShowExportDialog(true) }
+    function handleUpload() {
+      setShowUploadDialog(true)
+    }
+    function handleExport() {
+      setShowExportDialog(true)
+    }
     window.addEventListener('upload-receipt', handleUpload)
     window.addEventListener('export-expenses', handleExport)
     return () => {
@@ -205,385 +198,387 @@ export default function ExpensesTab() {
 
   return (
     <PageTransition>
-    <div className="space-y-6">
-      {/* Filter */}
-      <div className="flex flex-wrap gap-2">
-        <div>
-          <Select value={yearFilter} onValueChange={setYearFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('allYears')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('allYears')}</SelectItem>
-              {years.map((year) => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="space-y-6">
+        {/* Filter */}
+        <div className="flex flex-wrap gap-2">
+          <div>
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allYears')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allYears')}</SelectItem>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allCategories')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allCategories')}</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Select value={supplierFilter} onValueChange={setSupplierFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allSuppliers')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allSuppliers')}</SelectItem>
+                {suppliers.map((sup) => (
+                  <SelectItem key={sup} value={sup}>
+                    {sup}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Select value={gigFilter} onValueChange={setGigFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('allGigs')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('allGigs')}</SelectItem>
+                <SelectItem value="linked">{t('withGig')}</SelectItem>
+                <SelectItem value="unlinked">{t('withoutGig')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('allCategories')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('allCategories')}</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('allSuppliers')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('allSuppliers')}</SelectItem>
-              {suppliers.map((sup) => (
-                <SelectItem key={sup} value={sup}>{sup}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Select value={gigFilter} onValueChange={setGigFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('allGigs')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('allGigs')}</SelectItem>
-              <SelectItem value="linked">{t('withGig')}</SelectItem>
-              <SelectItem value="unlinked">{t('withoutGig')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
-                ? `${t('filteredExpenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
-                : t('totalExpenses')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalExpenses.toLocaleString(formatLocale)} {tc('kr')}
-            </div>
-          </CardContent>
-        </Card>
-
-        {yearlyData.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                {t('expensesPerYear')}
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
+                  ? `${t('filteredExpenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
+                  : t('totalExpenses')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[120px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={yearlyData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                    <XAxis
-                      dataKey="year"
-                      tick={{ fontSize: 12 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                      width={40}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => [`${value.toLocaleString(formatLocale)} ${tc('kr')}`, tc('total')]}
-                      labelFormatter={(label) => `${t('year')} ${label}`}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-                      {yearlyData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.year === yearFilter ? '#3b82f6' : '#93c5fd'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="text-2xl font-bold">
+                {totalExpenses.toLocaleString(formatLocale)} {tc('kr')}
               </div>
             </CardContent>
           </Card>
-        )}
-      </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
-                ? `${t('expenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
-                : `${t('allExpenses')} (${expenses.length})`}
-            </CardTitle>
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={`${tc('search')}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <TableSkeleton columns={7} rows={5} />
-          ) : filteredExpenses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              {expenses.length === 0 ? (
-                <>
-                  <p>{t('noExpensesYet')}</p>
-                  <p className="text-sm">
-                    {t('uploadOrImportHint')}
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setShowUploadDialog(true)}>
-                    <Upload className="h-4 w-4 mr-1" />
-                    {t('uploadReceipt')}
-                  </Button>
-                </>
-              ) : (
-                <p>{t('noExpensesMatchFilter')}</p>
-              )}
-            </div>
-          ) : (
-            <>
-            {/* Mobile card view */}
-            <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
-              {filteredExpenses.map((expense) => (
-                <div
-                  key={expense.id}
-                  className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => setSelectedExpense(expense)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{expense.supplier}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(expense.date), 'd MMM yyyy', { locale: dateLocale })}
-                        </span>
-                        {expense.category && (
-                          <Badge variant="outline" className="text-xs">{expense.category}</Badge>
-                        )}
-                      </div>
-                      {expense.gig && (
-                        <Badge variant="secondary" className="text-xs mt-1">
-                          {expense.gig.client?.name || expense.gig.project_name || format(new Date(expense.gig.date), 'd MMM', { locale: dateLocale })}
-                        </Badge>
-                      )}
-                      {isSharedMode && expense.user_id !== currentUserId && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(expense.user_id)}</p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-semibold text-sm">
-                        {expense.currency && expense.currency !== 'SEK'
-                          ? `${expense.amount.toLocaleString(formatLocale)} ${expense.currency === 'EUR' ? '\u20AC' : '$'}`
-                          : `${expense.amount.toLocaleString(formatLocale)} ${tc('kr')}`}
-                      </span>
-                      {expense.currency && expense.currency !== 'SEK' && expense.amount_base && (
-                        <p className="text-xs text-muted-foreground">
-                          {expense.amount_base.toLocaleString(formatLocale)} {tc('kr')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {(expense.notes || expense.attachment_url) && (
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                      {expense.notes ? (
-                        <p className="text-xs text-muted-foreground truncate flex-1">{expense.notes}</p>
-                      ) : <div />}
-                      {expense.attachment_url && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openPreview(expense.id, expense.attachment_url!) }}
-                          className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
-                          title={t('showReceiptImage')}
-                        >
-                          <Image className="h-5 w-5 text-blue-500" />
-                        </button>
-                      )}
-                    </div>
-                  )}
+          {yearlyData.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  {t('expensesPerYear')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[120px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={yearlyData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                      <XAxis dataKey="year" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis
+                        tick={{ fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                        width={40}
+                      />
+                      <Tooltip
+                        formatter={(value: number) => [
+                          `${value.toLocaleString(formatLocale)} ${tc('kr')}`,
+                          tc('total'),
+                        ]}
+                        labelFormatter={(label) => `${t('year')} ${label}`}
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                        {yearlyData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.year === yearFilter ? '#3b82f6' : '#93c5fd'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
-
-            {/* Desktop table view */}
-            <div className="hidden lg:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('date')}</TableHead>
-                  <TableHead>{t('supplier')}</TableHead>
-                  <TableHead>{t('category')}</TableHead>
-                  <TableHead>{t('gig')}</TableHead>
-                  <TableHead>{t('amount')}</TableHead>
-                  <TableHead>{t('notes')}</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredExpenses.map((expense) => (
-                  <TableRow
-                    key={expense.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedExpense(expense)}
-                  >
-                    <TableCell>
-                      {format(new Date(expense.date), 'PPP', { locale: dateLocale })}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div>
-                        {expense.supplier}
-                        {isSharedMode && expense.user_id !== currentUserId && (
-                          <div className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(expense.user_id)}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {expense.category ? (
-                        <Badge variant="outline">{expense.category}</Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {expense.gig ? (
-                        <Badge variant="secondary" className="text-xs">
-                          {expense.gig.client?.name || expense.gig.project_name || format(new Date(expense.gig.date), 'd MMM', { locale: dateLocale })}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {expense.currency && expense.currency !== 'SEK' ? (
-                        <div>
-                          <span>{expense.amount.toLocaleString(formatLocale)} {expense.currency === 'EUR' ? '\u20AC' : '$'}</span>
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({expense.amount_base?.toLocaleString(formatLocale)} {tc('kr')})
-                          </span>
-                        </div>
-                      ) : (
-                        <span>{expense.amount.toLocaleString(formatLocale)} {tc('kr')}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {expense.notes || '-'}
-                      </span>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {expense.attachment_url && (
-                        <button
-                          onClick={() => openPreview(expense.id, expense.attachment_url!)}
-                          className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
-                          title={t('showReceiptImage')}
-                        >
-                          <Image className="h-5 w-5 text-blue-500" />
-                        </button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            </div>
-            </>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      <UploadReceiptDialog
-        open={showUploadDialog}
-        onOpenChange={setShowUploadDialog}
-        onSuccess={() => mutateExpenses()}
-      />
-
-      <ExportDialog
-        open={showExportDialog}
-        onOpenChange={setShowExportDialog}
-      />
-
-      <EditExpenseDialog
-        expense={selectedExpense}
-        open={selectedExpense !== null}
-        onOpenChange={(open) => !open && setSelectedExpense(null)}
-        onSuccess={() => mutateExpenses()}
-        gigs={gigs}
-      />
-
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className={`p-0 ${previewIsPdf ? 'sm:max-w-[700px]' : 'sm:max-w-[600px]'}`}>
-          <DialogTitle className="sr-only">{t('receiptPreview')}</DialogTitle>
-          <div className="relative">
-            <div className="absolute top-2 right-2 z-10 flex gap-1">
-              {previewUrl && (
-                <button
-                  onClick={() => previewUrl && downloadFile(previewUrl, `kvitto.${previewIsPdf ? 'pdf' : 'jpg'}`)}
-                  className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-                  title={tc('download')}
-                >
-                  <Download className="h-5 w-5" />
-                </button>
-              )}
-              <button
-                onClick={() => setPreviewOpen(false)}
-                className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                {yearFilter !== 'all' || categoryFilter !== 'all' || supplierFilter !== 'all' || gigFilter !== 'all'
+                  ? `${t('expenses')} ${yearFilter !== 'all' ? yearFilter : ''} (${filteredExpenses.length} / ${expenses.length})`
+                  : `${t('allExpenses')} (${expenses.length})`}
+              </CardTitle>
+              <div className="relative w-full max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={`${tc('search')}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
-            {previewLoading ? (
-              <div className="flex items-center justify-center h-96">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <TableSkeleton columns={7} rows={5} />
+            ) : filteredExpenses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                {expenses.length === 0 ? (
+                  <>
+                    <p>{t('noExpensesYet')}</p>
+                    <p className="text-sm">{t('uploadOrImportHint')}</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={() => setShowUploadDialog(true)}>
+                      <Upload className="h-4 w-4 mr-1" />
+                      {t('uploadReceipt')}
+                    </Button>
+                  </>
+                ) : (
+                  <p>{t('noExpensesMatchFilter')}</p>
+                )}
               </div>
-            ) : previewUrl ? (
-              previewIsPdf ? (
-                <iframe
-                  src={previewUrl}
-                  className="w-full h-[80vh] rounded-lg"
-                  title={t('receiptPreview')}
-                />
-              ) : (
-                <img
-                  src={previewUrl}
-                  alt={t('receipt')}
-                  className="w-full max-h-[80vh] object-contain"
-                />
-              )
             ) : (
-              <div className="flex items-center justify-center h-96 text-gray-500">
-                {t('couldNotLoadImage')}
-              </div>
+              <>
+                {/* Mobile card view */}
+                <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                  {filteredExpenses.map((expense) => (
+                    <div
+                      key={expense.id}
+                      className="p-3 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => setSelectedExpense(expense)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{expense.supplier}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(expense.date), 'd MMM yyyy', { locale: dateLocale })}
+                            </span>
+                            {expense.category && (
+                              <Badge variant="outline" className="text-xs">
+                                {expense.category}
+                              </Badge>
+                            )}
+                          </div>
+                          {expense.gig && (
+                            <Badge variant="secondary" className="text-xs mt-1">
+                              {expense.gig.client?.name ||
+                                expense.gig.project_name ||
+                                format(new Date(expense.gig.date), 'd MMM', { locale: dateLocale })}
+                            </Badge>
+                          )}
+                          {isSharedMode && expense.user_id !== currentUserId && (
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              {getMemberLabel(expense.user_id)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-semibold text-sm">
+                            {expense.currency && expense.currency !== 'SEK'
+                              ? `${expense.amount.toLocaleString(formatLocale)} ${expense.currency === 'EUR' ? '\u20AC' : '$'}`
+                              : `${expense.amount.toLocaleString(formatLocale)} ${tc('kr')}`}
+                          </span>
+                          {expense.currency && expense.currency !== 'SEK' && expense.amount_base && (
+                            <p className="text-xs text-muted-foreground">
+                              {expense.amount_base.toLocaleString(formatLocale)} {tc('kr')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {(expense.notes || expense.attachment_url) && (
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          {expense.notes ? (
+                            <p className="text-xs text-muted-foreground truncate flex-1">{expense.notes}</p>
+                          ) : (
+                            <div />
+                          )}
+                          {expense.attachment_url && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openPreview(expense.id, expense.attachment_url!)
+                              }}
+                              className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
+                              title={t('showReceiptImage')}
+                            >
+                              <Image className="h-5 w-5 text-blue-500" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table view */}
+                <div className="hidden lg:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('date')}</TableHead>
+                        <TableHead>{t('supplier')}</TableHead>
+                        <TableHead>{t('category')}</TableHead>
+                        <TableHead>{t('gig')}</TableHead>
+                        <TableHead>{t('amount')}</TableHead>
+                        <TableHead>{t('notes')}</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredExpenses.map((expense) => (
+                        <TableRow
+                          key={expense.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedExpense(expense)}
+                        >
+                          <TableCell>{format(new Date(expense.date), 'PPP', { locale: dateLocale })}</TableCell>
+                          <TableCell className="font-medium">
+                            <div>
+                              {expense.supplier}
+                              {isSharedMode && expense.user_id !== currentUserId && (
+                                <div className="text-xs text-blue-600 dark:text-blue-400">
+                                  {getMemberLabel(expense.user_id)}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {expense.category ? (
+                              <Badge variant="outline">{expense.category}</Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {expense.gig ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {expense.gig.client?.name ||
+                                  expense.gig.project_name ||
+                                  format(new Date(expense.gig.date), 'd MMM', { locale: dateLocale })}
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {expense.currency && expense.currency !== 'SEK' ? (
+                              <div>
+                                <span>
+                                  {expense.amount.toLocaleString(formatLocale)}{' '}
+                                  {expense.currency === 'EUR' ? '\u20AC' : '$'}
+                                </span>
+                                <span className="text-xs text-muted-foreground ml-1">
+                                  ({expense.amount_base?.toLocaleString(formatLocale)} {tc('kr')})
+                                </span>
+                              </div>
+                            ) : (
+                              <span>
+                                {expense.amount.toLocaleString(formatLocale)} {tc('kr')}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">{expense.notes || '-'}</span>
+                          </TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            {expense.attachment_url && (
+                              <button
+                                onClick={() => openPreview(expense.id, expense.attachment_url!)}
+                                className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
+                                title={t('showReceiptImage')}
+                              >
+                                <Image className="h-5 w-5 text-blue-500" />
+                              </button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </CardContent>
+        </Card>
+
+        <UploadReceiptDialog
+          open={showUploadDialog}
+          onOpenChange={setShowUploadDialog}
+          onSuccess={() => mutateExpenses()}
+        />
+
+        <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} />
+
+        <EditExpenseDialog
+          expense={selectedExpense}
+          open={selectedExpense !== null}
+          onOpenChange={(open) => !open && setSelectedExpense(null)}
+          onSuccess={() => mutateExpenses()}
+          gigs={gigs}
+        />
+
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className={`p-0 ${previewIsPdf ? 'sm:max-w-[700px]' : 'sm:max-w-[600px]'}`}>
+            <DialogTitle className="sr-only">{t('receiptPreview')}</DialogTitle>
+            <div className="relative">
+              <div className="absolute top-2 right-2 z-10 flex gap-1">
+                {previewUrl && (
+                  <button
+                    onClick={() => previewUrl && downloadFile(previewUrl, `kvitto.${previewIsPdf ? 'pdf' : 'jpg'}`)}
+                    className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                    title={tc('download')}
+                  >
+                    <Download className="h-5 w-5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setPreviewOpen(false)}
+                  className="p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-96">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : previewUrl ? (
+                previewIsPdf ? (
+                  <iframe src={previewUrl} className="w-full h-[80vh] rounded-lg" title={t('receiptPreview')} />
+                ) : (
+                  <img src={previewUrl} alt={t('receipt')} className="w-full max-h-[80vh] object-contain" />
+                )
+              ) : (
+                <div className="flex items-center justify-center h-96 text-gray-500">{t('couldNotLoadImage')}</div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </PageTransition>
   )
 }

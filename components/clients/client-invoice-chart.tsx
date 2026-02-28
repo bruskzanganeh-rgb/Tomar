@@ -3,29 +3,15 @@
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 type Invoice = {
   id: string
   invoice_number: number
   invoice_date: string
   total: number
-  status: string
+  status: string | null
 }
 
 type Props = {
@@ -40,15 +26,11 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
 
   // Get available years from invoices
   const availableYears = useMemo(() => {
-    const years = [...new Set(invoices.map(inv =>
-      new Date(inv.invoice_date).getFullYear()
-    ))].sort((a, b) => b - a) // Descending order
-    return years.map(y => y.toString())
+    const years = [...new Set(invoices.map((inv) => new Date(inv.invoice_date).getFullYear()))].sort((a, b) => b - a) // Descending order
+    return years.map((y) => y.toString())
   }, [invoices])
 
-  const [selectedYear, setSelectedYear] = useState<string>(
-    availableYears[0] || new Date().getFullYear().toString()
-  )
+  const [selectedYear, setSelectedYear] = useState<string>(availableYears[0] || new Date().getFullYear().toString())
 
   // Calculate monthly data for selected year
   const chartData = useMemo(() => {
@@ -62,11 +44,11 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
 
     // Sum invoices by month
     invoices
-      .filter(inv => {
+      .filter((inv) => {
         const invYear = new Date(inv.invoice_date).getFullYear()
         return invYear === year && (inv.status === 'paid' || inv.status === 'sent')
       })
-      .forEach(inv => {
+      .forEach((inv) => {
         const month = new Date(inv.invoice_date).getMonth()
         monthlyData[month] += inv.total
       })
@@ -90,7 +72,10 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
         <div>
           <CardTitle>{t('invoicingPerMonth')}</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {t('totalYear', { year: selectedYear })}: <span className="font-semibold">{yearTotal.toLocaleString('sv-SE')} {tc('kr')}</span>
+            {t('totalYear', { year: selectedYear })}:{' '}
+            <span className="font-semibold">
+              {yearTotal.toLocaleString('sv-SE')} {tc('kr')}
+            </span>
           </p>
         </div>
         <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -98,8 +83,10 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
             <SelectValue placeholder={t('yearLabel')} />
           </SelectTrigger>
           <SelectContent>
-            {availableYears.map(year => (
-              <SelectItem key={year} value={year}>{year}</SelectItem>
+            {availableYears.map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -109,17 +96,12 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
           <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorClientRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis
-              dataKey="monthName"
-              tick={{ fontSize: 12 }}
-              tickLine={false}
-              axisLine={false}
-            />
+            <XAxis dataKey="monthName" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
             <YAxis
               tick={{ fontSize: 12 }}
               tickLine={false}
@@ -135,13 +117,7 @@ export function ClientInvoiceChart({ invoices, clientName }: Props) {
                 borderRadius: '8px',
               }}
             />
-            <Area
-              type="monotone"
-              dataKey="total"
-              stroke="#8b5cf6"
-              fillOpacity={1}
-              fill="url(#colorClientRevenue)"
-            />
+            <Area type="monotone" dataKey="total" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorClientRevenue)" />
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>

@@ -9,18 +9,29 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Settings, Building2, CreditCard, Image, Loader2, Upload, Trash2, Calendar, Copy, Check, Mail, Send, Crown, Globe, Key, Users } from 'lucide-react'
+import {
+  Settings,
+  Building2,
+  CreditCard,
+  Image,
+  Loader2,
+  Upload,
+  Trash2,
+  Calendar,
+  Copy,
+  Check,
+  Mail,
+  Send,
+  Crown,
+  Globe,
+  Key,
+  Users,
+} from 'lucide-react'
 import { SubscriptionSettings } from '@/components/settings/subscription-settings'
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings'
 import { TeamSettings } from '@/components/settings/team-settings'
 import { Switch } from '@/components/ui/switch'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useTranslations, useLocale } from 'next-intl'
 import { useSubscription } from '@/lib/hooks/use-subscription'
@@ -42,7 +53,7 @@ type CompanySettings = {
   logo_url: string | null
   vat_registration_number: string | null
   late_payment_interest_text: string | null
-  show_logo_on_invoice: boolean
+  show_logo_on_invoice: boolean | null
   our_reference: string | null
   smtp_host: string | null
   smtp_port: number | null
@@ -50,10 +61,10 @@ type CompanySettings = {
   smtp_password: string | null
   smtp_from_email: string | null
   smtp_from_name: string | null
-  base_currency: string
-  locale: string
+  base_currency: string | null
+  locale: string | null
   email_provider: string | null
-  country_code: string
+  country_code: string | null
   calendar_token: string | null
 }
 
@@ -91,9 +102,10 @@ export default function SettingsPage() {
 
   // Generate calendar URL with user parameter and auth token
   const calendarToken = settings?.calendar_token || ''
-  const calendarUrl = typeof window !== 'undefined' && userId && calendarToken
-    ? `${window.location.origin}/api/calendar/feed?user=${userId}&token=${calendarToken}`
-    : ''
+  const calendarUrl =
+    typeof window !== 'undefined' && userId && calendarToken
+      ? `${window.location.origin}/api/calendar/feed?user=${userId}&token=${calendarToken}`
+      : ''
   const webcalUrl = calendarUrl.replace('http://', 'webcal://').replace('https://', 'webcal://')
 
   async function copyCalendarUrl() {
@@ -128,11 +140,7 @@ export default function SettingsPage() {
     }
 
     // Load company info from companies table
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .limit(1)
-      .single()
+    const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
 
     if (membership) {
       const { data: company, error: compError } = await supabase
@@ -251,24 +259,27 @@ export default function SettingsPage() {
     setTestingEmail(true)
     try {
       // Send test email to the logged-in user's own email, not the company email
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       const toEmail = user?.email || settings?.email
 
-      const body = emailProvider === 'platform'
-        ? {
-            provider: 'platform',
-            to_email: toEmail,
-          }
-        : {
-            provider: 'smtp',
-            smtp_host: settings?.smtp_host,
-            smtp_port: settings?.smtp_port || 587,
-            smtp_user: settings?.smtp_user,
-            smtp_password: settings?.smtp_password,
-            smtp_from_email: settings?.smtp_from_email,
-            smtp_from_name: settings?.smtp_from_name || settings?.company_name,
-            to_email: toEmail,
-          }
+      const body =
+        emailProvider === 'platform'
+          ? {
+              provider: 'platform',
+              to_email: toEmail,
+            }
+          : {
+              provider: 'smtp',
+              smtp_host: settings?.smtp_host,
+              smtp_port: settings?.smtp_port || 587,
+              smtp_user: settings?.smtp_user,
+              smtp_password: settings?.smtp_password,
+              smtp_from_email: settings?.smtp_from_email,
+              smtp_from_name: settings?.smtp_from_name || settings?.company_name,
+              to_email: toEmail,
+            }
 
       const response = await fetch('/api/settings/test-email', {
         method: 'POST',
@@ -345,696 +356,604 @@ export default function SettingsPage() {
 
   return (
     <PageTransition>
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="w-full overflow-x-auto justify-start">
-        <TabsTrigger value="company" className="gap-2" title={t('tabCompany')}>
-          <Building2 className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">{t('tabCompany')}</span>
-        </TabsTrigger>
-        <TabsTrigger value="email" className="gap-2" title={t('tabEmail')}>
-          <Mail className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">{t('tabEmail')}</span>
-        </TabsTrigger>
-        <TabsTrigger value="calendar" className="gap-2" title={t('tabCalendar')}>
-          <Calendar className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">{t('tabCalendar')}</span>
-        </TabsTrigger>
-        <TabsTrigger value="team" className="gap-2" title={t('tabTeam')}>
-          <Users className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">{t('tabTeam')}</span>
-        </TabsTrigger>
-        <TabsTrigger value="api" className="gap-2" title="API">
-          <Key className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">API</span>
-        </TabsTrigger>
-        <TabsTrigger value="subscription" className="gap-2" title={t('tabSubscription')}>
-          <Crown className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">{t('tabSubscription')}</span>
-        </TabsTrigger>
-      </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="w-full overflow-x-auto justify-start">
+          <TabsTrigger value="company" className="gap-2" title={t('tabCompany')}>
+            <Building2 className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{t('tabCompany')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="email" className="gap-2" title={t('tabEmail')}>
+            <Mail className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{t('tabEmail')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2" title={t('tabCalendar')}>
+            <Calendar className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{t('tabCalendar')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="team" className="gap-2" title={t('tabTeam')}>
+            <Users className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{t('tabTeam')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="api" className="gap-2" title="API">
+            <Key className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">API</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="gap-2" title={t('tabSubscription')}>
+            <Crown className="h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">{t('tabSubscription')}</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Company Tab */}
-      <TabsContent value="company" className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-        {/* Company Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              {t('companyInfo')}
-            </CardTitle>
-            <CardDescription>
-              {t('companyInfoDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="company_name">{t('companyName')}</Label>
-              <Input
-                id="company_name"
-                value={settings?.company_name || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, company_name: e.target.value } : null)
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t('country')}</Label>
-              <Select
-                value={settings?.country_code || 'SE'}
-                onValueChange={(value) =>
-                  setSettings(s => s ? { ...s, country_code: value } : null)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(COUNTRY_CONFIGS).map(([code, config]) => (
-                    <SelectItem key={code} value={code}>
-                      {config.flag} {locale === 'sv' ? config.name.sv : config.name.en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="org_number">{locale === 'sv' ? countryConfig.orgLabel.sv : countryConfig.orgLabel.en}</Label>
-              <Input
-                id="org_number"
-                value={settings?.org_number || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, org_number: e.target.value } : null)
-                }
-                placeholder={countryConfig.orgPlaceholder}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">{t('address')}</Label>
-              <Textarea
-                id="address"
-                rows={3}
-                value={settings?.address || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, address: e.target.value } : null)
-                }
-                className="resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('email')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={settings?.email || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, email: e.target.value } : null)
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">{t('phone')}</Label>
-                <Input
-                  id="phone"
-                  value={settings?.phone || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, phone: e.target.value } : null)
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="our_reference">{t('ourReference')}</Label>
-              <Input
-                id="our_reference"
-                value={settings?.our_reference || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, our_reference: e.target.value } : null)
-                }
-                placeholder={t('referenceExample')}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('ourReferenceHint')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bank & Payment */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              {t('paymentInfo')}
-            </CardTitle>
-            <CardDescription>
-              {t('paymentInfoDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="bankgiro">{t('bankgiro')}</Label>
-                <Input
-                  id="bankgiro"
-                  value={settings?.bankgiro || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, bankgiro: e.target.value } : null)
-                  }
-                  placeholder="XXXX-XXXX"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bank_account">{locale === 'sv' ? countryConfig.bankLabel.sv : countryConfig.bankLabel.en}</Label>
-                <Input
-                  id="bank_account"
-                  value={settings?.bank_account || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, bank_account: e.target.value } : null)
-                  }
-                  placeholder={countryConfig.bankPlaceholder}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="iban">IBAN</Label>
-                <Input
-                  id="iban"
-                  value={settings?.iban || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, iban: e.target.value } : null)
-                  }
-                  placeholder="SE00 0000 0000 0000 0000 0000"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bic">BIC / SWIFT</Label>
-                <Input
-                  id="bic"
-                  value={settings?.bic || ''}
-                  onChange={(e) =>
-                    setSettings(s => s ? { ...s, bic: e.target.value } : null)
-                  }
-                  placeholder="XXXXSESS"
-                />
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              {t('bankAccountHint')}
-            </p>
-
-            <div className="space-y-2">
-              <Label htmlFor="vat_registration_number">{t('vatRegNumber')}</Label>
-              <Input
-                id="vat_registration_number"
-                value={settings?.vat_registration_number || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, vat_registration_number: e.target.value } : null)
-                }
-                placeholder="SE559087745101"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('vatRegNumberHint')}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="late_payment_interest_text">{t('latePaymentInterest')}</Label>
-              <Textarea
-                id="late_payment_interest_text"
-                rows={2}
-                value={settings?.late_payment_interest_text || ''}
-                onChange={(e) =>
-                  setSettings(s => s ? { ...s, late_payment_interest_text: e.target.value } : null)
-                }
-                placeholder={t('latePaymentExample')}
-                className="resize-none"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('latePaymentInterestHint')}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="base_currency">{t('baseCurrency')}</Label>
-              <Select
-                value={settings?.base_currency || 'SEK'}
-                onValueChange={(value) =>
-                  setSettings(s => s ? { ...s, base_currency: value } : null)
-                }
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SEK">SEK — Svenska kronor</SelectItem>
-                  <SelectItem value="NOK">NOK — Norska kronor</SelectItem>
-                  <SelectItem value="DKK">DKK — Danska kronor</SelectItem>
-                  <SelectItem value="EUR">EUR — Euro</SelectItem>
-                  <SelectItem value="USD">USD — US Dollar</SelectItem>
-                  <SelectItem value="GBP">GBP — Brittiskt pund</SelectItem>
-                  <SelectItem value="CHF">CHF — Schweizisk franc</SelectItem>
-                  <SelectItem value="CZK">CZK — Tjeckisk krona</SelectItem>
-                  <SelectItem value="PLN">PLN — Polsk zloty</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {t('baseCurrencyHint')}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="locale">{t('language')}</Label>
-              <Select
-                value={settings?.locale || 'sv'}
-                onValueChange={async (value) => {
-                  setSettings(s => s ? { ...s, locale: value } : null)
-                  // Save locale to DB immediately
-                  if (settings?.id) {
-                    await supabase
-                      .from('company_settings')
-                      .update({ locale: value })
-                      .eq('id', settings.id)
-                  }
-                  // Set cookie and reload for the new locale to take effect
-                  document.cookie = `NEXT_LOCALE=${value};path=/;max-age=${60 * 60 * 24 * 365}`
-                  window.location.reload()
-                }}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <Globe className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sv">Svenska</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {t('languageHint')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Logo */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Image className="h-5 w-5" />
-              {t('logo')}
-            </CardTitle>
-            <CardDescription>
-              {t('logoDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-start gap-6">
-              {/* Preview */}
-              <div className="w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50">
-                {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt={t('logo')}
-                    className="max-w-full max-h-full object-contain p-2"
-                  />
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <Image className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs">{t('noLogo')}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Upload controls */}
-              <div className="space-y-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {tc('chooseImage')}
-                </Button>
-
-                {logoPreview && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRemoveLogo}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {tc('delete')}
-                  </Button>
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  {t('logoSizeRecommendation')}<br />
-                  {t('logoFormats')}
-                </p>
-              </div>
-            </div>
-
-            {/* Show logo on invoice toggle */}
-            <div className="flex items-center justify-between pt-4 border-t mt-4">
-              <div className="space-y-0.5">
-                <Label htmlFor="show_logo_on_invoice">{t('showLogoOnInvoice')}</Label>
-                <p className="text-xs text-muted-foreground">
-                  {t('showLogoOnInvoiceHint')}
-                </p>
-              </div>
-              <Switch
-                id="show_logo_on_invoice"
-                checked={settings?.show_logo_on_invoice ?? true}
-                onCheckedChange={(checked) =>
-                  setSettings(s => s ? { ...s, show_logo_on_invoice: checked } : null)
-                }
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        </div>
-
-        {/* Save button */}
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving} size="lg">
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {tc('saveSettings')}
-          </Button>
-        </div>
-      </TabsContent>
-
-      {/* Email Tab */}
-      <TabsContent value="email" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              {t('emailSettings')}
-            </CardTitle>
-            <CardDescription>
-              {t('emailSettingsDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!isPro ? (
-              <div className="p-4 rounded-lg bg-muted/50 text-center space-y-2">
-                <Crown className="h-8 w-8 mx-auto text-yellow-500" />
-                <p className="text-sm font-medium">{t('emailRequiresPro')}</p>
-                <button onClick={() => setActiveTab('subscription')} className="text-sm text-primary underline">
-                  {t('subscription')}
-                </button>
-              </div>
-            ) : (
-              <>
-                {/* Provider selector */}
+        {/* Company Tab */}
+        <TabsContent value="company" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Company Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  {t('companyInfo')}
+                </CardTitle>
+                <CardDescription>{t('companyInfoDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>{t('emailProvider')}</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={emailProvider === 'platform' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setEmailProvider('platform')}
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      {t('platformEmail')}
-                    </Button>
-                    <Button
-                      variant={emailProvider === 'smtp' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setEmailProvider('smtp')}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      {t('ownSmtp')}
-                    </Button>
+                  <Label htmlFor="company_name">{t('companyName')}</Label>
+                  <Input
+                    id="company_name"
+                    value={settings?.company_name || ''}
+                    onChange={(e) => setSettings((s) => (s ? { ...s, company_name: e.target.value } : null))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('country')}</Label>
+                  <Select
+                    value={settings?.country_code || 'SE'}
+                    onValueChange={(value) => setSettings((s) => (s ? { ...s, country_code: value } : null))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(COUNTRY_CONFIGS).map(([code, config]) => (
+                        <SelectItem key={code} value={code}>
+                          {config.flag} {locale === 'sv' ? config.name.sv : config.name.en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="org_number">
+                    {locale === 'sv' ? countryConfig.orgLabel.sv : countryConfig.orgLabel.en}
+                  </Label>
+                  <Input
+                    id="org_number"
+                    value={settings?.org_number || ''}
+                    onChange={(e) => setSettings((s) => (s ? { ...s, org_number: e.target.value } : null))}
+                    placeholder={countryConfig.orgPlaceholder}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">{t('address')}</Label>
+                  <Textarea
+                    id="address"
+                    rows={3}
+                    value={settings?.address || ''}
+                    onChange={(e) => setSettings((s) => (s ? { ...s, address: e.target.value } : null))}
+                    className="resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">{t('email')}</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={settings?.email || ''}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, email: e.target.value } : null))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">{t('phone')}</Label>
+                    <Input
+                      id="phone"
+                      value={settings?.phone || ''}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, phone: e.target.value } : null))}
+                    />
                   </div>
                 </div>
 
-                {emailProvider === 'platform' ? (
-                  <>
-                    <div className="p-4 rounded-lg bg-muted/50 flex items-start gap-3">
-                      <Mail className="h-5 w-5 mt-0.5 text-primary shrink-0" />
-                      <p className="text-sm text-muted-foreground">
-                        {t('platformEmailInfo')}
-                      </p>
-                    </div>
-
-                    <div className="pt-4 border-t flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-medium">{t('testConnection')}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('testConnectionHint', { email: settings?.email || '' })}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={handleTestEmail}
-                        disabled={testingEmail}
-                      >
-                        {testingEmail ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4 mr-2" />
-                        )}
-                        {t('sendTestEmail')}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_host">{t('smtpHost')}</Label>
-                        <Input
-                          id="smtp_host"
-                          value={settings?.smtp_host || ''}
-                          onChange={(e) =>
-                            setSettings(s => s ? { ...s, smtp_host: e.target.value } : null)
-                          }
-                          placeholder="smtp.gmail.com"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_port">{t('smtpPort')}</Label>
-                        <Input
-                          id="smtp_port"
-                          type="number"
-                          value={settings?.smtp_port || 587}
-                          onChange={(e) =>
-                            setSettings(s => s ? { ...s, smtp_port: parseInt(e.target.value) || 587 } : null)
-                          }
-                          placeholder="587"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_user">{t('smtpUser')}</Label>
-                        <Input
-                          id="smtp_user"
-                          value={settings?.smtp_user || ''}
-                          onChange={(e) =>
-                            setSettings(s => s ? { ...s, smtp_user: e.target.value } : null)
-                          }
-                          placeholder={t('smtpUserPlaceholder')}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_password">{t('smtpPassword')}</Label>
-                        <Input
-                          id="smtp_password"
-                          type="password"
-                          value={settings?.smtp_password || ''}
-                          onChange={(e) =>
-                            setSettings(s => s ? { ...s, smtp_password: e.target.value } : null)
-                          }
-                          placeholder="••••••••"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_from_email">{t('smtpFromEmail')}</Label>
-                        <Input
-                          id="smtp_from_email"
-                          type="email"
-                          value={settings?.smtp_from_email || ''}
-                          onChange={(e) =>
-                            setSettings(s => s ? { ...s, smtp_from_email: e.target.value } : null)
-                          }
-                          placeholder={t('smtpFromPlaceholder')}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="smtp_from_name">{t('smtpFromName')}</Label>
-                        <Input
-                          id="smtp_from_name"
-                          value={settings?.smtp_from_name || ''}
-                          onChange={(e) =>
-                            setSettings(s => s ? { ...s, smtp_from_name: e.target.value } : null)
-                          }
-                          placeholder={t('smtpFromNamePlaceholder')}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-medium">{t('testConnection')}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('testConnectionHint', { email: settings?.email || '' })}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={handleTestEmail}
-                        disabled={testingEmail || !settings?.smtp_host}
-                      >
-                        {testingEmail ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4 mr-2" />
-                        )}
-                        {t('sendTestEmail')}
-                      </Button>
-                    </div>
-
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">
-                        <strong>Gmail:</strong> {t('smtpGmail')}<br />
-                        <strong>Outlook:</strong> {t('smtpOutlook')}<br />
-                        <strong>{t('smtpCustom')}</strong>
-                      </p>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Save button for email */}
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving} size="lg">
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {tc('saveSettings')}
-          </Button>
-        </div>
-      </TabsContent>
-
-      {/* Calendar Tab */}
-      <TabsContent value="calendar">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              {t('calendarSubscription')}
-            </CardTitle>
-            <CardDescription>
-              {t('calendarSubscriptionDesc')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {calendarUrl.includes('localhost') ? (
-              <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
-                <p className="font-medium text-sm">{t('localDevTitle')}</p>
-                <p className="text-xs mt-1">
-                  {t('localDevWarning')}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Label>{t('subscriptionUrl')}</Label>
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="our_reference">{t('ourReference')}</Label>
                   <Input
-                    value={calendarUrl}
-                    readOnly
-                    className="font-mono text-sm"
+                    id="our_reference"
+                    value={settings?.our_reference || ''}
+                    onChange={(e) => setSettings((s) => (s ? { ...s, our_reference: e.target.value } : null))}
+                    placeholder={t('referenceExample')}
                   />
-                  <Button
-                    variant="outline"
-                    onClick={copyCalendarUrl}
-                    className="shrink-0"
+                  <p className="text-xs text-muted-foreground">{t('ourReferenceHint')}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank & Payment */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  {t('paymentInfo')}
+                </CardTitle>
+                <CardDescription>{t('paymentInfoDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bankgiro">{t('bankgiro')}</Label>
+                    <Input
+                      id="bankgiro"
+                      value={settings?.bankgiro || ''}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, bankgiro: e.target.value } : null))}
+                      placeholder="XXXX-XXXX"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bank_account">
+                      {locale === 'sv' ? countryConfig.bankLabel.sv : countryConfig.bankLabel.en}
+                    </Label>
+                    <Input
+                      id="bank_account"
+                      value={settings?.bank_account || ''}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, bank_account: e.target.value } : null))}
+                      placeholder={countryConfig.bankPlaceholder}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="iban">IBAN</Label>
+                    <Input
+                      id="iban"
+                      value={settings?.iban || ''}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, iban: e.target.value } : null))}
+                      placeholder="SE00 0000 0000 0000 0000 0000"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bic">BIC / SWIFT</Label>
+                    <Input
+                      id="bic"
+                      value={settings?.bic || ''}
+                      onChange={(e) => setSettings((s) => (s ? { ...s, bic: e.target.value } : null))}
+                      placeholder="XXXXSESS"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground">{t('bankAccountHint')}</p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vat_registration_number">{t('vatRegNumber')}</Label>
+                  <Input
+                    id="vat_registration_number"
+                    value={settings?.vat_registration_number || ''}
+                    onChange={(e) => setSettings((s) => (s ? { ...s, vat_registration_number: e.target.value } : null))}
+                    placeholder="SE559087745101"
+                  />
+                  <p className="text-xs text-muted-foreground">{t('vatRegNumberHint')}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="late_payment_interest_text">{t('latePaymentInterest')}</Label>
+                  <Textarea
+                    id="late_payment_interest_text"
+                    rows={2}
+                    value={settings?.late_payment_interest_text || ''}
+                    onChange={(e) =>
+                      setSettings((s) => (s ? { ...s, late_payment_interest_text: e.target.value } : null))
+                    }
+                    placeholder={t('latePaymentExample')}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">{t('latePaymentInterestHint')}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="base_currency">{t('baseCurrency')}</Label>
+                  <Select
+                    value={settings?.base_currency || 'SEK'}
+                    onValueChange={(value) => setSettings((s) => (s ? { ...s, base_currency: value } : null))}
                   >
-                    {calendarCopied ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SEK">SEK — Svenska kronor</SelectItem>
+                      <SelectItem value="NOK">NOK — Norska kronor</SelectItem>
+                      <SelectItem value="DKK">DKK — Danska kronor</SelectItem>
+                      <SelectItem value="EUR">EUR — Euro</SelectItem>
+                      <SelectItem value="USD">USD — US Dollar</SelectItem>
+                      <SelectItem value="GBP">GBP — Brittiskt pund</SelectItem>
+                      <SelectItem value="CHF">CHF — Schweizisk franc</SelectItem>
+                      <SelectItem value="CZK">CZK — Tjeckisk krona</SelectItem>
+                      <SelectItem value="PLN">PLN — Polsk zloty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{t('baseCurrencyHint')}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="locale">{t('language')}</Label>
+                  <Select
+                    value={settings?.locale || 'sv'}
+                    onValueChange={async (value) => {
+                      setSettings((s) => (s ? { ...s, locale: value } : null))
+                      // Save locale to DB immediately
+                      if (settings?.id) {
+                        await supabase.from('company_settings').update({ locale: value }).eq('id', settings.id)
+                      }
+                      // Set cookie and reload for the new locale to take effect
+                      document.cookie = `NEXT_LOCALE=${value};path=/;max-age=${60 * 60 * 24 * 365}`
+                      window.location.reload()
+                    }}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <Globe className="h-4 w-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sv">Svenska</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{t('languageHint')}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Logo */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  {t('logo')}
+                </CardTitle>
+                <CardDescription>{t('logoDesc')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start gap-6">
+                  {/* Preview */}
+                  <div className="w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt={t('logo')} className="max-w-full max-h-full object-contain p-2" />
                     ) : (
-                      <Copy className="h-4 w-4" />
+                      <div className="text-center text-muted-foreground">
+                        <Image className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-xs">{t('noLogo')}</p>
+                      </div>
                     )}
-                  </Button>
+                  </div>
+
+                  {/* Upload controls */}
+                  <div className="space-y-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      {tc('chooseImage')}
+                    </Button>
+
+                    {logoPreview && (
+                      <Button variant="ghost" size="sm" onClick={handleRemoveLogo} className="text-destructive">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        {tc('delete')}
+                      </Button>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      {t('logoSizeRecommendation')}
+                      <br />
+                      {t('logoFormats')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Show logo on invoice toggle */}
+                <div className="flex items-center justify-between pt-4 border-t mt-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="show_logo_on_invoice">{t('showLogoOnInvoice')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('showLogoOnInvoiceHint')}</p>
+                  </div>
+                  <Switch
+                    id="show_logo_on_invoice"
+                    checked={settings?.show_logo_on_invoice ?? true}
+                    onCheckedChange={(checked) =>
+                      setSettings((s) => (s ? { ...s, show_logo_on_invoice: checked } : null))
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Save button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving} size="lg">
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tc('saveSettings')}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Email Tab */}
+        <TabsContent value="email" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                {t('emailSettings')}
+              </CardTitle>
+              <CardDescription>{t('emailSettingsDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!isPro ? (
+                <div className="p-4 rounded-lg bg-muted/50 text-center space-y-2">
+                  <Crown className="h-8 w-8 mx-auto text-yellow-500" />
+                  <p className="text-sm font-medium">{t('emailRequiresPro')}</p>
+                  <button onClick={() => setActiveTab('subscription')} className="text-sm text-primary underline">
+                    {t('subscription')}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Provider selector */}
+                  <div className="space-y-2">
+                    <Label>{t('emailProvider')}</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={emailProvider === 'platform' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEmailProvider('platform')}
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        {t('platformEmail')}
+                      </Button>
+                      <Button
+                        variant={emailProvider === 'smtp' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEmailProvider('smtp')}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        {t('ownSmtp')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {emailProvider === 'platform' ? (
+                    <>
+                      <div className="p-4 rounded-lg bg-muted/50 flex items-start gap-3">
+                        <Mail className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+                        <p className="text-sm text-muted-foreground">{t('platformEmailInfo')}</p>
+                      </div>
+
+                      <div className="pt-4 border-t flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium">{t('testConnection')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('testConnectionHint', { email: settings?.email || '' })}
+                          </p>
+                        </div>
+                        <Button variant="outline" onClick={handleTestEmail} disabled={testingEmail}>
+                          {testingEmail ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-2" />
+                          )}
+                          {t('sendTestEmail')}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp_host">{t('smtpHost')}</Label>
+                          <Input
+                            id="smtp_host"
+                            value={settings?.smtp_host || ''}
+                            onChange={(e) => setSettings((s) => (s ? { ...s, smtp_host: e.target.value } : null))}
+                            placeholder="smtp.gmail.com"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp_port">{t('smtpPort')}</Label>
+                          <Input
+                            id="smtp_port"
+                            type="number"
+                            value={settings?.smtp_port || 587}
+                            onChange={(e) =>
+                              setSettings((s) => (s ? { ...s, smtp_port: parseInt(e.target.value) || 587 } : null))
+                            }
+                            placeholder="587"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp_user">{t('smtpUser')}</Label>
+                          <Input
+                            id="smtp_user"
+                            value={settings?.smtp_user || ''}
+                            onChange={(e) => setSettings((s) => (s ? { ...s, smtp_user: e.target.value } : null))}
+                            placeholder={t('smtpUserPlaceholder')}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp_password">{t('smtpPassword')}</Label>
+                          <Input
+                            id="smtp_password"
+                            type="password"
+                            value={settings?.smtp_password || ''}
+                            onChange={(e) => setSettings((s) => (s ? { ...s, smtp_password: e.target.value } : null))}
+                            placeholder="••••••••"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp_from_email">{t('smtpFromEmail')}</Label>
+                          <Input
+                            id="smtp_from_email"
+                            type="email"
+                            value={settings?.smtp_from_email || ''}
+                            onChange={(e) => setSettings((s) => (s ? { ...s, smtp_from_email: e.target.value } : null))}
+                            placeholder={t('smtpFromPlaceholder')}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="smtp_from_name">{t('smtpFromName')}</Label>
+                          <Input
+                            id="smtp_from_name"
+                            value={settings?.smtp_from_name || ''}
+                            onChange={(e) => setSettings((s) => (s ? { ...s, smtp_from_name: e.target.value } : null))}
+                            placeholder={t('smtpFromNamePlaceholder')}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium">{t('testConnection')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t('testConnectionHint', { email: settings?.email || '' })}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={handleTestEmail}
+                          disabled={testingEmail || !settings?.smtp_host}
+                        >
+                          {testingEmail ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-2" />
+                          )}
+                          {t('sendTestEmail')}
+                        </Button>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Gmail:</strong> {t('smtpGmail')}
+                          <br />
+                          <strong>Outlook:</strong> {t('smtpOutlook')}
+                          <br />
+                          <strong>{t('smtpCustom')}</strong>
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Save button for email */}
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving} size="lg">
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tc('saveSettings')}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Calendar Tab */}
+        <TabsContent value="calendar">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                {t('calendarSubscription')}
+              </CardTitle>
+              <CardDescription>{t('calendarSubscriptionDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {calendarUrl.includes('localhost') ? (
+                <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                  <p className="font-medium text-sm">{t('localDevTitle')}</p>
+                  <p className="text-xs mt-1">{t('localDevWarning')}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>{t('subscriptionUrl')}</Label>
+                  <div className="flex gap-2">
+                    <Input value={calendarUrl} readOnly className="font-mono text-sm" />
+                    <Button variant="outline" onClick={copyCalendarUrl} className="shrink-0">
+                      {calendarCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-4 pt-2">
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <h4 className="font-medium text-sm">{t('googleCalendar')}</h4>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>{t('googleCalendarStep1')}</li>
+                    <li>{t('googleCalendarStep2')}</li>
+                    <li>{t('googleCalendarStep3')}</li>
+                    <li>{t('googleCalendarStep4')}</li>
+                  </ol>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <h4 className="font-medium text-sm">{t('appleCalendar')}</h4>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>{t('appleCalendarStep1')}</li>
+                    <li>{t('appleCalendarStep2')}</li>
+                    <li>{t('appleCalendarStep3')}</li>
+                    <li>{t('appleCalendarStep4')}</li>
+                  </ol>
                 </div>
               </div>
-            )}
 
-            <div className="grid md:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h4 className="font-medium text-sm">{t('googleCalendar')}</h4>
-                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>{t('googleCalendarStep1')}</li>
-                  <li>{t('googleCalendarStep2')}</li>
-                  <li>{t('googleCalendarStep3')}</li>
-                  <li>{t('googleCalendarStep4')}</li>
-                </ol>
-              </div>
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h4 className="font-medium text-sm">{t('appleCalendar')}</h4>
-                <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>{t('appleCalendarStep1')}</li>
-                  <li>{t('appleCalendarStep2')}</li>
-                  <li>{t('appleCalendarStep3')}</li>
-                  <li>{t('appleCalendarStep4')}</li>
-                </ol>
-              </div>
-            </div>
+              <p className="text-xs text-muted-foreground">{t('calendarAutoUpdate')}</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            <p className="text-xs text-muted-foreground">
-              {t('calendarAutoUpdate')}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Team Tab */}
+        <TabsContent value="team">
+          <TeamSettings />
+        </TabsContent>
 
-      </TabsContent>
+        {/* API Tab */}
+        <TabsContent value="api">
+          <ApiKeysSettings />
+        </TabsContent>
 
-      {/* Team Tab */}
-      <TabsContent value="team">
-        <TeamSettings />
-      </TabsContent>
-
-      {/* API Tab */}
-      <TabsContent value="api">
-        <ApiKeysSettings />
-      </TabsContent>
-
-      {/* Subscription Tab */}
-      <TabsContent value="subscription">
-        <SubscriptionSettings />
-      </TabsContent>
-    </Tabs>
+        {/* Subscription Tab */}
+        <TabsContent value="subscription">
+          <SubscriptionSettings />
+        </TabsContent>
+      </Tabs>
     </PageTransition>
   )
 }

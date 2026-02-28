@@ -30,7 +30,7 @@ type InvoiceData = {
   vatRate: number
   vatAmount: number
   total: number
-  selectedClientId?: string | null  // null = skapa ny, undefined = använd matchning
+  selectedClientId?: string | null // null = skapa ny, undefined = använd matchning
 }
 
 type ImportResult = {
@@ -48,26 +48,25 @@ type ImportResult = {
     amount: number
     category: string | null
   }
-  createdClient?: string  // Namn på ny kund som skapades
+  createdClient?: string // Namn på ny kund som skapades
 }
 
 // Enkel klientmatchning
 function matchClientByName(
   clientName: string,
-  clients: Array<{ id: string; name: string }>
+  clients: Array<{ id: string; name: string }>,
 ): { id: string; name: string } | null {
   if (!clientName || clients.length === 0) return null
 
   const normalized = clientName.toLowerCase().trim()
 
   // Exakt match
-  const exact = clients.find(c => c.name.toLowerCase() === normalized)
+  const exact = clients.find((c) => c.name.toLowerCase() === normalized)
   if (exact) return exact
 
   // Partiell match
-  const partial = clients.find(c =>
-    c.name.toLowerCase().includes(normalized) ||
-    normalized.includes(c.name.toLowerCase())
+  const partial = clients.find(
+    (c) => c.name.toLowerCase().includes(normalized) || normalized.includes(c.name.toLowerCase()),
   )
   if (partial) return partial
 
@@ -86,7 +85,9 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticate user
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -97,32 +98,25 @@ export async function POST(request: NextRequest) {
     const skipDuplicates = formData.get('skipDuplicates') === 'true'
 
     if (!metadataJson) {
-      return NextResponse.json(
-        { error: 'Metadata required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Metadata required' }, { status: 400 })
     }
 
     const metadata: FileMetadata[] = JSON.parse(metadataJson)
 
     if (!metadata || metadata.length === 0) {
-      return NextResponse.json(
-        { error: 'No files to import' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'No files to import' }, { status: 400 })
     }
 
     // Batch import started
 
     // Hämta klienter för matching (scoped to user)
-    const { data: clients } = await supabase
-      .from('clients')
-      .select('id, name')
-      .eq('user_id', user.id)
+    const { data: clients } = await supabase.from('clients').select('id, name').eq('user_id', user.id)
 
     // Hämta befintliga utgifter för dublettkontroll (scoped to user)
-    const expenseMetadata = metadata.filter(m => m.type === 'expense')
-    const expenseDates = [...new Set(expenseMetadata.map(m => (m.data as ExpenseData).date).filter(Boolean))]
+    const expenseMetadata = metadata.filter((m) => m.type === 'expense')
+    const expenseDates = [
+      ...new Set(expenseMetadata.map((m) => (m.data as ExpenseData).date).filter((d): d is string => Boolean(d))),
+    ]
 
     const { data: existingExpenses } = await supabase
       .from('expenses')
@@ -149,32 +143,30 @@ export async function POST(request: NextRequest) {
       try {
         // Ladda upp fil till Supabase Storage
         const fileExt = file.name.split('.').pop() || 'pdf'
-        const year = fileMeta.type === 'expense'
-          ? ((fileMeta.data as ExpenseData).date?.substring(0, 4) || new Date().getFullYear().toString())
-          : (fileMeta.data as InvoiceData).invoiceDate.substring(0, 4)
+        const year =
+          fileMeta.type === 'expense'
+            ? (fileMeta.data as ExpenseData).date?.substring(0, 4) || new Date().getFullYear().toString()
+            : (fileMeta.data as InvoiceData).invoiceDate.substring(0, 4)
 
-        const storagePath = fileMeta.type === 'expense'
-          ? `receipts/${year}/${sanitizeStorageFilename(fileMeta.suggestedFilename)}.${fileExt}`
-          : `invoices/${year}/${sanitizeStorageFilename(fileMeta.suggestedFilename)}.${fileExt}`
+        const storagePath =
+          fileMeta.type === 'expense'
+            ? `receipts/${year}/${sanitizeStorageFilename(fileMeta.suggestedFilename)}.${fileExt}`
+            : `invoices/${year}/${sanitizeStorageFilename(fileMeta.suggestedFilename)}.${fileExt}`
 
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        const { error: uploadError } = await serviceSupabase.storage
-          .from('expenses')
-          .upload(storagePath, buffer, {
-            contentType: file.type,
-            upsert: true,
-          })
+        const { error: uploadError } = await serviceSupabase.storage.from('expenses').upload(storagePath, buffer, {
+          contentType: file.type,
+          upsert: true,
+        })
 
         if (uploadError) {
           console.error('Upload error:', uploadError)
         }
 
         // Hämta public URL
-        const { data: urlData } = serviceSupabase.storage
-          .from('expenses')
-          .getPublicUrl(storagePath)
+        const { data: urlData } = serviceSupabase.storage.from('expenses').getPublicUrl(storagePath)
 
         const attachmentUrl = urlData?.publicUrl || null
 
@@ -184,10 +176,10 @@ export async function POST(request: NextRequest) {
 
           // Dublettkontroll
           const duplicate = existingExpenses?.find(
-            exp =>
+            (exp) =>
               exp.date === expenseData.date &&
               exp.supplier.toLowerCase() === expenseData.supplier.toLowerCase() &&
-              Math.abs(exp.amount - expenseData.total) < 0.01
+              Math.abs(exp.amount - expenseData.total) < 0.01,
           )
 
           if (duplicate && skipDuplicates) {
@@ -346,10 +338,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const succeeded = results.filter(r => r.success).length
-    const failed = results.filter(r => !r.success && !r.skippedAsDuplicate).length
-    const skipped = results.filter(r => r.skippedAsDuplicate).length
-    const createdClients = results.filter(r => r.createdClient).map(r => r.createdClient!)
+    const succeeded = results.filter((r) => r.success).length
+    const failed = results.filter((r) => !r.success && !r.skippedAsDuplicate).length
+    const skipped = results.filter((r) => r.skippedAsDuplicate).length
+    const createdClients = results.filter((r) => r.createdClient).map((r) => r.createdClient!)
 
     // Batch import complete
     // createdClients info returned in response summary
@@ -361,16 +353,13 @@ export async function POST(request: NextRequest) {
         succeeded,
         failed,
         skipped,
-        expenses: results.filter(r => r.success && r.type === 'expense').length,
-        invoices: results.filter(r => r.success && r.type === 'invoice').length,
+        expenses: results.filter((r) => r.success && r.type === 'expense').length,
+        invoices: results.filter((r) => r.success && r.type === 'invoice').length,
         createdClients,
       },
     })
   } catch (error) {
     console.error('Batch import error:', error)
-    return NextResponse.json(
-      { error: 'Import failed' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Import failed' }, { status: 500 })
   }
 }

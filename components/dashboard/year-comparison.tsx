@@ -68,17 +68,27 @@ export function YearComparison() {
 
     if (invoices && gigs) {
       // Current year calculations
-      const currentYearInvoices = invoices.filter(inv => new Date(inv.invoice_date).getFullYear() === currentYearNum)
-      const currentYearGigs = gigs.filter(g => new Date(g.start_date).getFullYear() === currentYearNum)
-      const currentYearNewClients = (clients || []).filter(c => new Date(c.created_at).getFullYear() === currentYearNum)
+      const currentYearInvoices = invoices.filter(
+        (inv) => inv.invoice_date && new Date(inv.invoice_date).getFullYear() === currentYearNum,
+      )
+      const currentYearGigs = gigs.filter(
+        (g) => g.start_date && new Date(g.start_date).getFullYear() === currentYearNum,
+      )
+      const currentYearNewClients = (clients || []).filter(
+        (c) => c.created_at && new Date(c.created_at).getFullYear() === currentYearNum,
+      )
 
       // Previous year calculations
-      const previousYearInvoices = invoices.filter(inv => new Date(inv.invoice_date).getFullYear() === previousYearNum)
-      const previousYearGigs = gigs.filter(g => new Date(g.start_date).getFullYear() === previousYearNum)
+      const previousYearInvoices = invoices.filter(
+        (inv) => inv.invoice_date && new Date(inv.invoice_date).getFullYear() === previousYearNum,
+      )
+      const previousYearGigs = gigs.filter(
+        (g) => g.start_date && new Date(g.start_date).getFullYear() === previousYearNum,
+      )
 
       // YTD calculations for previous year (same period)
-      const previousYearYTDInvoices = previousYearInvoices.filter(inv => inv.invoice_date <= ytdEndDatePrev)
-      const previousYearYTDGigs = previousYearGigs.filter(g => g.start_date <= ytdEndDatePrev)
+      const previousYearYTDInvoices = previousYearInvoices.filter((inv) => inv.invoice_date <= ytdEndDatePrev)
+      const previousYearYTDGigs = previousYearGigs.filter((g) => g.start_date! <= ytdEndDatePrev)
 
       setCurrentYear({
         year: currentYearNum,
@@ -111,7 +121,15 @@ export function YearComparison() {
     return ((current - previous) / previous) * 100
   }
 
-  function ChangeIndicator({ current, previous, showAbsolute = false }: { current: number; previous: number; showAbsolute?: boolean }) {
+  function ChangeIndicator({
+    current,
+    previous,
+    showAbsolute = false,
+  }: {
+    current: number
+    previous: number
+    showAbsolute?: boolean
+  }) {
     const change = getChangePercent(current, previous)
     const diff = current - previous
 
@@ -127,9 +145,13 @@ export function YearComparison() {
     if (change > 0) {
       return (
         <span className="flex items-center text-emerald-600 dark:text-emerald-400 text-[10px]">
-          <TrendingUp className="w-3 h-3 mr-0.5" />
-          +{change.toFixed(0)}%
-          {showAbsolute && <span className="ml-1 text-emerald-500 dark:text-emerald-300">({diff > 0 ? '+' : ''}{diff})</span>}
+          <TrendingUp className="w-3 h-3 mr-0.5" />+{change.toFixed(0)}%
+          {showAbsolute && (
+            <span className="ml-1 text-emerald-500 dark:text-emerald-300">
+              ({diff > 0 ? '+' : ''}
+              {diff})
+            </span>
+          )}
         </span>
       )
     }
@@ -137,8 +159,7 @@ export function YearComparison() {
     return (
       <span className="flex items-center text-red-600 dark:text-red-400 text-[10px]">
         <TrendingDown className="w-3 h-3 mr-0.5" />
-        {change.toFixed(0)}%
-        {showAbsolute && <span className="ml-1 text-red-500 dark:text-red-300">({diff})</span>}
+        {change.toFixed(0)}%{showAbsolute && <span className="ml-1 text-red-500 dark:text-red-300">({diff})</span>}
       </span>
     )
   }
@@ -194,12 +215,11 @@ export function YearComparison() {
           <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50">
             <div>
               <span className="text-xs text-muted-foreground">{t('ytdRevenue')}</span>
-              <p className="text-sm font-bold">{(currentYear?.ytdRevenue || 0).toLocaleString(formatLocale)} {tc('kr')}</p>
+              <p className="text-sm font-bold">
+                {(currentYear?.ytdRevenue || 0).toLocaleString(formatLocale)} {tc('kr')}
+              </p>
             </div>
-            <ChangeIndicator
-              current={currentYear?.ytdRevenue || 0}
-              previous={previousYear?.ytdRevenue || 0}
-            />
+            <ChangeIndicator current={currentYear?.ytdRevenue || 0} previous={previousYear?.ytdRevenue || 0} />
           </div>
 
           <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/50">

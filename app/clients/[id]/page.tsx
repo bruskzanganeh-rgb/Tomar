@@ -8,29 +8,14 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  ArrowLeft,
-  Building2,
-  FileText,
-  TrendingUp,
-  Clock,
-  Calendar,
-  DollarSign,
-} from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ArrowLeft, Building2, FileText, TrendingUp, Clock, Calendar, DollarSign } from 'lucide-react'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import dynamic from 'next/dynamic'
 const ClientInvoiceChart = dynamic(
-  () => import('@/components/clients/client-invoice-chart').then(mod => ({ default: mod.ClientInvoiceChart })),
-  { ssr: false, loading: () => <div className="h-[200px] animate-pulse bg-muted rounded" /> }
+  () => import('@/components/clients/client-invoice-chart').then((mod) => ({ default: mod.ClientInvoiceChart })),
+  { ssr: false, loading: () => <div className="h-[200px] animate-pulse bg-muted rounded" /> },
 )
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
@@ -41,7 +26,7 @@ type Client = {
   client_code: string | null
   email: string | null
   address: string | null
-  payment_terms: number
+  payment_terms: number | null
   notes: string | null
 }
 
@@ -52,7 +37,7 @@ type Invoice = {
   due_date: string
   paid_date: string | null
   total: number
-  status: 'draft' | 'sent' | 'paid' | 'overdue'
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | null
 }
 
 export default function ClientDetailPage() {
@@ -80,11 +65,7 @@ export default function ClientDetailPage() {
     setLoading(true)
 
     // Load client
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('id', clientId)
-      .single()
+    const { data: clientData } = await supabase.from('clients').select('*').eq('id', clientId).single()
 
     // Load invoices for this client
     const { data: invoicesData } = await supabase
@@ -100,21 +81,23 @@ export default function ClientDetailPage() {
 
   // Calculate statistics
   const totalRevenue = invoices
-    .filter(inv => inv.status === 'paid' || inv.status === 'sent')
+    .filter((inv) => inv.status === 'paid' || inv.status === 'sent')
     .reduce((sum, inv) => sum + inv.total, 0)
 
   const unpaidAmount = invoices
-    .filter(inv => inv.status === 'sent' || inv.status === 'overdue')
+    .filter((inv) => inv.status === 'sent' || inv.status === 'overdue')
     .reduce((sum, inv) => sum + inv.total, 0)
 
   const invoiceCount = invoices.length
 
-  const lastInvoiceDate = invoices.length > 0
-    ? invoices[0].invoice_date
-    : null
+  const lastInvoiceDate = invoices.length > 0 ? invoices[0].invoice_date : null
 
   function getStatusBadge(status: Invoice['status']) {
-    const variants: Record<Invoice['status'], { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+    if (!status) return <Badge variant="secondary">—</Badge>
+    const variants: Record<
+      NonNullable<Invoice['status']>,
+      { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }
+    > = {
       draft: { variant: 'secondary', label: tis('draft') },
       sent: { variant: 'default', label: tis('sent') },
       paid: { variant: 'outline', label: tis('paid') },
@@ -167,12 +150,14 @@ export default function ClientDetailPage() {
         </h1>
         <div className="flex items-center gap-4 mt-2 text-muted-foreground">
           {client.org_number && (
-            <span>{t('orgNumber')}: {client.org_number}</span>
+            <span>
+              {t('orgNumber')}: {client.org_number}
+            </span>
           )}
-          <span>{t('paymentTerms')}: {client.payment_terms} {tc('days')}</span>
-          {client.address && (
-            <span className="text-sm">{client.address}</span>
-          )}
+          <span>
+            {t('paymentTerms')}: {client.payment_terms} {tc('days')}
+          </span>
+          {client.address && <span className="text-sm">{client.address}</span>}
         </div>
       </div>
 
@@ -187,9 +172,7 @@ export default function ClientDetailPage() {
             <div className="text-2xl font-bold">
               {totalRevenue.toLocaleString(formatLocale)} {tc('kr')}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {t('allPaidSentInvoices')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('allPaidSentInvoices')}</p>
           </CardContent>
         </Card>
 
@@ -202,9 +185,7 @@ export default function ClientDetailPage() {
             <div className="text-2xl font-bold">
               {unpaidAmount.toLocaleString(formatLocale)} {tc('kr')}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {t('awaitingPayment')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('awaitingPayment')}</p>
           </CardContent>
         </Card>
 
@@ -215,9 +196,7 @@ export default function ClientDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{invoiceCount}</div>
-            <p className="text-xs text-muted-foreground">
-              {t('totalCount')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('totalCount')}</p>
           </CardContent>
         </Card>
 
@@ -228,23 +207,17 @@ export default function ClientDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {lastInvoiceDate
-                ? format(new Date(lastInvoiceDate), 'MMM yyyy', { locale: dateLocale })
-                : '-'}
+              {lastInvoiceDate ? format(new Date(lastInvoiceDate), 'MMM yyyy', { locale: dateLocale }) : '-'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {lastInvoiceDate
-                ? format(new Date(lastInvoiceDate), 'PPP', { locale: dateLocale })
-                : t('noInvoices')}
+              {lastInvoiceDate ? format(new Date(lastInvoiceDate), 'PPP', { locale: dateLocale }) : t('noInvoices')}
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Invoice chart */}
-      {invoices.length > 0 && (
-        <ClientInvoiceChart invoices={invoices} clientName={client.name} />
-      )}
+      {invoices.length > 0 && <ClientInvoiceChart invoices={invoices} clientName={client.name} />}
 
       {/* Invoice table */}
       <Card>
@@ -274,21 +247,13 @@ export default function ClientDetailPage() {
               <TableBody>
                 {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">
-                      #{invoice.invoice_number}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.invoice_date), 'PPP', { locale: dateLocale })}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.due_date), 'PPP', { locale: dateLocale })}
-                    </TableCell>
+                    <TableCell className="font-medium">#{invoice.invoice_number}</TableCell>
+                    <TableCell>{format(new Date(invoice.invoice_date), 'PPP', { locale: dateLocale })}</TableCell>
+                    <TableCell>{format(new Date(invoice.due_date), 'PPP', { locale: dateLocale })}</TableCell>
                     <TableCell className="font-medium">
                       {invoice.total.toLocaleString(formatLocale)} {tc('kr')}
                     </TableCell>
-                    <TableCell>
-                      {getStatusBadge(invoice.status)}
-                    </TableCell>
+                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

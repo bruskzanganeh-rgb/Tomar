@@ -4,10 +4,7 @@ import { generateInvoicePdf } from '@/lib/pdf/generator'
 import { logActivity } from '@/lib/activity'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const { success } = rateLimit(`pdf:${ip}`, 20, 60_000)
   if (!success) return rateLimitResponse()
@@ -17,7 +14,9 @@ export async function GET(
     const supabase = await createClient()
 
     // Authenticate user
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -25,7 +24,8 @@ export async function GET(
     // Fetch invoice with client - verify ownership
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
         invoice_number,
         invoice_date,
         due_date,
@@ -39,15 +39,13 @@ export async function GET(
         reverse_charge,
         customer_vat_number,
         client:clients(name, org_number, address, payment_terms, reference_person, invoice_language)
-      `)
+      `,
+      )
       .eq('id', id)
       .single()
 
     if (invoiceError || !invoice) {
-      return NextResponse.json(
-        { error: 'Invoice not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
     }
 
     // Fetch company info from companies table
@@ -57,17 +55,20 @@ export async function GET(
       .eq('user_id', user.id)
       .single()
 
+    if (!membership?.company_id) {
+      return NextResponse.json({ error: 'Company membership not found' }, { status: 500 })
+    }
+
     const { data: company, error: companyError } = await supabase
       .from('companies')
-      .select('company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
-      .eq('id', membership?.company_id)
+      .select(
+        'company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference',
+      )
+      .eq('id', membership.company_id)
       .single()
 
     if (companyError || !company) {
-      return NextResponse.json(
-        { error: 'Company settings not found' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Company settings not found' }, { status: 500 })
     }
 
     // Fetch invoice lines if they exist
@@ -107,9 +108,7 @@ export async function GET(
         .select('instrument_id, instrument:instruments(category_id)')
         .eq('user_id', user.id)
 
-      const categoryIds = (userInstruments || [])
-        .map((ui: any) => ui.instrument?.category_id)
-        .filter(Boolean)
+      const categoryIds = (userInstruments || []).map((ui: any) => ui.instrument?.category_id).filter(Boolean)
 
       if (categoryIds.length > 0) {
         const { data: sponsors } = await supabase
@@ -182,9 +181,6 @@ export async function GET(
     })
   } catch (error: any) {
     console.error('Error generating PDF:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate PDF' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
   }
 }

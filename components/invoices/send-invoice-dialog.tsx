@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
@@ -55,12 +55,7 @@ type SendInvoiceDialogProps = {
   onSuccess: () => void
 }
 
-export function SendInvoiceDialog({
-  invoice,
-  open,
-  onOpenChange,
-  onSuccess,
-}: SendInvoiceDialogProps) {
+export function SendInvoiceDialog({ invoice, open, onOpenChange, onSuccess }: SendInvoiceDialogProps) {
   const t = useTranslations('invoice')
   const tc = useTranslations('common')
   const tToast = useTranslations('toast')
@@ -83,12 +78,14 @@ export function SendInvoiceDialog({
       loadAttachments()
       setEmail(invoice.client.email || '')
       setSubject(t('emailDefaultSubject', { number: invoice.invoice_number, company: 'Babalisk AB' }))
-      setMessage(t('emailDefaultBody', {
-        number: invoice.invoice_number,
-        total: invoice.total.toLocaleString(formatLocale),
-        dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
-        company: 'Babalisk AB',
-      }))
+      setMessage(
+        t('emailDefaultBody', {
+          number: invoice.invoice_number,
+          total: invoice.total.toLocaleString(formatLocale),
+          dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
+          company: 'Babalisk AB',
+        }),
+      )
       setSelectedReceipts([]) // Reset selection
       setSelectedDocs([])
     }
@@ -104,10 +101,7 @@ export function SendInvoiceDialog({
     setLoading(true)
 
     // Get all linked gig IDs from junction table
-    const { data: linkedGigs } = await supabase
-      .from('invoice_gigs')
-      .select('gig_id')
-      .eq('invoice_id', invoice.id)
+    const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id').eq('invoice_id', invoice.id)
     const gigIds = (linkedGigs || []).map((g: any) => g.gig_id)
 
     // Also check legacy gig_id
@@ -149,33 +143,27 @@ export function SendInvoiceDialog({
       console.error('Error loading invoice docs:', docsError)
       toast.error(tToast('attachmentLoadError'))
     } else {
-      setInvoiceDocs(docsData || [])
+      setInvoiceDocs((docsData || []) as unknown as InvoiceDoc[])
     }
 
     setLoading(false)
   }
 
   function toggleReceipt(receiptId: string) {
-    setSelectedReceipts(prev =>
-      prev.includes(receiptId)
-        ? prev.filter(id => id !== receiptId)
-        : [...prev, receiptId]
+    setSelectedReceipts((prev) =>
+      prev.includes(receiptId) ? prev.filter((id) => id !== receiptId) : [...prev, receiptId],
     )
   }
 
   function toggleDoc(docId: string) {
-    setSelectedDocs(prev =>
-      prev.includes(docId)
-        ? prev.filter(id => id !== docId)
-        : [...prev, docId]
-    )
+    setSelectedDocs((prev) => (prev.includes(docId) ? prev.filter((id) => id !== docId) : [...prev, docId]))
   }
 
   function selectAllReceipts() {
     if (selectedReceipts.length === receipts.length) {
       setSelectedReceipts([])
     } else {
-      setSelectedReceipts(receipts.map(r => r.id))
+      setSelectedReceipts(receipts.map((r) => r.id))
     }
   }
 
@@ -183,7 +171,7 @@ export function SendInvoiceDialog({
     if (selectedDocs.length === invoiceDocs.length) {
       setSelectedDocs([])
     } else {
-      setSelectedDocs(invoiceDocs.map(d => d.id))
+      setSelectedDocs(invoiceDocs.map((d) => d.id))
     }
   }
 
@@ -197,13 +185,13 @@ export function SendInvoiceDialog({
     try {
       // Get selected receipt URLs
       const receiptUrls = receipts
-        .filter(r => selectedReceipts.includes(r.id))
-        .map(r => r.attachment_url)
+        .filter((r) => selectedReceipts.includes(r.id))
+        .map((r) => r.attachment_url)
         .filter(Boolean) as string[]
 
       // Get signed URLs for selected invoice documents
       const docUrls: string[] = []
-      for (const doc of invoiceDocs.filter(d => selectedDocs.includes(d.id))) {
+      for (const doc of invoiceDocs.filter((d) => selectedDocs.includes(d.id))) {
         const signedUrl = await getSignedUrl(doc.file_path)
         if (signedUrl) {
           docUrls.push(signedUrl)
@@ -241,7 +229,7 @@ export function SendInvoiceDialog({
   }
 
   const selectedTotal = receipts
-    .filter(r => selectedReceipts.includes(r.id))
+    .filter((r) => selectedReceipts.includes(r.id))
     .reduce((sum, r) => sum + (r.amount_base || r.amount), 0)
 
   return (
@@ -252,9 +240,7 @@ export function SendInvoiceDialog({
             <Mail className="h-5 w-5" />
             {t('sendInvoiceTitle', { number: invoice?.invoice_number ?? '' })}
           </DialogTitle>
-          <DialogDescription>
-            {t('sendViaEmailDesc')}
-          </DialogDescription>
+          <DialogDescription>{t('sendViaEmailDesc')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -273,29 +259,22 @@ export function SendInvoiceDialog({
           {/* Subject */}
           <div className="space-y-2">
             <Label htmlFor="subject">{t('subject')}</Label>
-            <Input
-              id="subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
+            <Input id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           {/* Message */}
           <div className="space-y-2">
             <Label htmlFor="message">{t('message')}</Label>
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={6}
-            />
+            <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} rows={6} />
           </div>
 
           {/* Invoice PDF attachment (always included) */}
           <div className="p-3 rounded-lg border bg-gray-50">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">{t('invoice')} #{invoice?.invoice_number}.pdf</span>
+              <span className="text-sm font-medium">
+                {t('invoice')} #{invoice?.invoice_number}.pdf
+              </span>
               <span className="text-xs text-muted-foreground">{t('attachedAutomatically')}</span>
             </div>
           </div>
@@ -308,13 +287,7 @@ export function SendInvoiceDialog({
                   <FileCheck className="h-4 w-4 text-muted-foreground" />
                   <Label>{t('attachInvoiceDocs')}</Label>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={selectAllDocs}
-                  className="text-xs"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={selectAllDocs} className="text-xs">
                   {selectedDocs.length === invoiceDocs.length ? t('deselectAll') : t('selectAll')}
                 </Button>
               </div>
@@ -326,16 +299,11 @@ export function SendInvoiceDialog({
                     className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer"
                     onClick={() => toggleDoc(doc.id)}
                   >
-                    <Checkbox
-                      checked={selectedDocs.includes(doc.id)}
-                      onCheckedChange={() => toggleDoc(doc.id)}
-                    />
+                    <Checkbox checked={selectedDocs.includes(doc.id)} onCheckedChange={() => toggleDoc(doc.id)} />
                     <div className="flex-1 min-w-0">
-                      <span className="font-medium text-sm truncate block">
-                        {doc.file_name}
-                      </span>
+                      <span className="font-medium text-sm truncate block">{doc.file_name}</span>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(doc.uploaded_at).toLocaleDateString(formatLocale)}
+                        {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString(formatLocale) : ''}
                       </p>
                     </div>
                   </div>
@@ -350,7 +318,7 @@ export function SendInvoiceDialog({
           )}
 
           {/* Receipt selection */}
-          {(
+          {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -358,13 +326,7 @@ export function SendInvoiceDialog({
                   <Label>{t('attachReceipts')}</Label>
                 </div>
                 {receipts.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={selectAllReceipts}
-                    className="text-xs"
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={selectAllReceipts} className="text-xs">
                     {selectedReceipts.length === receipts.length ? t('deselectAll') : t('selectAll')}
                   </Button>
                 )}
@@ -375,9 +337,7 @@ export function SendInvoiceDialog({
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               ) : receipts.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-2">
-                  {t('noReceiptsLinked')}
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-2">{t('noReceiptsLinked')}</p>
               ) : (
                 <div className="space-y-2 border rounded-lg p-3 bg-white">
                   {receipts.map((receipt) => (
@@ -392,13 +352,9 @@ export function SendInvoiceDialog({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">
-                            {receipt.supplier}
-                          </span>
+                          <span className="font-medium text-sm truncate">{receipt.supplier}</span>
                           {receipt.category && (
-                            <span className="text-xs text-muted-foreground">
-                              ({receipt.category})
-                            </span>
+                            <span className="text-xs text-muted-foreground">({receipt.category})</span>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -430,7 +386,7 @@ export function SendInvoiceDialog({
                 </div>
               )}
             </div>
-          )}
+          }
         </div>
 
         <DialogFooter className="flex-col items-stretch gap-2 sm:flex-col">

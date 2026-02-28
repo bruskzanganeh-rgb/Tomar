@@ -15,7 +15,9 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticate user
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -24,10 +26,7 @@ export async function POST(request: NextRequest) {
     const { invoiceId, to, subject, message, attachmentUrls } = body
 
     if (!invoiceId || !to || !subject) {
-      return NextResponse.json(
-        { error: 'invoiceId, to and subject required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'invoiceId, to and subject required' }, { status: 400 })
     }
 
     const serviceSupabase = createAdminClient()
@@ -50,7 +49,8 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    const isPaidPlan = (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
+    const isPaidPlan =
+      (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
     if (!isPaidPlan) {
       return NextResponse.json({ error: 'Pro plan required to send emails' }, { status: 403 })
     }
@@ -62,10 +62,16 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
+    if (!membership) {
+      return NextResponse.json({ error: 'Could not fetch company settings' }, { status: 500 })
+    }
+
     const { data: company, error: companyError } = await supabase
       .from('companies')
-      .select('smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name, email_provider, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference')
-      .eq('id', membership?.company_id)
+      .select(
+        'smtp_host, smtp_port, smtp_user, smtp_password, smtp_from_email, smtp_from_name, company_name, email_provider, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, our_reference',
+      )
+      .eq('id', membership.company_id)
       .single()
 
     if (companyError || !company) {
@@ -80,8 +86,12 @@ export async function POST(request: NextRequest) {
       .order('sort_order')
 
     const clientData = invoice.client as unknown as {
-      name: string; org_number: string | null; address: string | null;
-      payment_terms: number; reference_person: string | null; invoice_language: string | null
+      name: string
+      org_number: string | null
+      address: string | null
+      payment_terms: number
+      reference_person: string | null
+      invoice_language: string | null
     }
 
     const isPro = isPaidPlan
@@ -154,7 +164,7 @@ export async function POST(request: NextRequest) {
         .select('key, value')
         .in('key', ['resend_api_key', 'resend_from_email'])
 
-      const config = Object.fromEntries((configRows || []).map(r => [r.key, r.value]))
+      const config = Object.fromEntries((configRows || []).map((r) => [r.key, r.value]))
 
       if (!config.resend_api_key) {
         return NextResponse.json({ error: 'Platform email is not configured. Contact admin.' }, { status: 400 })
@@ -171,7 +181,7 @@ export async function POST(request: NextRequest) {
         subject,
         text: message || '',
         html: htmlBody,
-        attachments: fileAttachments.map(a => ({
+        attachments: fileAttachments.map((a) => ({
           filename: a.filename,
           content: a.content,
           contentType: a.contentType,
@@ -182,7 +192,7 @@ export async function POST(request: NextRequest) {
       if (!company.smtp_host || !company.smtp_from_email) {
         return NextResponse.json(
           { error: 'SMTP is not configured. Go to Settings and fill in email details.' },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -190,10 +200,12 @@ export async function POST(request: NextRequest) {
         host: company.smtp_host,
         port: company.smtp_port || 587,
         secure: company.smtp_port === 465,
-        auth: company.smtp_user ? {
-          user: company.smtp_user,
-          pass: company.smtp_password || '',
-        } : undefined,
+        auth: company.smtp_user
+          ? {
+              user: company.smtp_user,
+              pass: company.smtp_password || '',
+            }
+          : undefined,
       })
 
       const fromAddress = company.smtp_from_name
@@ -206,7 +218,7 @@ export async function POST(request: NextRequest) {
         subject,
         text: message || '',
         html: htmlBody,
-        attachments: fileAttachments.map(a => ({
+        attachments: fileAttachments.map((a) => ({
           filename: a.filename,
           content: a.content,
           contentType: a.contentType,
@@ -217,18 +229,13 @@ export async function POST(request: NextRequest) {
     // Store sent PDF to Supabase storage
     try {
       const storagePath = `invoices/${invoiceId}/sent.pdf`
-      const { error: uploadError } = await serviceSupabase.storage
-        .from('expenses')
-        .upload(storagePath, pdfBuffer, {
-          contentType: 'application/pdf',
-          upsert: true,
-        })
+      const { error: uploadError } = await serviceSupabase.storage.from('expenses').upload(storagePath, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: true,
+      })
 
       if (!uploadError) {
-        await serviceSupabase
-          .from('invoices')
-          .update({ pdf_url: storagePath })
-          .eq('id', invoiceId)
+        await serviceSupabase.from('invoices').update({ pdf_url: storagePath }).eq('id', invoiceId)
       } else {
         console.error('PDF storage upload error:', uploadError)
       }
@@ -238,11 +245,7 @@ export async function POST(request: NextRequest) {
 
     // Update invoice status - scope to user for safety
     if (invoice.status === 'draft') {
-      await supabase
-        .from('invoices')
-        .update({ status: 'sent' })
-        .eq('id', invoiceId)
-        .eq('user_id', user.id)
+      await supabase.from('invoices').update({ status: 'sent' }).eq('id', invoiceId).eq('user_id', user.id)
     }
 
     // Log activity
@@ -259,9 +262,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Invoice sent!' })
   } catch (error) {
     console.error('Send email error:', error)
-    return NextResponse.json(
-      { error: 'Could not send email' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Could not send email' }, { status: 500 })
   }
 }

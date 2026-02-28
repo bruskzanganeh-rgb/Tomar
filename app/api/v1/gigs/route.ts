@@ -4,6 +4,9 @@ import { apiSuccess, apiError, apiValidationError } from '@/lib/api-response'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createGigSchema } from '@/lib/schemas/gig'
+import type { Database } from '@/lib/types/supabase'
+
+type GigStatus = Database['public']['Enums']['gig_status']
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -28,17 +31,20 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient()
     let query = supabase
       .from('gigs')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name),
         gig_type:gig_types(id, name),
         position:positions(id, name),
         gig_dates(date)
-      `, { count: 'exact' })
+      `,
+        { count: 'exact' },
+      )
       .eq('user_id', auth.userId)
       .neq('status', 'draft')
 
-    if (status) query = query.eq('status', status)
+    if (status) query = query.eq('status', status as GigStatus)
     if (clientId) query = query.eq('client_id', clientId)
     if (dateFrom) query = query.gte('date', dateFrom)
     if (dateTo) query = query.lte('date', dateTo)
@@ -93,13 +99,14 @@ export async function POST(request: NextRequest) {
       .from('gigs')
       .insert({
         ...gigData,
+        status: gigData.status as GigStatus,
         user_id: auth.userId,
         company_id: membership.company_id,
         date: dates[0],
         start_date: dates[0],
         end_date: dates[dates.length - 1],
         total_days: dates.length,
-      })
+      } as Database['public']['Tables']['gigs']['Insert'])
       .select()
       .single()
 
@@ -117,13 +124,15 @@ export async function POST(request: NextRequest) {
     // Fetch full gig with relations
     const { data: fullGig } = await supabase
       .from('gigs')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name),
         gig_type:gig_types(id, name),
         position:positions(id, name),
         gig_dates(date)
-      `)
+      `,
+      )
       .eq('id', gig.id)
       .single()
 

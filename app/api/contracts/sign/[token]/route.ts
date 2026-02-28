@@ -16,10 +16,7 @@ function getClientInfo(request: NextRequest) {
 }
 
 // GET /api/contracts/sign/[token] — Public: get contract data for signing page
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { ip } = getClientInfo(request)
   const { success } = rateLimit(`contract-view:${ip}`, 10, 60_000)
   if (!success) return rateLimitResponse()
@@ -29,7 +26,9 @@ export async function GET(
 
   const { data: contract, error } = await adminClient
     .from('contracts')
-    .select('id, contract_number, tier, annual_price, currency, billing_interval, vat_rate_pct, contract_start_date, contract_duration_months, custom_terms, signer_name, signer_email, signer_title, status, token_expires_at, document_hash_sha256, unsigned_pdf_path, company:companies(company_name, org_number, address)')
+    .select(
+      'id, contract_number, tier, annual_price, currency, billing_interval, vat_rate_pct, contract_start_date, contract_duration_months, custom_terms, signer_name, signer_email, signer_title, status, token_expires_at, document_hash_sha256, unsigned_pdf_path, company:companies(company_name, org_number, address)',
+    )
     .eq('signing_token', token)
     .single()
 
@@ -40,10 +39,7 @@ export async function GET(
   // Check token expiry
   if (contract.token_expires_at && new Date(contract.token_expires_at) < new Date()) {
     // Mark as expired
-    await adminClient
-      .from('contracts')
-      .update({ status: 'expired' })
-      .eq('id', contract.id)
+    await adminClient.from('contracts').update({ status: 'expired' }).eq('id', contract.id)
     return NextResponse.json({ error: 'This signing link has expired' }, { status: 410 })
   }
 
@@ -75,9 +71,7 @@ export async function GET(
   // Generate a signed URL for the PDF
   let pdfUrl: string | null = null
   if (contract.unsigned_pdf_path) {
-    const { data } = await adminClient.storage
-      .from('contracts')
-      .createSignedUrl(contract.unsigned_pdf_path, 3600)
+    const { data } = await adminClient.storage.from('contracts').createSignedUrl(contract.unsigned_pdf_path, 3600)
     pdfUrl = data?.signedUrl || null
   }
 
@@ -102,10 +96,7 @@ export async function GET(
 }
 
 // POST /api/contracts/sign/[token] — Public: submit signature
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { ip, userAgent } = getClientInfo(request)
   const { success } = rateLimit(`contract-sign:${ip}`, 3, 60_000)
   if (!success) return rateLimitResponse()
@@ -150,11 +141,15 @@ export async function POST(
     adminClient,
     contract.company_id,
     contract.id,
-    parsed.data.signature_image
+    parsed.data.signature_image,
   )
 
   // Generate signed PDF with embedded signature
-  const companyInfo = contract.company as unknown as { company_name: string | null; org_number: string | null; address: string | null } | null
+  const companyInfo = contract.company as unknown as {
+    company_name: string | null
+    org_number: string | null
+    address: string | null
+  } | null
   const signedPdfBuffer = await generateContractPdf({
     contractNumber: contract.contract_number,
     tier: contract.tier,
@@ -164,7 +159,7 @@ export async function POST(
     vatRatePct: Number(contract.vat_rate_pct),
     contractStartDate: contract.contract_start_date,
     contractDurationMonths: contract.contract_duration_months,
-    customTerms: contract.custom_terms || {},
+    customTerms: (contract.custom_terms || {}) as Record<string, unknown>,
     signerName: parsed.data.signer_name,
     signerEmail: contract.signer_email,
     signerTitle: parsed.data.signer_title,
@@ -184,7 +179,7 @@ export async function POST(
     contract.company_id,
     contract.id,
     'signed.pdf',
-    signedPdfBuffer
+    signedPdfBuffer,
   )
 
   // Update contract

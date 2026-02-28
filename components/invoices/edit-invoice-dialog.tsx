@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
@@ -13,17 +13,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Trash2, FileText, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { createClient } from '@/lib/supabase/client'
+import type { Database } from '@/lib/types/supabase'
 import { downloadFile } from '@/lib/download'
 
 type Invoice = {
@@ -57,13 +52,7 @@ type EditInvoiceDialogProps = {
   clients: Client[]
 }
 
-export function EditInvoiceDialog({
-  invoice,
-  open,
-  onOpenChange,
-  onSuccess,
-  clients,
-}: EditInvoiceDialogProps) {
+export function EditInvoiceDialog({ invoice, open, onOpenChange, onSuccess, clients }: EditInvoiceDialogProps) {
   const t = useTranslations('invoice')
   const tc = useTranslations('common')
   const [saving, setSaving] = useState(false)
@@ -139,9 +128,8 @@ export function EditInvoiceDialog({
   async function loadPdf(invoiceId: string, source: 'sent' | 'original') {
     setPdfLoading(true)
     try {
-      const endpoint = source === 'sent'
-        ? `/api/invoices/${invoiceId}/sent-pdf`
-        : `/api/invoices/${invoiceId}/original-pdf`
+      const endpoint =
+        source === 'sent' ? `/api/invoices/${invoiceId}/sent-pdf` : `/api/invoices/${invoiceId}/original-pdf`
       const response = await fetch(endpoint)
       if (response.ok) {
         const data = await response.json()
@@ -170,14 +158,14 @@ export function EditInvoiceDialog({
         .from('invoices')
         .update({
           invoice_number: formData.invoice_number,
-          client_id: formData.client_id || null,
+          client_id: formData.client_id || undefined,
           invoice_date: formData.invoice_date,
           due_date: formData.due_date,
           subtotal: formData.subtotal,
           vat_rate: formData.vat_rate,
           vat_amount: formData.vat_amount,
           total: formData.total,
-          status: formData.status,
+          status: formData.status as Database['public']['Enums']['invoice_status'],
           paid_date: formData.paid_date || null,
         })
         .eq('id', invoice.id)
@@ -201,15 +189,9 @@ export function EditInvoiceDialog({
 
     try {
       // Delete invoice_lines first
-      await supabase
-        .from('invoice_lines')
-        .delete()
-        .eq('invoice_id', invoice.id)
+      await supabase.from('invoice_lines').delete().eq('invoice_id', invoice.id)
 
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoice.id)
+      const { error } = await supabase.from('invoices').delete().eq('id', invoice.id)
 
       if (error) throw error
 
@@ -243,9 +225,7 @@ export function EditInvoiceDialog({
             <div className="flex flex-col md:flex-row gap-6">
               {/* Left column: PDF preview (hidden on mobile) */}
               <div className="hidden md:block w-56 shrink-0 space-y-3">
-                <Label className="text-sm font-medium">
-                  {pdfSource === 'sent' ? t('sentPdf') : t('originalPdf')}
-                </Label>
+                <Label className="text-sm font-medium">{pdfSource === 'sent' ? t('sentPdf') : t('originalPdf')}</Label>
 
                 {pdfLoading ? (
                   <div className="flex flex-col items-center justify-center h-80 text-sm text-gray-500 border rounded-lg">
@@ -282,9 +262,7 @@ export function EditInvoiceDialog({
                   <div className="flex flex-col items-center justify-center h-80 text-sm text-gray-400 border-2 border-dashed rounded-lg">
                     <FileText className="h-12 w-12 mb-2 opacity-50" />
                     <p>{t('noPdf')}</p>
-                    {!invoice.imported_from_pdf && (
-                      <p className="text-xs mt-1">{t('createdManually')}</p>
-                    )}
+                    {!invoice.imported_from_pdf && <p className="text-xs mt-1">{t('createdManually')}</p>}
                   </div>
                 )}
               </div>
@@ -312,7 +290,9 @@ export function EditInvoiceDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -399,7 +379,9 @@ export function EditInvoiceDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {statuses.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

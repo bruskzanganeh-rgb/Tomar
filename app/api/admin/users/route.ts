@@ -90,9 +90,9 @@ export async function GET() {
   const usageMap = new Map<string, { invoices: number; scans: number }>()
   if (usageData) {
     usageData.forEach((u: Record<string, number | string>) => {
-      usageMap.set(u.user_id, {
-        invoices: u.invoice_count || 0,
-        scans: u.receipt_scan_count || 0,
+      usageMap.set(String(u.user_id), {
+        invoices: Number(u.invoice_count) || 0,
+        scans: Number(u.receipt_scan_count) || 0,
       })
     })
   }

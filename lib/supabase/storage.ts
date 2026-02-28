@@ -9,15 +9,17 @@ export type GigAttachment = {
   file_path: string
   file_size: number | null
   file_type: string | null
-  uploaded_at: string
-  category: AttachmentCategory
+  uploaded_at: string | null
+  category: string | null
   invoice_id: string | null
+  user_id: string | null
+  company_id: string | null
 }
 
 export async function uploadGigAttachment(
   gigId: string,
   file: File,
-  category: AttachmentCategory = 'gig_info'
+  category: AttachmentCategory = 'gig_info',
 ): Promise<GigAttachment> {
   // Check storage quota before uploading
   const quotaRes = await fetch('/api/storage/quota')
@@ -35,9 +37,7 @@ export async function uploadGigAttachment(
   const filePath = `${gigId}/${Date.now()}-${sanitizedName}`
 
   // Upload to Storage
-  const { error: uploadError } = await supabase.storage
-    .from('gig-attachments')
-    .upload(filePath, file)
+  const { error: uploadError } = await supabase.storage.from('gig-attachments').upload(filePath, file)
 
   if (uploadError) {
     throw new Error('Kunde inte ladda upp fil')
@@ -52,7 +52,7 @@ export async function uploadGigAttachment(
       file_path: filePath,
       file_size: file.size,
       file_type: file.type,
-      category: category
+      category: category,
     })
     .select()
     .single()
@@ -70,19 +70,14 @@ export async function deleteGigAttachment(attachmentId: string, filePath: string
   const supabase = createClient()
 
   // Delete from Storage
-  const { error: storageError } = await supabase.storage
-    .from('gig-attachments')
-    .remove([filePath])
+  const { error: storageError } = await supabase.storage.from('gig-attachments').remove([filePath])
 
   if (storageError) {
     console.error('Storage delete error:', storageError)
   }
 
   // Delete from database
-  const { error } = await supabase
-    .from('gig_attachments')
-    .delete()
-    .eq('id', attachmentId)
+  const { error } = await supabase.from('gig_attachments').delete().eq('id', attachmentId)
 
   if (error) {
     throw new Error('Kunde inte ta bort fil')
@@ -107,7 +102,7 @@ export async function getGigAttachments(gigId: string): Promise<GigAttachment[]>
 
 export async function updateGigAttachmentCategory(
   attachmentId: string,
-  category: AttachmentCategory
+  category: AttachmentCategory,
 ): Promise<GigAttachment> {
   const supabase = createClient()
 
@@ -127,7 +122,7 @@ export async function updateGigAttachmentCategory(
 
 export async function getGigAttachmentsByCategory(
   gigId: string,
-  category: AttachmentCategory
+  category: AttachmentCategory,
 ): Promise<GigAttachment[]> {
   const supabase = createClient()
 
@@ -152,9 +147,7 @@ export async function getInvoiceDocuments(gigId: string): Promise<GigAttachment[
 export async function getSignedUrl(filePath: string): Promise<string | null> {
   const supabase = createClient()
 
-  const { data, error } = await supabase.storage
-    .from('gig-attachments')
-    .createSignedUrl(filePath, 3600) // 1 hour
+  const { data, error } = await supabase.storage.from('gig-attachments').createSignedUrl(filePath, 3600) // 1 hour
 
   if (error) {
     console.error('Signed URL error:', error)

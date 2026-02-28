@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
@@ -20,7 +20,7 @@ type GigType = {
   vat_rate: number
   color: string | null
   default_description: string | null
-  is_default: boolean
+  is_default: boolean | null
 }
 
 export default function GigTypesPage() {
@@ -49,10 +49,7 @@ export default function GigTypesPage() {
 
   async function loadGigTypes() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('gig_types')
-      .select('*')
-      .order('name')
+    const { data, error } = await supabase.from('gig_types').select('*').order('name')
 
     if (error) {
       console.error('Error loading gig types:', error)
@@ -68,10 +65,7 @@ export default function GigTypesPage() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase
-      .from('gig_types')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('gig_types').delete().eq('id', id)
 
     if (error) {
       console.error('Error deleting gig type:', error)
@@ -92,9 +86,7 @@ export default function GigTypesPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {tc('loading')}
-            </div>
+            <div className="text-center py-8 text-muted-foreground">{tc('loading')}</div>
           ) : (
             <Table>
               <TableHeader>
@@ -109,22 +101,15 @@ export default function GigTypesPage() {
               <TableBody>
                 {gigTypes.map((type) => (
                   <TableRow key={type.id}>
-                    <TableCell className="font-medium">
-                      {type.name}
-                    </TableCell>
+                    <TableCell className="font-medium">{type.name}</TableCell>
                     <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {type.name_en || '-'}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{type.name_en || '-'}</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{type.vat_rate}%</Badge>
                     </TableCell>
                     <TableCell>
-                      <div
-                        className="w-4 h-4 rounded"
-                        style={{ backgroundColor: type.color || '#gray' }}
-                      />
+                      <div className="w-4 h-4 rounded" style={{ backgroundColor: type.color || '#gray' }} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -138,11 +123,7 @@ export default function GigTypesPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => confirmDelete(type.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(type.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -155,11 +136,7 @@ export default function GigTypesPage() {
         </CardContent>
       </Card>
 
-      <CreateGigTypeDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={loadGigTypes}
-      />
+      <CreateGigTypeDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={loadGigTypes} />
 
       <EditGigTypeDialog
         gigType={selectedGigType}

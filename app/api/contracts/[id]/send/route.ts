@@ -7,14 +7,25 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { Resend } from 'resend'
 
 async function requireAdmin(supabase: ReturnType<typeof createClient> extends Promise<infer T> ? T : never) {
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return null
   const { data: isAdmin } = await supabase.rpc('is_admin', { uid: user.id })
   if (!isAdmin) return null
   return user
 }
 
-function contractInfoHtml(contract: { contract_number: string; tier: string; annual_price: number; currency: string; contract_duration_months: number }, companyName: string) {
+function contractInfoHtml(
+  contract: {
+    contract_number: string
+    tier: string
+    annual_price: number
+    currency: string
+    contract_duration_months: number
+  },
+  companyName: string,
+) {
   return `
     <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0;">
       <table style="width: 100%; font-size: 14px; color: #111827;">
@@ -28,10 +39,7 @@ function contractInfoHtml(contract: { contract_number: string; tier: string; ann
 }
 
 // POST /api/contracts/[id]/send — Send for review or signing
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ip = request.headers.get('x-forwarded-for') || 'unknown'
   const { success } = rateLimit(`contract-send:${ip}`, 5, 60_000)
   if (!success) return rateLimitResponse()
@@ -95,7 +103,7 @@ export async function POST(
 
     const { error: emailError } = await resend.emails.send({
       from: fromEmail,
-      to: contract.reviewer_email,
+      to: contract.reviewer_email!,
       subject: `Agreement for Review — ${contract.contract_number}`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

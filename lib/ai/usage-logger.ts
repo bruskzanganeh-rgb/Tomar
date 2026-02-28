@@ -1,8 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Json } from '@/lib/types/supabase'
 
 // Anthropic pricing per 1M tokens
 const PRICING: Record<string, { input: number; output: number }> = {
-  'claude-haiku-4-5-20251001': { input: 0.80, output: 4.00 },
+  'claude-haiku-4-5-20251001': { input: 0.8, output: 4.0 },
 }
 
 export type UsageType =
@@ -26,16 +27,12 @@ export type LogAiUsageParams = {
 /**
  * Calculate estimated cost in USD based on model and token usage
  */
-export function calculateCost(
-  model: string,
-  inputTokens: number,
-  outputTokens: number
-): number {
+export function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
   const pricing = PRICING[model]
   if (!pricing) {
     // Fallback to Claude 3.5 Haiku pricing for unknown models
     console.warn(`Unknown model pricing: ${model}, using Claude 3.5 Haiku pricing`)
-    return (inputTokens * 0.80 + outputTokens * 4.00) / 1_000_000
+    return (inputTokens * 0.8 + outputTokens * 4.0) / 1_000_000
   }
   return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000
 }
@@ -57,7 +54,7 @@ export async function logAiUsage(params: LogAiUsageParams): Promise<void> {
       output_tokens: outputTokens,
       estimated_cost_usd: estimatedCostUsd,
       user_id: params.userId || null,
-      metadata: metadata || null,
+      metadata: (metadata || null) as Json,
     })
 
     if (error) {
