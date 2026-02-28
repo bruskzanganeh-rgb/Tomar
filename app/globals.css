@@ -151,7 +151,7 @@
 /* Compact desktop density — zoom-out feel like Vercel/Linear/GitHub */
 @media (min-width: 1024px) {
   html {
-    zoom: 0.9;
+    zoom: 0.85;
   }
 }
 
