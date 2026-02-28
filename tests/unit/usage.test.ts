@@ -1,16 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock Supabase before importing the module under test
-const mockSelect = vi.fn()
-const mockInsert = vi.fn()
-const mockUpdate = vi.fn()
-const mockEq = vi.fn()
-const mockIn = vi.fn()
-const mockSingle = vi.fn()
-const mockNot = vi.fn()
-
 function chainMock() {
-  const chain: any = {
+  const chain: Record<string, unknown> = {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
@@ -94,7 +86,7 @@ describe('incrementUsage (logic verification)', () => {
     const existing = { invoice_count: 3, receipt_scan_count: 1 }
     const type = 'invoice' as const
     const field = type === 'invoice' ? 'invoice_count' : 'receipt_scan_count'
-    const newValue = (existing as any)[field] + 1
+    const newValue = (existing as Record<string, number>)[field] + 1
     expect(newValue).toBe(4)
   })
 
@@ -102,7 +94,7 @@ describe('incrementUsage (logic verification)', () => {
     const existing = { invoice_count: 3, receipt_scan_count: 2 }
     const type = 'receipt_scan' as const
     const field = type === 'invoice' ? 'invoice_count' : 'receipt_scan_count'
-    const newValue = (existing as any)[field] + 1
+    const newValue = (existing as Record<string, number>)[field] + 1
     expect(newValue).toBe(3)
   })
 })
@@ -116,17 +108,13 @@ describe('plan resolution', () => {
 
   it('resolves to free when status is not active', () => {
     const sub = { plan: 'pro', status: 'cancelled' }
-    const plan = (sub.status === 'active' && (sub.plan === 'pro' || sub.plan === 'team'))
-      ? sub.plan
-      : 'free'
+    const plan = sub.status === 'active' && (sub.plan === 'pro' || sub.plan === 'team') ? sub.plan : 'free'
     expect(plan).toBe('free')
   })
 
   it('resolves to pro when active pro', () => {
     const sub = { plan: 'pro', status: 'active' }
-    const plan = (sub.status === 'active' && (sub.plan === 'pro' || sub.plan === 'team'))
-      ? sub.plan
-      : 'free'
+    const plan = sub.status === 'active' && (sub.plan === 'pro' || sub.plan === 'team') ? sub.plan : 'free'
     expect(plan).toBe('pro')
   })
 })
