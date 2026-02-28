@@ -8,10 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-01-28.clover',
 })
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(request: Request) {
   const body = await request.text()
@@ -24,13 +21,9 @@ export async function POST(request: Request) {
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    )
-  } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message)
+    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET!)
+  } catch (err: unknown) {
+    console.error('Webhook signature verification failed:', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -68,9 +61,8 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       stripe_subscription_id: subscriptionId,
       stripe_price_id: stripeSub.items.data[0]?.price.id || null,
       current_period_start: new Date(stripeSub.start_date * 1000).toISOString(),
-      current_period_end: stripeSub.ended_at
-        ? new Date(stripeSub.ended_at * 1000).toISOString()
-        : null,
+      current_period_end: stripeSub.ended_at ? new Date(stripeSub.ended_at * 1000).toISOString() : null,
+      admin_override: false,
       ...(companyId ? { company_id: companyId } : {}),
     })
     .eq('user_id', userId)
@@ -98,20 +90,19 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .eq('user_id', sub.user_id)
     .single()
 
-  const pendingPlan = (currentSub?.pending_plan === plan) ? null : currentSub?.pending_plan
+  const pendingPlan = currentSub?.pending_plan === plan ? null : currentSub?.pending_plan
 
   await supabase
     .from('subscriptions')
     .update({
       plan,
-      status: subscription.status as any,
+      status: subscription.status as 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete',
       stripe_price_id: priceId || null,
       current_period_start: new Date(subscription.start_date * 1000).toISOString(),
-      current_period_end: subscription.ended_at
-        ? new Date(subscription.ended_at * 1000).toISOString()
-        : null,
+      current_period_end: subscription.ended_at ? new Date(subscription.ended_at * 1000).toISOString() : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       pending_plan: pendingPlan ?? null,
+      admin_override: false,
     })
     .eq('user_id', sub.user_id)
 }
@@ -135,6 +126,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       stripe_subscription_id: null,
       stripe_price_id: null,
       cancel_at_period_end: false,
+      admin_override: false,
     })
     .eq('user_id', sub.user_id)
 }

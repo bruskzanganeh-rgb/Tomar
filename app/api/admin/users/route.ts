@@ -9,29 +9,23 @@ export async function GET() {
   const { supabase } = auth
 
   // Fetch all data in parallel
-  const [
-    { data: subscriptions },
-    { data: settings },
-    { data: members },
-  ] = await Promise.all([
+  const [{ data: subscriptions }, { data: settings }, { data: members }] = await Promise.all([
     supabase
       .from('subscriptions')
-      .select('user_id, plan, status, stripe_customer_id, stripe_price_id, current_period_end, cancel_at_period_end, created_at')
+      .select(
+        'user_id, plan, status, stripe_customer_id, stripe_price_id, current_period_end, cancel_at_period_end, created_at, admin_override',
+      )
       .order('created_at', { ascending: false }),
-    supabase
-      .from('company_settings')
-      .select('user_id, company_name, org_number, email, address, phone'),
-    supabase
-      .from('company_members')
-      .select('user_id, company_id, role'),
+    supabase.from('company_settings').select('user_id, company_name, org_number, email, address, phone'),
+    supabase.from('company_members').select('user_id, company_id, role'),
   ])
 
-  const settingsMap = new Map((settings || []).map(s => [s.user_id, s]))
+  const settingsMap = new Map((settings || []).map((s) => [s.user_id, s]))
 
   // Build membership maps
   const userToMembership = new Map<string, { company_id: string; role: string }>()
   const companyMembers = new Map<string, { user_id: string; role: string; email: string | null }[]>()
-  for (const m of (members || [])) {
+  for (const m of members || []) {
     userToMembership.set(m.user_id, { company_id: m.company_id, role: m.role })
     if (!companyMembers.has(m.company_id)) companyMembers.set(m.company_id, [])
     companyMembers.get(m.company_id)!.push({
@@ -43,7 +37,7 @@ export async function GET() {
 
   // Set of user_ids that are non-owner members (they'll be nested under their company's owner)
   const nonOwnerMemberIds = new Set<string>()
-  for (const m of (members || [])) {
+  for (const m of members || []) {
     if (m.role !== 'owner') nonOwnerMemberIds.add(m.user_id)
   }
 
@@ -52,28 +46,50 @@ export async function GET() {
   const month = now.getMonth() + 1
 
   // Include ALL user IDs (owners + members) for stats
-  const ownerUserIds = (subscriptions || []).map(s => s.user_id)
-  const allUserIds = [...new Set([...ownerUserIds, ...(members || []).map(m => m.user_id)])]
+  const ownerUserIds = (subscriptions || []).map((s) => s.user_id)
+  const allUserIds = [...new Set([...ownerUserIds, ...(members || []).map((m) => m.user_id)])]
 
   const [statsData, usageData] = await Promise.all([
-    supabase.rpc('admin_user_stats', { p_user_ids: allUserIds }).then(r => r.data),
+    supabase.rpc('admin_user_stats', { p_user_ids: allUserIds }).then((r) => r.data),
     supabase
       .from('usage_tracking')
       .select('user_id, invoice_count, receipt_scan_count')
       .in('user_id', allUserIds)
       .eq('year', year)
       .eq('month', month)
-      .then(r => r.data),
+      .then((r) => r.data),
   ])
 
-  const statsMap = new Map<string, { invoice_count: number; client_count: number; position_count: number; gig_type_count: number; expense_count: number; gig_count: number }>()
+  const statsMap = new Map<
+    string,
+    {
+      invoice_count: number
+      client_count: number
+      position_count: number
+      gig_type_count: number
+      expense_count: number
+      gig_count: number
+    }
+  >()
   if (statsData) {
-    statsData.forEach((s: any) => statsMap.set(s.user_id, s))
+    statsData.forEach((s: Record<string, number | string>) =>
+      statsMap.set(
+        s.user_id as string,
+        s as unknown as {
+          invoice_count: number
+          client_count: number
+          position_count: number
+          gig_type_count: number
+          expense_count: number
+          gig_count: number
+        },
+      ),
+    )
   }
 
   const usageMap = new Map<string, { invoices: number; scans: number }>()
   if (usageData) {
-    usageData.forEach((u: any) => {
+    usageData.forEach((u: Record<string, number | string>) => {
       usageMap.set(u.user_id, {
         invoices: u.invoice_count || 0,
         scans: u.receipt_scan_count || 0,
@@ -84,14 +100,14 @@ export async function GET() {
   // Only show owners and users without a company (legacy/not onboarded)
   // Non-owner members are nested under their company's owner
   const users = (subscriptions || [])
-    .filter(sub => !nonOwnerMemberIds.has(sub.user_id))
-    .map(sub => {
+    .filter((sub) => !nonOwnerMemberIds.has(sub.user_id))
+    .map((sub) => {
       const stats = statsMap.get(sub.user_id)
       const membership = userToMembership.get(sub.user_id)
-      const membersList = membership ? (companyMembers.get(membership.company_id) || []) : []
+      const membersList = membership ? companyMembers.get(membership.company_id) || [] : []
 
       // Enrich members with per-user stats
-      const enrichedMembers = membersList.map(m => {
+      const enrichedMembers = membersList.map((m) => {
         const mStats = statsMap.get(m.user_id)
         return {
           ...m,

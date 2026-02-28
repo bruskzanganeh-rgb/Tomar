@@ -7,13 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +16,23 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { AlertTriangle, Building2, Calendar, ChevronDown, ChevronRight, Crown, Mail, Phone, MapPin, Trash2, Plus, Loader2, UserPlus, X, Pencil } from 'lucide-react'
+import {
+  AlertTriangle,
+  Building2,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Crown,
+  Mail,
+  Phone,
+  MapPin,
+  Trash2,
+  Plus,
+  Loader2,
+  UserPlus,
+  X,
+  Pencil,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -44,6 +54,7 @@ type User = {
   stripe_price_id: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  admin_override: boolean
   created_at: string
   company_name: string | null
   org_number: string | null
@@ -114,7 +125,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
       body: JSON.stringify({ plan: newPlan }),
     })
     if (res.ok) {
-      setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, plan: newPlan } : u))
+      setUsers((prev) => prev.map((u) => (u.user_id === userId ? { ...u, plan: newPlan, admin_override: true } : u)))
       toast.success(t('tierChanged'))
     } else {
       toast.error('Failed to change tier')
@@ -132,7 +143,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
       method: 'DELETE',
     })
     if (res.ok) {
-      setUsers(prev => prev.filter(u => u.user_id !== ownerUserId))
+      setUsers((prev) => prev.filter((u) => u.user_id !== ownerUserId))
       toast.success(t('companyDeleted'))
     } else {
       const data = await res.json()
@@ -163,13 +174,15 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
       toast.success(t('userUpdated'))
       if (email) {
         // Update local state with new email
-        setUsers(prev => prev.map(u => {
-          if (u.user_id === editUserId) return { ...u, email }
-          if (u.members) {
-            return { ...u, members: u.members.map(m => m.user_id === editUserId ? { ...m, email } : m) }
-          }
-          return u
-        }))
+        setUsers((prev) =>
+          prev.map((u) => {
+            if (u.user_id === editUserId) return { ...u, email }
+            if (u.members) {
+              return { ...u, members: u.members.map((m) => (m.user_id === editUserId ? { ...m, email } : m)) }
+            }
+            return u
+          }),
+        )
       }
       setEditUserId(null)
     } else {
@@ -188,11 +201,11 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
       method: 'DELETE',
     })
     if (res.ok) {
-      setUsers(prev => prev.map(u =>
-        u.user_id === ownerUserId
-          ? { ...u, members: u.members?.filter(m => m.user_id !== memberUserId) }
-          : u
-      ))
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === ownerUserId ? { ...u, members: u.members?.filter((m) => m.user_id !== memberUserId) } : u,
+        ),
+      )
       toast.success(t('memberRemoved'))
     } else {
       const data = await res.json()
@@ -275,7 +288,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
             </div>
           ) : (
             <div className="space-y-2">
-              {users.map(u => (
+              {users.map((u) => (
                 <div key={u.user_id} className="rounded-lg bg-secondary/50 overflow-hidden">
                   <div
                     className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-secondary/80 transition-colors"
@@ -318,13 +331,22 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                       {/* Contact info */}
                       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                         {u.email && (
-                          <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{u.email}</span>
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {u.email}
+                          </span>
                         )}
                         {u.phone && (
-                          <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{u.phone}</span>
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {u.phone}
+                          </span>
                         )}
                         {u.address && (
-                          <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{u.address}</span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {u.address}
+                          </span>
                         )}
                       </div>
 
@@ -332,13 +354,24 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                       {(u.plan === 'pro' || u.plan === 'team') && (
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <Crown className="h-3 w-3 text-yellow-500" />
-                          <Badge variant="outline" className="text-[10px]">
-                            {u.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID
-                              ? t('monthly') + ' — ' + t('perMonth')
-                              : u.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID
-                                ? t('yearly') + ' — ' + t('perYear')
-                                : t('adminSet')}
-                          </Badge>
+                          {u.admin_override ? (
+                            <Badge variant="outline" className="text-[10px] text-purple-600 border-purple-300">
+                              {t('adminSet')}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">
+                              {u.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRO_MONTHLY_PRICE_ID
+                                ? t('monthly') + ' — ' + t('perMonth')
+                                : u.stripe_price_id === process.env.NEXT_PUBLIC_STRIPE_PRO_YEARLY_PRICE_ID
+                                  ? t('yearly') + ' — ' + t('perYear')
+                                  : t('adminSet')}
+                            </Badge>
+                          )}
+                          {u.admin_override && u.stripe_customer_id && (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                              Stripe: {u.stripe_price_id ? 'aktiv' : 'ingen'}
+                            </Badge>
+                          )}
                           {u.current_period_end && (
                             <span className="text-muted-foreground flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -369,7 +402,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                         <span className="text-xs font-medium">{t('changeTier')}:</span>
                         <Select
                           value={u.plan}
-                          onValueChange={v => handleTierChange(u.user_id, v)}
+                          onValueChange={(v) => handleTierChange(u.user_id, v)}
                           disabled={changingTier === u.user_id}
                         >
                           <SelectTrigger className="w-32 h-7 text-xs">
@@ -398,10 +431,15 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                       {/* Members */}
                       {u.members && u.members.length > 0 && (
                         <div>
-                          <p className="text-xs font-medium mb-1">{t('members')} ({u.members.length})</p>
+                          <p className="text-xs font-medium mb-1">
+                            {t('members')} ({u.members.length})
+                          </p>
                           <div className="space-y-1">
-                            {u.members.map(m => (
-                              <div key={m.user_id} className="flex items-center gap-2 text-xs bg-background rounded px-2 py-1.5">
+                            {u.members.map((m) => (
+                              <div
+                                key={m.user_id}
+                                className="flex items-center gap-2 text-xs bg-background rounded px-2 py-1.5"
+                              >
                                 <span className="text-muted-foreground flex-1">{m.email || m.user_id.slice(0, 8)}</span>
                                 <span className="text-[10px] text-muted-foreground hidden sm:inline">
                                   {m.gig_count}g · {m.invoice_count}i · {m.expense_count}e
@@ -501,9 +539,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('newUser')}</DialogTitle>
-            <DialogDescription>
-              {addMode === 'invite' ? t('inviteMode') : t('createMode')}
-            </DialogDescription>
+            <DialogDescription>{addMode === 'invite' ? t('inviteMode') : t('createMode')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -532,7 +568,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
               <Input
                 type="email"
                 value={addForm.email}
-                onChange={e => setAddForm(f => ({ ...f, email: e.target.value }))}
+                onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="user@example.com"
               />
             </div>
@@ -541,7 +577,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
               <Label>{t('companyName')}</Label>
               <Input
                 value={addForm.company_name}
-                onChange={e => setAddForm(f => ({ ...f, company_name: e.target.value }))}
+                onChange={(e) => setAddForm((f) => ({ ...f, company_name: e.target.value }))}
                 placeholder="Företagsnamn AB"
               />
             </div>
@@ -552,7 +588,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                 <Input
                   type="password"
                   value={addForm.password}
-                  onChange={e => setAddForm(f => ({ ...f, password: e.target.value }))}
+                  onChange={(e) => setAddForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="••••••"
                 />
                 <p className="text-xs text-muted-foreground">{t('minPassword')}</p>
@@ -561,7 +597,9 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>{tc('cancel')}</Button>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+              {tc('cancel')}
+            </Button>
             <Button
               onClick={handleAddUser}
               disabled={addSaving || !addForm.email || (addMode === 'create' && addForm.password.length < 6)}
@@ -574,13 +612,16 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
       </Dialog>
 
       {/* Edit user dialog */}
-      <Dialog open={!!editUserId} onOpenChange={(open) => { if (!open) setEditUserId(null) }}>
+      <Dialog
+        open={!!editUserId}
+        onOpenChange={(open) => {
+          if (!open) setEditUserId(null)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('editUser')}</DialogTitle>
-            <DialogDescription>
-              {t('editUserDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('editUserDesc')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -589,7 +630,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
               <Input
                 type="email"
                 value={editForm.email}
-                onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="user@example.com"
               />
             </div>
@@ -599,7 +640,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
               <Input
                 type="password"
                 value={editForm.password}
-                onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))}
                 placeholder="Leave empty to keep current"
               />
               <p className="text-xs text-muted-foreground">{t('minPassword')}</p>
@@ -607,11 +648,10 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUserId(null)}>{tc('cancel')}</Button>
-            <Button
-              onClick={handleEditUser}
-              disabled={editSaving || (!editForm.email && !editForm.password)}
-            >
+            <Button variant="outline" onClick={() => setEditUserId(null)}>
+              {tc('cancel')}
+            </Button>
+            <Button onClick={handleEditUser} disabled={editSaving || (!editForm.email && !editForm.password)}>
               {editSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {tc('save')}
             </Button>
@@ -620,13 +660,16 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
       </Dialog>
 
       {/* Invite member dialog */}
-      <Dialog open={!!inviteForUserId} onOpenChange={(open) => { if (!open) setInviteForUserId(null) }}>
+      <Dialog
+        open={!!inviteForUserId}
+        onOpenChange={(open) => {
+          if (!open) setInviteForUserId(null)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('inviteMember')}</DialogTitle>
-            <DialogDescription>
-              {t('inviteMemberDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('inviteMemberDesc')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -654,7 +697,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
               <Input
                 type="email"
                 value={inviteForm.email}
-                onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
+                onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="user@example.com"
               />
             </div>
@@ -665,7 +708,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                 <Input
                   type="password"
                   value={inviteForm.password}
-                  onChange={e => setInviteForm(f => ({ ...f, password: e.target.value }))}
+                  onChange={(e) => setInviteForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="••••••"
                 />
                 <p className="text-xs text-muted-foreground">{t('minPassword')}</p>
@@ -674,10 +717,14 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteForUserId(null)}>{tc('cancel')}</Button>
+            <Button variant="outline" onClick={() => setInviteForUserId(null)}>
+              {tc('cancel')}
+            </Button>
             <Button
               onClick={handleInviteMember}
-              disabled={inviteSaving || !inviteForm.email || (inviteMode === 'create' && inviteForm.password.length < 6)}
+              disabled={
+                inviteSaving || !inviteForm.email || (inviteMode === 'create' && inviteForm.password.length < 6)
+              }
             >
               {inviteSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {inviteMode === 'invite' ? t('inviteUser') : t('createAccount')}
