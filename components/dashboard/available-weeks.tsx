@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
@@ -42,73 +42,75 @@ export function AvailableWeeks() {
   const maxYear = currentYear + 1
 
   useEffect(() => {
+    async function loadWeeks() {
+      setLoading(true)
+      const yearStart = new Date(selectedYear, 0, 1)
+      const yearEnd = new Date(selectedYear, 11, 31)
+
+      const start = format(yearStart, 'yyyy-MM-dd')
+      const end = format(yearEnd, 'yyyy-MM-dd')
+
+      const { data: dates } = await supabase
+        .from('gig_dates')
+        .select(
+          `
+          date,
+          gig:gigs(status)
+        `,
+        )
+        .gte('date', start)
+        .lte('date', end)
+
+      const filtered = ((dates || []) as unknown as GigDate[]).filter(
+        (d) => d.gig && !['cancelled', 'declined'].includes(d.gig.status),
+      )
+
+      const weekInfos: WeekInfo[] = []
+      let currentWeekStart = startOfWeek(yearStart, { weekStartsOn: 1 })
+
+      while (currentWeekStart <= yearEnd) {
+        const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
+        const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd })
+
+        const weekGigs = filtered.filter((gd) => {
+          const gigDate = new Date(gd.date)
+          return weekDays.some((d) => isSameDay(d, gigDate))
+        })
+
+        const gigDaysCount = new Set(weekGigs.map((g) => g.date)).size
+
+        let status: WeekStatus = 'free'
+        if (gigDaysCount >= 4) {
+          status = 'busy'
+        } else if (gigDaysCount > 0) {
+          status = 'partial'
+        }
+
+        weekInfos.push({
+          weekNumber: getWeek(currentWeekStart, { weekStartsOn: 1 }),
+          startDate: currentWeekStart,
+          endDate: weekEnd,
+          status,
+          gigDays: gigDaysCount,
+        })
+
+        currentWeekStart = addWeeks(currentWeekStart, 1)
+      }
+
+      setWeeks(weekInfos)
+      setLoading(false)
+    }
     loadWeeks()
-  }, [selectedYear])
+  }, [selectedYear, supabase])
 
   useEffect(() => {
     if (!loading && currentWeekRef.current && scrollContainerRef.current && selectedYear === currentYear) {
       const container = scrollContainerRef.current
       const element = currentWeekRef.current
-      container.scrollTop = element.offsetTop - container.offsetTop - container.clientHeight / 2 + element.clientHeight / 2
+      container.scrollTop =
+        element.offsetTop - container.offsetTop - container.clientHeight / 2 + element.clientHeight / 2
     }
-  }, [loading, selectedYear])
-
-  async function loadWeeks() {
-    setLoading(true)
-    const yearStart = new Date(selectedYear, 0, 1)
-    const yearEnd = new Date(selectedYear, 11, 31)
-
-    const start = format(yearStart, 'yyyy-MM-dd')
-    const end = format(yearEnd, 'yyyy-MM-dd')
-
-    const { data: dates } = await supabase
-      .from('gig_dates')
-      .select(`
-        date,
-        gig:gigs(status)
-      `)
-      .gte('date', start)
-      .lte('date', end)
-
-    const filtered = (dates || []).filter((d: any) =>
-      d.gig && !['cancelled', 'declined'].includes(d.gig.status)
-    ) as unknown as GigDate[]
-
-    const weekInfos: WeekInfo[] = []
-    let currentWeekStart = startOfWeek(yearStart, { weekStartsOn: 1 })
-
-    while (currentWeekStart <= yearEnd) {
-      const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
-      const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd })
-
-      const weekGigs = filtered.filter(gd => {
-        const gigDate = new Date(gd.date)
-        return weekDays.some(d => isSameDay(d, gigDate))
-      })
-
-      const gigDaysCount = new Set(weekGigs.map(g => g.date)).size
-
-      let status: WeekStatus = 'free'
-      if (gigDaysCount >= 4) {
-        status = 'busy'
-      } else if (gigDaysCount > 0) {
-        status = 'partial'
-      }
-
-      weekInfos.push({
-        weekNumber: getWeek(currentWeekStart, { weekStartsOn: 1 }),
-        startDate: currentWeekStart,
-        endDate: weekEnd,
-        status,
-        gigDays: gigDaysCount,
-      })
-
-      currentWeekStart = addWeeks(currentWeekStart, 1)
-    }
-
-    setWeeks(weekInfos)
-    setLoading(false)
-  }
+  }, [loading, selectedYear, currentYear])
 
   function getStatusStyle(status: WeekStatus) {
     switch (status) {
@@ -121,9 +123,9 @@ export function AvailableWeeks() {
     }
   }
 
-  const freeCount = weeks.filter(w => w.status === 'free').length
-  const partialCount = weeks.filter(w => w.status === 'partial').length
-  const busyCount = weeks.filter(w => w.status === 'busy').length
+  const freeCount = weeks.filter((w) => w.status === 'free').length
+  const partialCount = weeks.filter((w) => w.status === 'partial').length
+  const busyCount = weeks.filter((w) => w.status === 'busy').length
   const totalWeeks = weeks.length
 
   return (
@@ -139,7 +141,7 @@ export function AvailableWeeks() {
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={() => setSelectedYear(y => Math.max(minYear, y - 1))}
+              onClick={() => setSelectedYear((y) => Math.max(minYear, y - 1))}
               disabled={selectedYear <= minYear}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -149,7 +151,7 @@ export function AvailableWeeks() {
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              onClick={() => setSelectedYear(y => Math.min(maxYear, y + 1))}
+              onClick={() => setSelectedYear((y) => Math.min(maxYear, y + 1))}
               disabled={selectedYear >= maxYear}
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -216,13 +218,12 @@ export function AvailableWeeks() {
                         <Icon className={`h-3 w-3 ${style.text}`} />
                         <span className="font-medium">V{week.weekNumber}</span>
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className={`text-[10px] ${style.text} bg-transparent border-0`}
-                      >
-                        {week.status === 'free' ? t('freeWeek') :
-                         week.status === 'partial' ? `${week.gigDays}d` :
-                         t('fullWeek')}
+                      <Badge variant="secondary" className={`text-[10px] ${style.text} bg-transparent border-0`}>
+                        {week.status === 'free'
+                          ? t('freeWeek')
+                          : week.status === 'partial'
+                            ? `${week.gigDays}d`
+                            : t('fullWeek')}
                       </Badge>
                     </div>
                   )

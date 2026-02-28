@@ -9,7 +9,9 @@
     "admin": "Admin",
     "newGig": "Nytt uppdrag",
     "menu": "Meny",
-    "logout": "Logga ut"
+    "logout": "Logga ut",
+    "showingMyGigs": "Visar bara mina uppdrag",
+    "showingTeamGigs": "Visar alla teammedlemmars uppdrag"
   },
   "common": {
     "save": "Spara",
@@ -631,7 +633,11 @@
     "visibilityUpdated": "Synlighet uppdaterad",
     "allMembers": "Alla",
     "me": "Jag",
-    "assignedTo": "Tilldelad"
+    "assignedTo": "Tilldelad",
+    "personalFilter": "Personligt filter",
+    "personalFilterDescription": "Filtrera alla vyer till att bara visa dina egna data",
+    "showOnlyMyData": "Visa bara mina uppdrag",
+    "showOnlyMyDataDesc": "När aktiverat visas bara dina egna uppdrag, fakturor och utgifter i alla vyer"
   },
   "currency": {
     "SEK": "Svensk krona",

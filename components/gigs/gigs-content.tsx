@@ -52,6 +52,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { formatCurrency, type SupportedCurrency } from '@/lib/currency/exchange'
 import { useCompany } from '@/lib/hooks/use-company'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import { PageTransition } from '@/components/ui/page-transition'
 
 function fmtFee(amount: number, currency?: string | null): string {
@@ -221,6 +222,7 @@ export default function GigsPage() {
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
   const { company, members } = useCompany()
+  const gigFilter = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -252,12 +254,23 @@ export default function GigsPage() {
   const [confirmBatchComplete, setConfirmBatchComplete] = useState(false)
   const [gigExpenses, setGigExpenses] = useState<GigExpense[]>([])
   const [showScrollHint, setShowScrollHint] = useState(true)
-  const [memberFilter, setMemberFilter] = useState<string>('all')
+  const [memberFilter, setMemberFilter] = useState<string>(gigFilter.shouldFilter ? gigFilter.currentUserId : 'all')
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [panelCanScrollUp, setPanelCanScrollUp] = useState(false)
   const [panelCanScrollDown, setPanelCanScrollDown] = useState(false)
   const panelScrollRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+
+  // Sync memberFilter with global filter toggle
+  useEffect(() => {
+    if (gigFilter.shouldFilter && gigFilter.currentUserId) {
+      setMemberFilter(gigFilter.currentUserId)
+    } else if (!gigFilter.shouldFilter && memberFilter === gigFilter.currentUserId) {
+      setMemberFilter('all')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gigFilter.shouldFilter, gigFilter.currentUserId])
+
   const upcomingScrollRef = useRef<HTMLDivElement>(null)
   const historyScrollRef = useRef<HTMLDivElement>(null)
   const declinedScrollRef = useRef<HTMLDivElement>(null)
@@ -493,7 +506,7 @@ export default function GigsPage() {
   const pastAccepted = pastNeedingAction.filter((g) => g.status === 'accepted')
   const pastUnanswered = pastNeedingAction.filter((g) => g.status === 'pending' || g.status === 'tentative')
 
-  const matchesSearch = (g: any) => {
+  const matchesSearch = (g: Gig) => {
     if (memberFilter !== 'all' && g.user_id !== memberFilter) return false
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase()

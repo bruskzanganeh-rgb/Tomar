@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
 
     // Build ICS events
     const events = (gigs || [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .flatMap((gig: any) => {
         const clientName = gig.client?.name || labels.unknownClient
         const baseSummary = gig.project_name

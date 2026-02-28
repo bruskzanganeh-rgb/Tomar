@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCompany } from '@/lib/hooks/use-company'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import useSWR from 'swr'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { createClient } from '@/lib/supabase/client'
@@ -114,6 +115,7 @@ export default function InvoicesTab() {
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
   const { company, members } = useCompany()
+  const { shouldFilter, currentUserId: filterUserId } = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
@@ -160,28 +162,33 @@ export default function InvoicesTab() {
     isLoading: loading,
     mutate: mutateInvoices,
   } = useSWR(
-    'invoices-with-reminders',
+    ['invoices-with-reminders', shouldFilter, filterUserId],
     async () => {
       // Mark overdue invoices
       const today = new Date().toISOString().split('T')[0]
-      await supabase.from('invoices').update({ status: 'overdue' }).eq('status', 'sent').lt('due_date', today)
-
-      const { data, error } = await supabase
+      let overdueQuery = supabase
         .from('invoices')
-        .select(
-          `
+        .update({ status: 'overdue' })
+        .eq('status', 'sent')
+        .lt('due_date', today)
+      if (shouldFilter && filterUserId) overdueQuery = overdueQuery.eq('user_id', filterUserId)
+      await overdueQuery
+
+      let invoiceQuery = supabase.from('invoices').select(
+        `
           *,
           client:clients(id, name, email, invoice_language)
         `,
-        )
-        .order('invoice_number', { ascending: false })
+      )
+      if (shouldFilter && filterUserId) invoiceQuery = invoiceQuery.eq('user_id', filterUserId)
+      const { data, error } = await invoiceQuery.order('invoice_number', { ascending: false })
 
       if (error) throw error
       const invoices = (data || []) as unknown as Invoice[]
 
       // Load reminder counts for overdue invoices
       const overdueIds = invoices.filter((inv) => inv.status === 'overdue').map((inv) => inv.id)
-      let reminderCounts: Record<string, number> = {}
+      const reminderCounts: Record<string, number> = {}
       if (overdueIds.length > 0) {
         const { data: reminders } = await supabase
           .from('invoice_reminders')
@@ -225,7 +232,7 @@ export default function InvoicesTab() {
     async () => {
       // Get gigs already linked to invoices via junction table
       const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id')
-      const linkedGigIds = new Set((linkedGigs || []).map((g: any) => g.gig_id))
+      const linkedGigIds = new Set((linkedGigs || []).map((g: { gig_id: string }) => g.gig_id))
 
       // Get completed gigs with fee that don't have invoices
       const { data, error } = await supabase
@@ -253,17 +260,27 @@ export default function InvoicesTab() {
 
       if (error) throw error
 
-      const filteredGigs = (data || []).filter((gig: any) => gig.client && !linkedGigIds.has(gig.id))
+      type RawPendingGig = typeof data extends (infer U)[] ? U : never
+      const filteredGigs = (data || []).filter((gig: RawPendingGig) => gig.client && !linkedGigIds.has(gig.id))
       const gigIds = filteredGigs.map((g) => g.id)
 
       // Fetch expenses for these gigs
-      let expensesData: any[] = []
+      type ExpenseRow = {
+        id: string
+        gig_id: string
+        supplier: string
+        amount: number
+        amount_base: number | null
+        category: string | null
+        notes: string | null
+      }
+      let expensesData: ExpenseRow[] = []
       if (gigIds.length > 0) {
         const { data: expenses } = await supabase
           .from('expenses')
           .select('id, gig_id, supplier, amount, amount_base, category, notes')
           .in('gig_id', gigIds)
-        expensesData = expenses || []
+        expensesData = (expenses || []) as ExpenseRow[]
       }
 
       // Group expenses by gig_id
@@ -283,25 +300,34 @@ export default function InvoicesTab() {
         {} as Record<string, GigExpense[]>,
       )
 
-      return filteredGigs.map((gig) => ({
-        id: gig.id,
-        fee: gig.fee!,
-        travel_expense: gig.travel_expense,
-        date: gig.date,
-        start_date: gig.start_date,
-        end_date: gig.end_date,
-        total_days: gig.total_days || 1,
-        project_name: gig.project_name,
-        invoice_notes: (gig as any).invoice_notes || null,
-        client_id: gig.client_id!,
-        client_name: (gig.client as any)?.name || '',
-        gig_type_id: (gig.gig_type as any)?.id || '',
-        gig_type_name: (gig.gig_type as any)?.name || '',
-        gig_type_name_en: (gig.gig_type as any)?.name_en || null,
-        gig_type_vat_rate: (gig.gig_type as any)?.vat_rate || 25,
-        client_payment_terms: (gig.client as any)?.payment_terms || 30,
-        expenses: expensesByGig[gig.id] || [],
-      }))
+      return filteredGigs.map((gig) => {
+        const client = gig.client as unknown as { name: string; payment_terms: number | null } | null
+        const gigType = gig.gig_type as unknown as {
+          id: string
+          name: string
+          name_en: string | null
+          vat_rate: number
+        } | null
+        return {
+          id: gig.id,
+          fee: gig.fee!,
+          travel_expense: gig.travel_expense,
+          date: gig.date,
+          start_date: gig.start_date,
+          end_date: gig.end_date,
+          total_days: gig.total_days || 1,
+          project_name: gig.project_name,
+          invoice_notes: gig.invoice_notes || null,
+          client_id: gig.client_id!,
+          client_name: client?.name || '',
+          gig_type_id: gigType?.id || '',
+          gig_type_name: gigType?.name || '',
+          gig_type_name_en: gigType?.name_en || null,
+          gig_type_vat_rate: gigType?.vat_rate || 25,
+          client_payment_terms: client?.payment_terms || 30,
+          expenses: expensesByGig[gig.id] || [],
+        }
+      })
     },
     { revalidateOnFocus: false, dedupingInterval: 10_000 },
   )
@@ -312,7 +338,7 @@ export default function InvoicesTab() {
     async () => {
       const today = new Date().toISOString().split('T')[0]
       const { data: upcoming } = await supabase.from('gigs').select('fee').gte('date', today).eq('status', 'accepted')
-      return (upcoming || []).reduce((sum, g: any) => sum + (g.fee || 0), 0)
+      return (upcoming || []).reduce((sum, g: { fee: number | null }) => sum + (g.fee || 0), 0)
     },
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   )
@@ -376,7 +402,7 @@ export default function InvoicesTab() {
   async function deleteInvoice(invoice: Invoice) {
     // Get all linked gig IDs before deleting
     const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id').eq('invoice_id', invoice.id)
-    const gigIds = (linkedGigs || []).map((g: any) => g.gig_id)
+    const gigIds = (linkedGigs || []).map((g: { gig_id: string }) => g.gig_id)
 
     // Also check legacy gig_id
     if (invoice.gig_id && !gigIds.includes(invoice.gig_id)) {

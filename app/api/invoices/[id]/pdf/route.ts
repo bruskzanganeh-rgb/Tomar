@@ -108,6 +108,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         .select('instrument_id, instrument:instruments(category_id)')
         .eq('user_id', user.id)
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const categoryIds = (userInstruments || []).map((ui: any) => ui.instrument?.category_id).filter(Boolean)
 
       if (categoryIds.length > 0) {
@@ -156,7 +157,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       client: clientData,
       company,
       lines: lines || undefined,
-      currency: (invoice as any).currency || 'SEK',
+      currency: invoice.currency || 'SEK',
       showBranding,
       sponsor,
       locale: clientData.invoice_language || 'sv',
@@ -179,7 +180,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         'Content-Disposition': `attachment; filename="Faktura-${invoice.invoice_number}.pdf"`,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error generating PDF:', error)
     return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 })
   }

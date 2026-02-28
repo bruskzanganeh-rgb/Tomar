@@ -9,7 +9,9 @@
     "admin": "Admin",
     "newGig": "New gig",
     "menu": "Menu",
-    "logout": "Log out"
+    "logout": "Log out",
+    "showingMyGigs": "Showing only my gigs",
+    "showingTeamGigs": "Showing all team members' gigs"
   },
   "common": {
     "save": "Save",
@@ -631,7 +633,11 @@
     "visibilityUpdated": "Visibility updated",
     "allMembers": "All",
     "me": "Me",
-    "assignedTo": "Assigned to"
+    "assignedTo": "Assigned to",
+    "personalFilter": "Personal filter",
+    "personalFilterDescription": "Filter all views to show only your own data",
+    "showOnlyMyData": "Show only my gigs",
+    "showOnlyMyDataDesc": "When enabled, only your own gigs, invoices and expenses are shown across all views"
   },
   "currency": {
     "SEK": "Swedish krona",

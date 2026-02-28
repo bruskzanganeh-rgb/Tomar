@@ -16,13 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 
@@ -40,6 +34,21 @@ type CompareRow = {
 
 type ViewMode = 'invoice' | 'workday'
 type ChartMode = 'timeline' | 'compare'
+
+type InvoiceRow = {
+  invoice_date: string
+  total: number
+  total_base: number | null
+  gig_id?: string | null
+  gig?: { position_id: string | null } | null
+}
+
+type GigRow = {
+  fee: number | null
+  fee_base: number | null
+  total_days: number | null
+  gig_dates: { date: string }[] | null
+}
 
 const YEAR_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1']
 
@@ -98,18 +107,11 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       .select('invoice_date')
       .order('invoice_date', { ascending: true })
 
-    const { data: gigDates } = await supabase
-      .from('gig_dates')
-      .select('date')
-      .order('date', { ascending: true })
+    const { data: gigDates } = await supabase.from('gig_dates').select('date').order('date', { ascending: true })
 
-    const invoiceYears = invoices?.map(inv =>
-      new Date(inv.invoice_date).getFullYear().toString()
-    ) || []
+    const invoiceYears = invoices?.map((inv) => new Date(inv.invoice_date).getFullYear().toString()) || []
 
-    const gigYears = gigDates?.map(gd =>
-      new Date(gd.date).getFullYear().toString()
-    ) || []
+    const gigYears = gigDates?.map((gd) => new Date(gd.date).getFullYear().toString()) || []
 
     const currentYearStr = new Date().getFullYear().toString()
     const years = [...new Set([...invoiceYears, ...gigYears, currentYearStr])].sort()
@@ -139,7 +141,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
     const rows: CompareRow[] = []
     for (let i = 0; i < 12; i++) {
       const row: CompareRow = { monthName: monthNames[i] }
-      years.forEach(y => {
+      years.forEach((y) => {
         row[y] = Math.round(monthData[i][y] || 0)
       })
       rows.push(row)
@@ -155,9 +157,11 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
     const needsPositionFilter = positionId && positionId !== 'all'
     let query = supabase
       .from('invoices')
-      .select(needsPositionFilter
-        ? 'invoice_date, total, total_base, gig_id, gig:gigs(position_id)'
-        : 'invoice_date, total, total_base')
+      .select(
+        needsPositionFilter
+          ? 'invoice_date, total, total_base, gig_id, gig:gigs(position_id)'
+          : 'invoice_date, total, total_base',
+      )
       .in('status', ['sent', 'paid'])
 
     if (!isAll) {
@@ -168,12 +172,12 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       query = query.eq('client_id', clientId)
     }
 
-    const { data: rawInvoices } = await query
+    const { data: rawInvoices } = (await query) as unknown as { data: InvoiceRow[] | null }
 
     // Filter by position client-side (invoices don't have position_id directly)
     let invoices = rawInvoices
     if (needsPositionFilter) {
-      invoices = (rawInvoices || []).filter((inv: any) => {
+      invoices = (rawInvoices || []).filter((inv) => {
         if (positionId === 'none') {
           // No position = invoices without gig OR gig without position
           return !inv.gig_id || !inv.gig?.position_id
@@ -185,7 +189,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
     if (isAll) {
       // Build year-month map for both timeline and compare
       const timelineData: { [key: string]: number } = {}
-      invoices?.forEach((inv: any) => {
+      invoices?.forEach((inv) => {
         const d = new Date(inv.invoice_date)
         const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`
         timelineData[key] = (timelineData[key] || 0) + (inv.total_base || inv.total)
@@ -210,17 +214,19 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       }
 
       let cumulative = 0
-      const chartData: MonthlyRevenue[] = Object.keys(timelineData).sort().map(key => {
-        const [y, m] = key.split('-').map(Number)
-        const revenue = timelineData[key]
-        cumulative += revenue
-        return {
-          month: key,
-          monthName: `${monthNames[m - 1]} ${y.toString().slice(-2)}`,
-          revenue,
-          cumulative,
-        }
-      })
+      const chartData: MonthlyRevenue[] = Object.keys(timelineData)
+        .sort()
+        .map((key) => {
+          const [y, m] = key.split('-').map(Number)
+          const revenue = timelineData[key]
+          cumulative += revenue
+          return {
+            month: key,
+            monthName: `${monthNames[m - 1]} ${y.toString().slice(-2)}`,
+            revenue,
+            cumulative,
+          }
+        })
 
       setData(chartData)
     } else {
@@ -228,9 +234,9 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       const monthlyData: { [key: number]: number } = {}
       for (let i = 0; i < 12; i++) monthlyData[i] = 0
 
-      invoices?.forEach((inv: any) => {
+      invoices?.forEach((inv) => {
         const month = new Date(inv.invoice_date).getMonth()
-        monthlyData[month] += (inv.total_base || inv.total)
+        monthlyData[month] += inv.total_base || inv.total
       })
 
       let cumulative = 0
@@ -274,18 +280,18 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       }
     }
 
-    const { data: gigs } = await gigQuery
+    const { data: gigs } = (await gigQuery) as unknown as { data: GigRow[] | null }
 
     if (isAll) {
       // Build year-month map
       const timelineData: { [key: string]: number } = {}
 
-      gigs?.forEach((gig: any) => {
+      gigs?.forEach((gig) => {
         const fee = gig.fee_base || gig.fee
         if (!fee || !gig.total_days || gig.total_days === 0) return
         const dayRate = fee / gig.total_days
 
-        gig.gig_dates?.forEach((gd: { date: string }) => {
+        gig.gig_dates?.forEach((gd) => {
           const d = new Date(gd.date)
           const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`
           timelineData[key] = (timelineData[key] || 0) + dayRate
@@ -311,17 +317,19 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       }
 
       let cumulative = 0
-      const chartData: MonthlyRevenue[] = Object.keys(timelineData).sort().map(key => {
-        const [y, m] = key.split('-').map(Number)
-        const revenue = Math.round(timelineData[key])
-        cumulative += revenue
-        return {
-          month: key,
-          monthName: `${monthNames[m - 1]} ${y.toString().slice(-2)}`,
-          revenue,
-          cumulative,
-        }
-      })
+      const chartData: MonthlyRevenue[] = Object.keys(timelineData)
+        .sort()
+        .map((key) => {
+          const [y, m] = key.split('-').map(Number)
+          const revenue = Math.round(timelineData[key])
+          cumulative += revenue
+          return {
+            month: key,
+            monthName: `${monthNames[m - 1]} ${y.toString().slice(-2)}`,
+            revenue,
+            cumulative,
+          }
+        })
 
       setData(chartData)
     } else {
@@ -329,12 +337,12 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       const monthlyData: { [key: number]: number } = {}
       for (let i = 0; i < 12; i++) monthlyData[i] = 0
 
-      gigs?.forEach((gig: any) => {
+      gigs?.forEach((gig) => {
         const fee = gig.fee_base || gig.fee
         if (!fee || !gig.total_days || gig.total_days === 0) return
         const dayRate = fee / gig.total_days
 
-        gig.gig_dates?.forEach((gd: { date: string }) => {
+        gig.gig_dates?.forEach((gd) => {
           const date = new Date(gd.date)
           if (date.getFullYear() === year) {
             const month = date.getMonth()
@@ -373,9 +381,12 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3">
         <div className="flex items-center gap-3">
           <CardTitle className="text-sm font-medium">
-            {viewMode === 'invoice' ? t('invoiced') : t('worked')}{selectedYear !== 'all' ? ` ${selectedYear}` : ''}
+            {viewMode === 'invoice' ? t('invoiced') : t('worked')}
+            {selectedYear !== 'all' ? ` ${selectedYear}` : ''}
           </CardTitle>
-          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{totalYearRevenue.toLocaleString(formatLocale)} {tc('kr')}</span>
+          <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+            {totalYearRevenue.toLocaleString(formatLocale)} {tc('kr')}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {isAllYears && (
@@ -430,8 +441,10 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
                 <SelectValue placeholder={t('year')} />
               </SelectTrigger>
               <SelectContent>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                {availableYears.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -443,10 +456,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
           <div className="h-[160px] flex items-end gap-2 px-8 pb-4">
             {[40, 65, 85, 50, 70, 45, 55, 75, 60, 90, 72, 95].map((height, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <Skeleton
-                  className="w-full rounded-t"
-                  style={{ height: `${height}px` }}
-                />
+                <Skeleton className="w-full rounded-t" style={{ height: `${height}px` }} />
                 <Skeleton className="h-2 w-6" />
               </div>
             ))}
@@ -469,10 +479,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
                 width={35}
               />
               <Tooltip
-                formatter={(value: number, name: string) => [
-                  `${value.toLocaleString(formatLocale)} ${tc('kr')}`,
-                  name
-                ]}
+                formatter={(value: number, name: string) => [`${value.toLocaleString(formatLocale)} ${tc('kr')}`, name]}
                 contentStyle={{
                   backgroundColor: 'var(--popover)',
                   border: '1px solid var(--border)',
@@ -481,10 +488,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
                   color: 'var(--foreground)',
                 }}
               />
-              <Legend
-                wrapperStyle={{ fontSize: '11px' }}
-                iconSize={10}
-              />
+              <Legend wrapperStyle={{ fontSize: '11px' }} iconSize={10} />
               {compareYears.map((year, i) => (
                 <Bar
                   key={year}
@@ -532,11 +536,9 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
               <Tooltip
                 formatter={(value: number, name: string) => [
                   `${value.toLocaleString(formatLocale)} ${tc('kr')}`,
-                  name === 'revenue'
-                    ? (viewMode === 'invoice' ? t('invoiced') : t('worked'))
-                    : t('total')
+                  name === 'revenue' ? (viewMode === 'invoice' ? t('invoiced') : t('worked')) : t('total'),
                 ]}
-                labelFormatter={(label) => selectedYear !== 'all' ? `${label} ${selectedYear}` : label}
+                labelFormatter={(label) => (selectedYear !== 'all' ? `${label} ${selectedYear}` : label)}
                 contentStyle={{
                   backgroundColor: 'var(--popover)',
                   border: '1px solid var(--border)',

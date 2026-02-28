@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCompany } from '@/lib/hooks/use-company'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -63,6 +64,7 @@ export default function ExpensesTab() {
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
   const { company, members } = useCompany()
+  const { shouldFilter, currentUserId: filterUserId } = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
@@ -98,12 +100,11 @@ export default function ExpensesTab() {
     isLoading: loading,
     mutate: mutateExpenses,
   } = useSWR<Expense[]>(
-    'expenses-with-gigs',
+    ['expenses-with-gigs', shouldFilter, filterUserId],
     async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*, gig:gigs(id, project_name, date, client:clients(name))')
-        .order('date', { ascending: false })
+      let query = supabase.from('expenses').select('*, gig:gigs(id, project_name, date, client:clients(name))')
+      if (shouldFilter && filterUserId) query = query.eq('user_id', filterUserId)
+      const { data, error } = await query.order('date', { ascending: false })
       if (error) throw error
       return (data || []) as unknown as Expense[]
     },
@@ -111,13 +112,14 @@ export default function ExpensesTab() {
   )
 
   const { data: gigs = [] } = useSWR<Gig[]>(
-    'gigs-for-expenses',
+    ['gigs-for-expenses', shouldFilter, filterUserId],
     async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('gigs')
         .select('id, date, project_name, venue, status, client:clients(name)')
         .in('status', ['pending', 'accepted', 'completed', 'invoiced', 'paid'])
-        .order('date', { ascending: false })
+      if (shouldFilter && filterUserId) query = query.eq('user_id', filterUserId)
+      const { data } = await query.order('date', { ascending: false })
       return (data || []) as unknown as Gig[]
     },
     { revalidateOnFocus: false, dedupingInterval: 30_000 },

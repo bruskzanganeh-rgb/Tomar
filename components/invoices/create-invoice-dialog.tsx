@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from '@/components/ui/dialog'
@@ -184,13 +184,111 @@ export function CreateInvoiceDialog({
   useEffect(() => {
     if (open) {
       initializedRef.current = false
+
+      async function loadClients() {
+        const { data } = await supabase
+          .from('clients')
+          .select(
+            'id, name, org_number, address, payment_terms, reference_person, invoice_language, country_code, vat_number',
+          )
+          .order('name')
+        setClients(data || [])
+      }
+
+      async function loadCompletedGigs() {
+        const { data } = await supabase
+          .from('gigs')
+          .select(
+            `
+            id,
+            date,
+            fee,
+            travel_expense,
+            client:clients(name),
+            gig_type:gig_types(vat_rate)
+          `,
+          )
+          .in('status', ['accepted', 'completed'])
+          .order('date', { ascending: false })
+        setCompletedGigs((data || []) as unknown as Gig[])
+      }
+
+      async function loadGigTypes() {
+        const { data } = await supabase.from('gig_types').select('id, name, name_en, vat_rate').order('name')
+        setGigTypes(data || [])
+      }
+
+      async function loadCompanySettings() {
+        const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
+        if (membership) {
+          const { data } = await supabase
+            .from('companies')
+            .select(
+              'company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code',
+            )
+            .eq('id', membership.company_id)
+            .single()
+          setCompanySettings(data)
+        }
+      }
+
+      async function loadNextInvoiceNumber() {
+        const { data } = await supabase
+          .from('invoices')
+          .select('invoice_number')
+          .order('invoice_number', { ascending: false })
+          .limit(1)
+          .single()
+
+        const maxExisting = data?.invoice_number || 0
+        setNextInvoiceNumber(maxExisting + 1)
+      }
+
       loadClients()
       loadCompletedGigs()
       loadGigTypes()
       loadNextInvoiceNumber()
       loadCompanySettings()
     }
-  }, [open])
+  }, [open, supabase])
+
+  const buildLinesFromGigs = useCallback(
+    (gigs: InitialGig[]): InvoiceLine[] => {
+      const client = clients.find((c) => c.id === formData.client_id)
+      const useEnglish = client?.invoice_language === 'en'
+      const newLines: InvoiceLine[] = []
+      for (const gig of gigs) {
+        let dateDescription: string
+        if (gig.total_days > 1 && gig.start_date && gig.end_date) {
+          const startFormatted = new Date(gig.start_date).toLocaleDateString(formatLocale)
+          const endFormatted = new Date(gig.end_date).toLocaleDateString(formatLocale)
+          dateDescription = `${startFormatted} - ${endFormatted} (${gig.total_days} ${tc('days')})`
+        } else {
+          dateDescription = new Date(gig.date).toLocaleDateString(formatLocale)
+        }
+
+        const typeName = useEnglish && gig.gig_type_name_en ? gig.gig_type_name_en : gig.gig_type_name
+        newLines.push({
+          description: gig.project_name
+            ? `${typeName} - ${gig.project_name} - ${dateDescription}`
+            : `${typeName} - ${dateDescription}`,
+          amount: gig.fee.toString(),
+          gig_type_id: gig.gig_type_id,
+        })
+
+        if (gig.travel_expense && gig.travel_expense > 0) {
+          const konsertType = findGigType(gigTypes, 'Konsert', 'Concert')
+          newLines.push({
+            description: `${tg('travelExpense')} - ${dateDescription}`,
+            amount: gig.travel_expense.toString(),
+            gig_type_id: konsertType?.id || gig.gig_type_id,
+          })
+        }
+      }
+      return newLines.length > 0 ? newLines : [{ description: '', amount: '', gig_type_id: '' }]
+    },
+    [clients, formData.client_id, formatLocale, tc, tg, gigTypes],
+  )
 
   // Auto-populate form when initialGig or initialGigs are provided (once per dialog open)
   useEffect(() => {
@@ -218,105 +316,11 @@ export function CreateInvoiceDialog({
     setClientGigs(gigs)
     setLines(buildLinesFromGigs(gigs))
     initializedRef.current = true
-  }, [open, initialGig, initialGigs, gigTypes, clients])
-
-  async function loadClients() {
-    const { data } = await supabase
-      .from('clients')
-      .select(
-        'id, name, org_number, address, payment_terms, reference_person, invoice_language, country_code, vat_number',
-      )
-      .order('name')
-    setClients(data || [])
-  }
-
-  async function loadCompletedGigs() {
-    const { data } = await supabase
-      .from('gigs')
-      .select(
-        `
-        id,
-        date,
-        fee,
-        travel_expense,
-        client:clients(name),
-        gig_type:gig_types(vat_rate)
-      `,
-      )
-      .in('status', ['accepted', 'completed'])
-      .order('date', { ascending: false })
-    setCompletedGigs((data || []) as unknown as Gig[])
-  }
-
-  async function loadGigTypes() {
-    const { data } = await supabase.from('gig_types').select('id, name, name_en, vat_rate').order('name')
-    setGigTypes(data || [])
-  }
-
-  async function loadCompanySettings() {
-    const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
-    if (membership) {
-      const { data } = await supabase
-        .from('companies')
-        .select(
-          'company_name, org_number, address, email, phone, bank_account, bankgiro, iban, bic, logo_url, vat_registration_number, late_payment_interest_text, show_logo_on_invoice, country_code',
-        )
-        .eq('id', membership.company_id)
-        .single()
-      setCompanySettings(data)
-    }
-  }
-
-  async function loadNextInvoiceNumber() {
-    const { data } = await supabase
-      .from('invoices')
-      .select('invoice_number')
-      .order('invoice_number', { ascending: false })
-      .limit(1)
-      .single()
-
-    const maxExisting = data?.invoice_number || 0
-    setNextInvoiceNumber(maxExisting + 1)
-  }
-
-  function buildLinesFromGigs(gigs: InitialGig[]): InvoiceLine[] {
-    const client = clients.find((c) => c.id === formData.client_id)
-    const useEnglish = client?.invoice_language === 'en'
-    const newLines: InvoiceLine[] = []
-    for (const gig of gigs) {
-      let dateDescription: string
-      if (gig.total_days > 1 && gig.start_date && gig.end_date) {
-        const startFormatted = new Date(gig.start_date).toLocaleDateString(formatLocale)
-        const endFormatted = new Date(gig.end_date).toLocaleDateString(formatLocale)
-        dateDescription = `${startFormatted} - ${endFormatted} (${gig.total_days} ${tc('days')})`
-      } else {
-        dateDescription = new Date(gig.date).toLocaleDateString(formatLocale)
-      }
-
-      const typeName = useEnglish && gig.gig_type_name_en ? gig.gig_type_name_en : gig.gig_type_name
-      newLines.push({
-        description: gig.project_name
-          ? `${typeName} - ${gig.project_name} - ${dateDescription}`
-          : `${typeName} - ${dateDescription}`,
-        amount: gig.fee.toString(),
-        gig_type_id: gig.gig_type_id,
-      })
-
-      if (gig.travel_expense && gig.travel_expense > 0) {
-        const konsertType = findGigType(gigTypes, 'Konsert', 'Concert')
-        newLines.push({
-          description: `${tg('travelExpense')} - ${dateDescription}`,
-          amount: gig.travel_expense.toString(),
-          gig_type_id: konsertType?.id || gig.gig_type_id,
-        })
-      }
-    }
-    return newLines.length > 0 ? newLines : [{ description: '', amount: '', gig_type_id: '' }]
-  }
+  }, [open, initialGig, initialGigs, gigTypes, clients, buildLinesFromGigs])
 
   async function loadClientGigs(clientId: string) {
     const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id')
-    const linkedGigIds = new Set((linkedGigs || []).map((g: any) => g.gig_id))
+    const linkedGigIds = new Set((linkedGigs || []).map((g: { gig_id: string }) => g.gig_id))
 
     const { data } = await supabase
       .from('gigs')
@@ -334,25 +338,34 @@ export function CreateInvoiceDialog({
       .order('date', { ascending: false })
 
     const gigs: InitialGig[] = (data || [])
-      .filter((g: any) => !linkedGigIds.has(g.id))
-      .map((g: any) => ({
-        id: g.id,
-        fee: g.fee!,
-        travel_expense: g.travel_expense,
-        date: g.date,
-        start_date: g.start_date,
-        end_date: g.end_date,
-        total_days: g.total_days || 1,
-        project_name: g.project_name,
-        invoice_notes: g.invoice_notes || null,
-        client_id: g.client_id!,
-        client_name: (g.client as any)?.name || '',
-        gig_type_id: (g.gig_type as any)?.id || '',
-        gig_type_name: (g.gig_type as any)?.name || '',
-        gig_type_name_en: (g.gig_type as any)?.name_en || null,
-        gig_type_vat_rate: (g.gig_type as any)?.vat_rate || 25,
-        client_payment_terms: (g.client as any)?.payment_terms || 30,
-      }))
+      .filter((g) => !linkedGigIds.has(g.id))
+      .map((g) => {
+        const client = g.client as unknown as { name: string; payment_terms: number | null } | null
+        const gigType = g.gig_type as unknown as {
+          id: string
+          name: string
+          name_en: string | null
+          vat_rate: number
+        } | null
+        return {
+          id: g.id,
+          fee: g.fee!,
+          travel_expense: g.travel_expense,
+          date: g.date,
+          start_date: g.start_date,
+          end_date: g.end_date,
+          total_days: g.total_days || 1,
+          project_name: g.project_name,
+          invoice_notes: g.invoice_notes || null,
+          client_id: g.client_id!,
+          client_name: client?.name || '',
+          gig_type_id: gigType?.id || '',
+          gig_type_name: gigType?.name || '',
+          gig_type_name_en: gigType?.name_en || null,
+          gig_type_vat_rate: gigType?.vat_rate || 25,
+          client_payment_terms: client?.payment_terms || 30,
+        }
+      })
 
     setClientGigs(gigs)
   }

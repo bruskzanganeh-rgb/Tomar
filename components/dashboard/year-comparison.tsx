@@ -30,91 +30,90 @@ export function YearComparison() {
   const supabase = createClient()
 
   useEffect(() => {
-    loadYearComparison()
-  }, [])
+    async function loadYearComparison() {
+      setLoading(true)
 
-  async function loadYearComparison() {
-    setLoading(true)
+      const now = new Date()
+      const currentYearNum = now.getFullYear()
+      const previousYearNum = currentYearNum - 1
+      const currentMonth = now.getMonth() + 1
+      const currentDay = now.getDate()
+      const ytdEndDatePrev = `${previousYearNum}-${currentMonth.toString().padStart(2, '0')}-${currentDay.toString().padStart(2, '0')}`
 
-    const now = new Date()
-    const currentYearNum = now.getFullYear()
-    const previousYearNum = currentYearNum - 1
-    const currentMonth = now.getMonth() + 1
-    const currentDay = now.getDate()
-    const ytdEndDatePrev = `${previousYearNum}-${currentMonth.toString().padStart(2, '0')}-${currentDay.toString().padStart(2, '0')}`
+      // Fetch invoices
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('invoice_date, total, total_base')
+        .in('status', ['sent', 'paid'])
+        .gte('invoice_date', `${previousYearNum}-01-01`)
+        .lte('invoice_date', `${currentYearNum}-12-31`)
 
-    // Fetch invoices
-    const { data: invoices } = await supabase
-      .from('invoices')
-      .select('invoice_date, total, total_base')
-      .in('status', ['sent', 'paid'])
-      .gte('invoice_date', `${previousYearNum}-01-01`)
-      .lte('invoice_date', `${currentYearNum}-12-31`)
+      // Fetch gigs with status completed/invoiced/paid
+      const { data: gigs } = await supabase
+        .from('gigs')
+        .select('id, start_date, total_days, client_id')
+        .in('status', ['accepted', 'completed', 'invoiced', 'paid'])
+        .gte('start_date', `${previousYearNum}-01-01`)
+        .lte('start_date', `${currentYearNum}-12-31`)
 
-    // Fetch gigs with status completed/invoiced/paid
-    const { data: gigs } = await supabase
-      .from('gigs')
-      .select('id, start_date, total_days, client_id')
-      .in('status', ['accepted', 'completed', 'invoiced', 'paid'])
-      .gte('start_date', `${previousYearNum}-01-01`)
-      .lte('start_date', `${currentYearNum}-12-31`)
+      // Fetch clients to find new ones this year
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, created_at')
+        .gte('created_at', `${previousYearNum}-01-01`)
+        .lte('created_at', `${currentYearNum}-12-31T23:59:59`)
 
-    // Fetch clients to find new ones this year
-    const { data: clients } = await supabase
-      .from('clients')
-      .select('id, created_at')
-      .gte('created_at', `${previousYearNum}-01-01`)
-      .lte('created_at', `${currentYearNum}-12-31T23:59:59`)
+      if (invoices && gigs) {
+        // Current year calculations
+        const currentYearInvoices = invoices.filter(
+          (inv) => inv.invoice_date && new Date(inv.invoice_date).getFullYear() === currentYearNum,
+        )
+        const currentYearGigs = gigs.filter(
+          (g) => g.start_date && new Date(g.start_date).getFullYear() === currentYearNum,
+        )
+        const currentYearNewClients = (clients || []).filter(
+          (c) => c.created_at && new Date(c.created_at).getFullYear() === currentYearNum,
+        )
 
-    if (invoices && gigs) {
-      // Current year calculations
-      const currentYearInvoices = invoices.filter(
-        (inv) => inv.invoice_date && new Date(inv.invoice_date).getFullYear() === currentYearNum,
-      )
-      const currentYearGigs = gigs.filter(
-        (g) => g.start_date && new Date(g.start_date).getFullYear() === currentYearNum,
-      )
-      const currentYearNewClients = (clients || []).filter(
-        (c) => c.created_at && new Date(c.created_at).getFullYear() === currentYearNum,
-      )
+        // Previous year calculations
+        const previousYearInvoices = invoices.filter(
+          (inv) => inv.invoice_date && new Date(inv.invoice_date).getFullYear() === previousYearNum,
+        )
+        const previousYearGigs = gigs.filter(
+          (g) => g.start_date && new Date(g.start_date).getFullYear() === previousYearNum,
+        )
 
-      // Previous year calculations
-      const previousYearInvoices = invoices.filter(
-        (inv) => inv.invoice_date && new Date(inv.invoice_date).getFullYear() === previousYearNum,
-      )
-      const previousYearGigs = gigs.filter(
-        (g) => g.start_date && new Date(g.start_date).getFullYear() === previousYearNum,
-      )
+        // YTD calculations for previous year (same period)
+        const previousYearYTDInvoices = previousYearInvoices.filter((inv) => inv.invoice_date <= ytdEndDatePrev)
+        const previousYearYTDGigs = previousYearGigs.filter((g) => g.start_date! <= ytdEndDatePrev)
 
-      // YTD calculations for previous year (same period)
-      const previousYearYTDInvoices = previousYearInvoices.filter((inv) => inv.invoice_date <= ytdEndDatePrev)
-      const previousYearYTDGigs = previousYearGigs.filter((g) => g.start_date! <= ytdEndDatePrev)
+        setCurrentYear({
+          year: currentYearNum,
+          revenue: currentYearInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
+          ytdRevenue: currentYearInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
+          gigCount: currentYearGigs.length,
+          ytdGigCount: currentYearGigs.length,
+          workDays: currentYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+          ytdWorkDays: currentYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+          newClients: currentYearNewClients.length,
+        })
 
-      setCurrentYear({
-        year: currentYearNum,
-        revenue: currentYearInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
-        ytdRevenue: currentYearInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
-        gigCount: currentYearGigs.length,
-        ytdGigCount: currentYearGigs.length,
-        workDays: currentYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
-        ytdWorkDays: currentYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
-        newClients: currentYearNewClients.length,
-      })
+        setPreviousYear({
+          year: previousYearNum,
+          revenue: previousYearInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
+          ytdRevenue: previousYearYTDInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
+          gigCount: previousYearGigs.length,
+          ytdGigCount: previousYearYTDGigs.length,
+          workDays: previousYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+          ytdWorkDays: previousYearYTDGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
+          newClients: 0,
+        })
+      }
 
-      setPreviousYear({
-        year: previousYearNum,
-        revenue: previousYearInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
-        ytdRevenue: previousYearYTDInvoices.reduce((sum, inv) => sum + (inv.total_base || inv.total), 0),
-        gigCount: previousYearGigs.length,
-        ytdGigCount: previousYearYTDGigs.length,
-        workDays: previousYearGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
-        ytdWorkDays: previousYearYTDGigs.reduce((sum, g) => sum + (g.total_days || 1), 0),
-        newClients: 0,
-      })
+      setLoading(false)
     }
-
-    setLoading(false)
-  }
+    loadYearComparison()
+  }, [supabase])
 
   function getChangePercent(current: number, previous: number): number {
     if (previous === 0) return current > 0 ? 100 : 0

@@ -1,37 +1,25 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BarChart3, TrendingUp, XCircle, Calendar, Music, CalendarClock, Wallet, HelpCircle } from 'lucide-react'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import dynamic from 'next/dynamic'
 
 const RevenueChart = dynamic(
-  () => import('@/components/dashboard/revenue-chart').then(mod => ({ default: mod.RevenueChart })),
-  { ssr: false, loading: () => <div className="h-[300px] animate-pulse bg-muted rounded" /> }
+  () => import('@/components/dashboard/revenue-chart').then((mod) => ({ default: mod.RevenueChart })),
+  { ssr: false, loading: () => <div className="h-[300px] animate-pulse bg-muted rounded" /> },
 )
 
-const LazyBarChart = dynamic(
-  () => import('@/components/analytics/top-clients-chart'),
-  { ssr: false, loading: () => <div className="h-[160px] animate-pulse bg-muted rounded" /> }
-)
+const LazyBarChart = dynamic(() => import('@/components/analytics/top-clients-chart'), {
+  ssr: false,
+  loading: () => <div className="h-[160px] animate-pulse bg-muted rounded" />,
+})
 
 type Gig = {
   id: string
@@ -72,18 +60,16 @@ export function AnalyticsContent() {
   const [selectedClient, setSelectedClient] = useState<string>('all')
   const [selectedPosition, setSelectedPosition] = useState<string>('all')
   const supabase = createClient()
+  const { shouldFilter, currentUserId } = useGigFilter()
 
   useEffect(() => {
-    loadData()
-  }, [])
+    async function loadData() {
+      setLoading(true)
 
-  async function loadData() {
-    setLoading(true)
-
-    const [gigsResult, invoicesResult, clientsResult, positionsResult] = await Promise.all([
-      supabase
+      let gigQuery = supabase
         .from('gigs')
-        .select(`
+        .select(
+          `
           id,
           date,
           fee,
@@ -94,41 +80,47 @@ export function AnalyticsContent() {
           client:clients(id, name),
           gig_type:gig_types(name),
           position:positions(id, name)
-        `)
+        `,
+        )
         .neq('status', 'draft')
-        .order('date', { ascending: false }),
-      supabase
+      if (shouldFilter && currentUserId) gigQuery = gigQuery.eq('user_id', currentUserId)
+
+      let invoiceQuery = supabase
         .from('invoices')
         .select('invoice_date, total, total_base, client:clients(id, name)')
         .in('status', ['sent', 'paid'])
-        .order('invoice_date', { ascending: false }),
-      supabase
-        .from('clients')
-        .select('id, name')
-        .order('name'),
-      supabase
-        .from('positions')
-        .select('id, name')
-        .order('sort_order')
-    ])
+      if (shouldFilter && currentUserId) invoiceQuery = invoiceQuery.eq('user_id', currentUserId)
 
-    if (gigsResult.data) setGigs(gigsResult.data as unknown as Gig[])
-    if (invoicesResult.data) setInvoices(invoicesResult.data as unknown as Invoice[])
-    if (clientsResult.data) setClients(clientsResult.data)
-    if (positionsResult.data) setPositions(positionsResult.data)
-    setLoading(false)
-  }
+      const [gigsResult, invoicesResult, clientsResult, positionsResult] = await Promise.all([
+        gigQuery.order('date', { ascending: false }),
+        invoiceQuery.order('invoice_date', { ascending: false }),
+        supabase.from('clients').select('id, name').order('name'),
+        supabase.from('positions').select('id, name').order('sort_order'),
+      ])
+
+      if (gigsResult.data) setGigs(gigsResult.data as unknown as Gig[])
+      if (invoicesResult.data) setInvoices(invoicesResult.data as unknown as Invoice[])
+      if (clientsResult.data) setClients(clientsResult.data)
+      if (positionsResult.data) setPositions(positionsResult.data)
+      setLoading(false)
+    }
+    loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldFilter, currentUserId])
 
   // Get unique years from gigs and invoices
-  const gigYears = gigs.map(g => new Date(g.date).getFullYear())
-  const invoiceYears = invoices.map(inv => new Date(inv.invoice_date).getFullYear())
+  const gigYears = gigs.map((g) => new Date(g.date).getFullYear())
+  const invoiceYears = invoices.map((inv) => new Date(inv.invoice_date).getFullYear())
   const years = [...new Set([...gigYears, ...invoiceYears])].sort((a, b) => b - a)
 
   // Filter gigs based on selected year, client and position
-  const filteredGigs = gigs.filter(g => {
+  const filteredGigs = gigs.filter((g) => {
     const yearMatch = selectedYear === 'all' || new Date(g.date).getFullYear().toString() === selectedYear
     const clientMatch = selectedClient === 'all' || g.client?.id === selectedClient
-    const positionMatch = selectedPosition === 'all' || g.position_id === selectedPosition || (selectedPosition === 'none' && !g.position_id)
+    const positionMatch =
+      selectedPosition === 'all' ||
+      g.position_id === selectedPosition ||
+      (selectedPosition === 'none' && !g.position_id)
     return yearMatch && clientMatch && positionMatch
   })
 
@@ -136,16 +128,12 @@ export function AnalyticsContent() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const completedGigs = filteredGigs.filter(g => ['completed', 'invoiced', 'paid'].includes(g.status))
-  const declinedGigs = filteredGigs.filter(g => g.status === 'declined')
+  const completedGigs = filteredGigs.filter((g) => ['completed', 'invoiced', 'paid'].includes(g.status))
+  const declinedGigs = filteredGigs.filter((g) => g.status === 'declined')
 
-  const upcomingGigs = filteredGigs.filter(g =>
-    g.status === 'accepted' && new Date(g.date) >= today
-  )
+  const upcomingGigs = filteredGigs.filter((g) => g.status === 'accepted' && new Date(g.date) >= today)
 
-  const tentativeGigs = filteredGigs.filter(g =>
-    g.status === 'tentative' && new Date(g.date) >= today
-  )
+  const tentativeGigs = filteredGigs.filter((g) => g.status === 'tentative' && new Date(g.date) >= today)
 
   const totalRevenue = completedGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
   const totalDays = completedGigs.reduce((sum, g) => sum + g.total_days, 0)
@@ -154,66 +142,72 @@ export function AnalyticsContent() {
 
   const upcomingRevenue = upcomingGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
   const upcomingDays = upcomingGigs.reduce((sum, g) => sum + g.total_days, 0)
-  const nextGig = upcomingGigs.length > 0
-    ? upcomingGigs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
-    : null
+  const nextGig =
+    upcomingGigs.length > 0
+      ? upcomingGigs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+      : null
 
   const tentativeRevenue = tentativeGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
   const tentativeDays = tentativeGigs.reduce((sum, g) => sum + g.total_days, 0)
 
   // Calculate best paying gigs per day
   const gigsWithDayRate = completedGigs
-    .filter(g => g.fee && g.total_days > 0)
-    .map(g => ({
+    .filter((g) => g.fee && g.total_days > 0)
+    .map((g) => ({
       ...g,
-      dayRate: (g.fee || 0) / g.total_days
+      dayRate: (g.fee || 0) / g.total_days,
     }))
     .sort((a, b) => b.dayRate - a.dayRate)
     .slice(0, 10)
 
   // Calculate position statistics
-  const positionStats = positions.map(position => {
-    const positionGigs = completedGigs.filter(g => g.position_id === position.id)
-    const totalFee = positionGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
-    const totalDaysForPosition = positionGigs.reduce((sum, g) => sum + g.total_days, 0)
-    const avgPerDayForPosition = totalDaysForPosition > 0 ? totalFee / totalDaysForPosition : 0
-    return {
-      id: position.id,
-      name: position.name,
-      gigCount: positionGigs.length,
-      totalDays: totalDaysForPosition,
-      totalRevenue: totalFee,
-      avgPerDay: avgPerDayForPosition
-    }
-  }).filter(p => p.gigCount > 0).sort((a, b) => b.totalRevenue - a.totalRevenue)
+  const positionStats = positions
+    .map((position) => {
+      const positionGigs = completedGigs.filter((g) => g.position_id === position.id)
+      const totalFee = positionGigs.reduce((sum, g) => sum + (g.fee || 0), 0)
+      const totalDaysForPosition = positionGigs.reduce((sum, g) => sum + g.total_days, 0)
+      const avgPerDayForPosition = totalDaysForPosition > 0 ? totalFee / totalDaysForPosition : 0
+      return {
+        id: position.id,
+        name: position.name,
+        gigCount: positionGigs.length,
+        totalDays: totalDaysForPosition,
+        totalRevenue: totalFee,
+        avgPerDay: avgPerDayForPosition,
+      }
+    })
+    .filter((p) => p.gigCount > 0)
+    .sort((a, b) => b.totalRevenue - a.totalRevenue)
 
   // Add "no position" stats
-  const noPositionGigs = completedGigs.filter(g => !g.position_id)
+  const noPositionGigs = completedGigs.filter((g) => !g.position_id)
   const noPositionStats = {
     id: 'none',
     name: t('noPosition'),
     gigCount: noPositionGigs.length,
     totalDays: noPositionGigs.reduce((sum, g) => sum + g.total_days, 0),
     totalRevenue: noPositionGigs.reduce((sum, g) => sum + (g.fee || 0), 0),
-    avgPerDay: noPositionGigs.reduce((sum, g) => sum + g.total_days, 0) > 0
-      ? noPositionGigs.reduce((sum, g) => sum + (g.fee || 0), 0) / noPositionGigs.reduce((sum, g) => sum + g.total_days, 0)
-      : 0
+    avgPerDay:
+      noPositionGigs.reduce((sum, g) => sum + g.total_days, 0) > 0
+        ? noPositionGigs.reduce((sum, g) => sum + (g.fee || 0), 0) /
+          noPositionGigs.reduce((sum, g) => sum + g.total_days, 0)
+        : 0,
   }
 
   const allPositionStats = noPositionGigs.length > 0 ? [...positionStats, noPositionStats] : positionStats
 
   // Calculate top clients from invoice data (filtered by year and client)
-  const filteredInvoices = invoices.filter(inv => {
+  const filteredInvoices = invoices.filter((inv) => {
     const yearMatch = selectedYear === 'all' || new Date(inv.invoice_date).getFullYear().toString() === selectedYear
     const clientMatch = selectedClient === 'all' || inv.client?.id === selectedClient
     return yearMatch && clientMatch
   })
   const clientRevenue: { [key: string]: { name: string; revenue: number } } = {}
-  filteredInvoices.forEach(inv => {
+  filteredInvoices.forEach((inv) => {
     if (inv.client) {
       const id = inv.client.id
       if (!clientRevenue[id]) clientRevenue[id] = { name: inv.client.name, revenue: 0 }
-      clientRevenue[id].revenue += (inv.total_base || inv.total)
+      clientRevenue[id].revenue += inv.total_base || inv.total
     }
   })
   const topClients = Object.values(clientRevenue)
@@ -231,7 +225,7 @@ export function AnalyticsContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('allYears')}</SelectItem>
-              {years.map(year => (
+              {years.map((year) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
                 </SelectItem>
@@ -246,7 +240,7 @@ export function AnalyticsContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('allClients')}</SelectItem>
-              {clients.map(client => (
+              {clients.map((client) => (
                 <SelectItem key={client.id} value={client.id}>
                   {client.name}
                 </SelectItem>
@@ -263,7 +257,7 @@ export function AnalyticsContent() {
               <SelectContent>
                 <SelectItem value="all">{t('allPositions')}</SelectItem>
                 <SelectItem value="none">{t('noPosition')}</SelectItem>
-                {positions.map(position => (
+                {positions.map((position) => (
                   <SelectItem key={position.id} value={position.id}>
                     {position.name}
                   </SelectItem>
@@ -292,9 +286,7 @@ export function AnalyticsContent() {
                 <div className="text-2xl font-bold text-blue-900">
                   {upcomingRevenue.toLocaleString(formatLocale)} {tc('kr')}
                 </div>
-                <p className="text-xs text-blue-700">
-                  {t('acceptedGigsCount', { count: upcomingGigs.length })}
-                </p>
+                <p className="text-xs text-blue-700">{t('acceptedGigsCount', { count: upcomingGigs.length })}</p>
               </CardContent>
             </Card>
 
@@ -304,7 +296,9 @@ export function AnalyticsContent() {
                 <CalendarClock className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-900">{upcomingDays} {tc('days')}</div>
+                <div className="text-2xl font-bold text-blue-900">
+                  {upcomingDays} {tc('days')}
+                </div>
                 <p className="text-xs text-blue-700">
                   {nextGig
                     ? t('nextGig', { date: new Date(nextGig.date).toLocaleDateString(formatLocale) })
@@ -323,7 +317,9 @@ export function AnalyticsContent() {
                   {t('tentativeCount', { count: tentativeGigs.length })}
                 </div>
                 <p className="text-xs text-orange-700">
-                  {tentativeRevenue > 0 ? t('potentialRevenue', { amount: tentativeRevenue.toLocaleString(formatLocale) }) : t('potentialDays', { count: tentativeDays })}
+                  {tentativeRevenue > 0
+                    ? t('potentialRevenue', { amount: tentativeRevenue.toLocaleString(formatLocale) })
+                    : t('potentialDays', { count: tentativeDays })}
                 </p>
               </CardContent>
             </Card>
@@ -352,10 +348,10 @@ export function AnalyticsContent() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalDays} {tc('days')}</div>
-                <p className="text-xs text-muted-foreground">
-                  {t('totalDaysCount')}
-                </p>
+                <div className="text-2xl font-bold">
+                  {totalDays} {tc('days')}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('totalDaysCount')}</p>
               </CardContent>
             </Card>
 
@@ -381,9 +377,7 @@ export function AnalyticsContent() {
                 <div className="text-2xl font-bold">
                   {Math.round(avgPerDay).toLocaleString(formatLocale)} {tc('kr')}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('avgPerWorkDay')}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('avgPerWorkDay')}</p>
               </CardContent>
             </Card>
           </div>
@@ -398,9 +392,7 @@ export function AnalyticsContent() {
             </CardHeader>
             <CardContent>
               {gigsWithDayRate.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  {t('noCompletedGigsWithFee')}
-                </p>
+                <p className="text-muted-foreground text-center py-4">{t('noCompletedGigsWithFee')}</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -419,7 +411,11 @@ export function AnalyticsContent() {
                         <TableCell className="font-medium">
                           {gig.project_name || new Date(gig.date).toLocaleDateString(formatLocale)}
                         </TableCell>
-                        <TableCell>{gig.client?.name || <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>}</TableCell>
+                        <TableCell>
+                          {gig.client?.name || (
+                            <span className="text-muted-foreground italic">{tGig('notSpecified')}</span>
+                          )}
+                        </TableCell>
                         <TableCell>{gig.gig_type.name}</TableCell>
                         <TableCell className="text-right">
                           {(gig.fee || 0).toLocaleString(formatLocale)} {tc('kr')}

@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 import { useCompany } from '@/lib/hooks/use-company'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { format } from 'date-fns'
@@ -103,6 +104,7 @@ export default function CalendarPage() {
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
   const { company, members } = useCompany()
+  const gigFilter = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
 
   const [gigs, setGigs] = useState<Gig[]>([])
@@ -119,12 +121,22 @@ export default function CalendarPage() {
   const [gigToDelete, setGigToDelete] = useState<string | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [preselectedDate, setPreselectedDate] = useState<Date | undefined>(undefined)
-  const [memberFilter, setMemberFilter] = useState<string>('all')
+  const [memberFilter, setMemberFilter] = useState<string>(gigFilter.shouldFilter ? gigFilter.currentUserId : 'all')
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [panelCanScrollUp, setPanelCanScrollUp] = useState(false)
   const [panelCanScrollDown, setPanelCanScrollDown] = useState(false)
   const panelScrollRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+
+  // Sync memberFilter with global filter toggle
+  useEffect(() => {
+    if (gigFilter.shouldFilter && gigFilter.currentUserId) {
+      setMemberFilter(gigFilter.currentUserId)
+    } else if (!gigFilter.shouldFilter && memberFilter === gigFilter.currentUserId) {
+      setMemberFilter('all')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gigFilter.shouldFilter, gigFilter.currentUserId])
 
   const updatePanelScroll = useCallback(() => {
     const el = panelScrollRef.current
@@ -133,34 +145,7 @@ export default function CalendarPage() {
     setPanelCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 10)
   }, [])
 
-  useEffect(() => {
-    loadGigs()
-  }, [])
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) setCurrentUserId(user.id)
-    })
-  }, [])
-
-  function getMemberLabel(userId: string): string {
-    if (userId === currentUserId) return tTeam('me')
-    return userId.slice(0, 6)
-  }
-
-  useEffect(() => {
-    if (selectedGig) {
-      loadGigExpenses(selectedGig.id)
-      // Check scroll state after panel renders
-      setTimeout(updatePanelScroll, 100)
-    } else {
-      setGigExpenses([])
-      setPanelCanScrollUp(false)
-      setPanelCanScrollDown(false)
-    }
-  }, [selectedGig?.id])
-
-  async function loadGigs() {
+  const loadGigs = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('gigs')
@@ -182,21 +167,51 @@ export default function CalendarPage() {
       setGigs((data || []) as unknown as Gig[])
     }
     setLoading(false)
+  }, [supabase])
+
+  const loadGigExpenses = useCallback(
+    async (gigId: string) => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('id, date, supplier, amount, currency, category, attachment_url')
+        .eq('gig_id', gigId)
+        .order('date', { ascending: false })
+
+      if (error) {
+        console.error('Error loading gig expenses:', error)
+      } else {
+        setGigExpenses(data || [])
+      }
+    },
+    [supabase],
+  )
+
+  useEffect(() => {
+    loadGigs()
+  }, [loadGigs])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [supabase])
+
+  function getMemberLabel(userId: string): string {
+    if (userId === currentUserId) return tTeam('me')
+    return userId.slice(0, 6)
   }
 
-  async function loadGigExpenses(gigId: string) {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('id, date, supplier, amount, currency, category, attachment_url')
-      .eq('gig_id', gigId)
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error loading gig expenses:', error)
+  useEffect(() => {
+    if (selectedGig) {
+      loadGigExpenses(selectedGig.id)
+      // Check scroll state after panel renders
+      setTimeout(updatePanelScroll, 100)
     } else {
-      setGigExpenses(data || [])
+      setGigExpenses([])
+      setPanelCanScrollUp(false)
+      setPanelCanScrollDown(false)
     }
-  }
+  }, [selectedGig?.id, loadGigExpenses, updatePanelScroll])
 
   async function saveNotes(id: string, notes: string) {
     const { error } = await supabase

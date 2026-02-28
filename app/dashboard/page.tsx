@@ -18,6 +18,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { ListSkeleton } from '@/components/skeletons/list-skeleton'
 import { PageTransition } from '@/components/ui/page-transition'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -88,6 +89,7 @@ export default function DashboardPage() {
   const [gridHeight, setGridHeight] = useState<number | undefined>(undefined)
   const [isDesktop, setIsDesktop] = useState(false)
   const supabase = createClient()
+  const { shouldFilter, currentUserId } = useGigFilter()
 
   // useLayoutEffect runs synchronously before browser paint — no visual flash
   const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
@@ -111,7 +113,13 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboardData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldFilter, currentUserId])
+
+  // Helper to conditionally add user_id filter
+  function userFilter<T extends { eq: (col: string, val: string) => T }>(query: T): T {
+    return shouldFilter && currentUserId ? query.eq('user_id', currentUserId) : query
+  }
 
   async function loadDashboardData() {
     setLoading(true)
@@ -120,26 +128,32 @@ export default function DashboardPage() {
 
     // Phase 1 — all independent queries in parallel
     const [upcomingRes, pendingRes, needsActionRes, completedRes] = await Promise.all([
-      supabase
-        .from('gigs')
-        .select('id, date, fee, project_name, client:clients(name), gig_type:gig_types(name)')
-        .gte('date', today)
-        .eq('status', 'accepted')
-        .order('date', { ascending: true }),
-      supabase
-        .from('gigs')
-        .select('id, date, fee, status, response_deadline, client:clients(name)')
-        .in('status', ['pending', 'tentative'])
+      userFilter(
+        supabase
+          .from('gigs')
+          .select('id, date, fee, project_name, client:clients(name), gig_type:gig_types(name)')
+          .gte('date', today)
+          .eq('status', 'accepted'),
+      ).order('date', { ascending: true }),
+      userFilter(
+        supabase
+          .from('gigs')
+          .select('id, date, fee, status, response_deadline, client:clients(name)')
+          .in('status', ['pending', 'tentative']),
+      )
         .order('response_deadline', { ascending: true, nullsFirst: false })
         .limit(5),
-      supabase
-        .from('gigs')
-        .select(
-          'id, date, fee, status, currency, total_days, start_date, end_date, project_name, client:clients(name), gig_type:gig_types(name, color)',
-        )
-        .in('status', ['accepted', 'pending', 'tentative'])
-        .order('date', { ascending: false }),
-      supabase.from('gigs').select('id').eq('status', 'completed').not('fee', 'is', null).not('client_id', 'is', null),
+      userFilter(
+        supabase
+          .from('gigs')
+          .select(
+            'id, date, fee, status, currency, total_days, start_date, end_date, project_name, client:clients(name), gig_type:gig_types(name, color)',
+          )
+          .in('status', ['accepted', 'pending', 'tentative']),
+      ).order('date', { ascending: false }),
+      userFilter(supabase.from('gigs').select('id').eq('status', 'completed'))
+        .not('fee', 'is', null)
+        .not('client_id', 'is', null),
     ])
 
     const upcomingList = (upcomingRes.data || []) as unknown as UpcomingGig[]
@@ -170,7 +184,7 @@ export default function DashboardPage() {
 
     setUpcomingDays(new Set(gigDatesRes.data?.map((d) => d.date) || []).size)
 
-    const invoicedSet = new Set((invoicedRes.data || []).map((g: any) => g.gig_id))
+    const invoicedSet = new Set((invoicedRes.data || []).map((g: { gig_id: string }) => g.gig_id))
     setToInvoiceCount((completedRes.data || []).filter((g) => !invoicedSet.has(g.id)).length)
 
     setLoading(false)

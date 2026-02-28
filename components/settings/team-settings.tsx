@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,44 @@ export function TeamSettings() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [creating, setCreating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showOnlyMyData, setShowOnlyMyData] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('company_settings')
+        .select('show_only_my_data')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (data) setShowOnlyMyData((data as any).show_only_my_data ?? false)
+        })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleToggleShowOnlyMyData() {
+    const newValue = !showOnlyMyData
+    setShowOnlyMyData(newValue)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+    const { error } = await supabase
+      .from('company_settings')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ show_only_my_data: newValue } as any)
+      .eq('user_id', user.id)
+    if (error) {
+      setShowOnlyMyData(!newValue)
+      toast.error(tc('saveError'))
+    } else {
+      toast.success(tc('saved'))
+    }
+  }
 
   async function handleCreateInvite() {
     setCreating(true)
@@ -64,10 +101,7 @@ export function TeamSettings() {
     if (!companyId || !company) return
     const newVisibility = company.gig_visibility === 'shared' ? 'personal' : 'shared'
 
-    const { error } = await supabase
-      .from('companies')
-      .update({ gig_visibility: newVisibility })
-      .eq('id', companyId)
+    const { error } = await supabase.from('companies').update({ gig_visibility: newVisibility }).eq('id', companyId)
 
     if (error) {
       toast.error(t('visibilityError'))
@@ -78,10 +112,7 @@ export function TeamSettings() {
   }
 
   async function handleRemoveMember(memberId: string) {
-    const { error } = await supabase
-      .from('company_members')
-      .delete()
-      .eq('id', memberId)
+    const { error } = await supabase.from('company_members').delete().eq('id', memberId)
 
     if (error) {
       toast.error(t('removeMemberError'))
@@ -120,7 +151,7 @@ export function TeamSettings() {
           <CardDescription>{t('membersDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {members.map(member => (
+          {members.map((member) => (
             <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{member.email || member.user_id.slice(0, 8) + '...'}</span>
@@ -159,7 +190,7 @@ export function TeamSettings() {
             <div className="flex gap-2">
               <Input
                 value={inviteEmail}
-                onChange={e => setInviteEmail(e.target.value)}
+                onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder={t('emailOptional')}
                 type="email"
               />
@@ -192,10 +223,26 @@ export function TeamSettings() {
                 <Label>{t('sharedMode')}</Label>
                 <p className="text-xs text-muted-foreground">{t('sharedModeDescription')}</p>
               </div>
-              <Switch
-                checked={company?.gig_visibility === 'shared'}
-                onCheckedChange={handleToggleVisibility}
-              />
+              <Switch checked={company?.gig_visibility === 'shared'} onCheckedChange={handleToggleVisibility} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Personal filter */}
+      {company?.gig_visibility === 'shared' && members.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('personalFilter')}</CardTitle>
+            <CardDescription>{t('personalFilterDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>{t('showOnlyMyData')}</Label>
+                <p className="text-xs text-muted-foreground">{t('showOnlyMyDataDesc')}</p>
+              </div>
+              <Switch checked={showOnlyMyData} onCheckedChange={handleToggleShowOnlyMyData} />
             </div>
           </CardContent>
         </Card>
