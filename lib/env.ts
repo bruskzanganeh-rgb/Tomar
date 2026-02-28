@@ -32,8 +32,9 @@ export function validateEnv(): ServerEnv {
 
   if (!result.success) {
     const formatted = result.error.issues.map((issue) => `  ${issue.path.join('.')}: ${issue.message}`).join('\n')
-    console.error(`\n❌ Invalid environment variables:\n${formatted}\n`)
-    throw new Error('Missing or invalid environment variables. See above for details.')
+    console.error(`\n⚠️  Missing environment variables:\n${formatted}\n`)
+    // Don't throw — let the server start. Routes will fail gracefully
+    // when they try to use undefined clients.
   }
 
   // Warn about missing optional vars that affect features
