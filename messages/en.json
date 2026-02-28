@@ -15,6 +15,7 @@
   },
   "common": {
     "save": "Save",
+    "saved": "Saved",
     "cancel": "Cancel",
     "next": "Next",
     "back": "Back",

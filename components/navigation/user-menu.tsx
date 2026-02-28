@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
-import { Shield, LogOut, Moon, Sun, ChevronDown, Settings, User, Users } from 'lucide-react'
-import { useGigFilter } from '@/lib/hooks/use-gig-filter'
+import { Shield, LogOut, Moon, Sun, ChevronDown, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   DropdownMenu,
@@ -21,7 +20,6 @@ export function UserMenu() {
   const t = useTranslations('nav')
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { isSharedMode, showOnlyMine } = useGigFilter()
   const [mounted, setMounted] = useState(false)
   const [companyName, setCompanyName] = useState('')
   const [userEmail, setUserEmail] = useState('')
@@ -96,16 +94,6 @@ export function UserMenu() {
               {plan}
             </span>
           )}
-          {isSharedMode &&
-            (showOnlyMine ? (
-              <span title={t('showingMyGigs')}>
-                <User className="h-3 w-3" style={{ color: '#a5b4fc' }} />
-              </span>
-            ) : (
-              <span title={t('showingTeamGigs')}>
-                <Users className="h-3 w-3" style={{ color: '#a5b4fc' }} />
-              </span>
-            ))}
           <ChevronDown className="h-3 w-3" />
         </button>
       </DropdownMenuTrigger>

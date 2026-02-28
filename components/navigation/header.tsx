@@ -1,35 +1,34 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { Menu } from 'lucide-react'
+import { Menu, User, Users } from 'lucide-react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { navigationItems } from './nav-items'
 import { UserMenu } from './user-menu'
+import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import { Button } from '@/components/ui/button'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 export function Header() {
   const pathname = usePathname()
   const t = useTranslations('nav')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { isSharedMode, showOnlyMine, toggleShowOnlyMine } = useGigFilter()
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b" style={{ backgroundColor: '#0B1E3A', borderColor: '#102544' }}>
+    <header
+      className="sticky top-0 z-50 w-full border-b"
+      style={{ backgroundColor: '#0B1E3A', borderColor: '#102544' }}
+    >
       <div className="flex h-11 items-center gap-3 px-4 md:px-6">
         {/* Mobile: hamburger (left) */}
         <div className="md:hidden">
@@ -57,7 +56,7 @@ export function Header() {
                         'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                         isActive
                           ? 'bg-accent text-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                       )}
                     >
                       <item.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
@@ -72,12 +71,7 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/dashboard" className="mr-4 flex items-center gap-2 shrink-0">
-          <Image
-            src="/logo.png"
-            alt="Amida"
-            width={24}
-            height={24}
-          />
+          <Image src="/logo.png" alt="Amida" width={24} height={24} />
           <span className="text-[15px] font-bold tracking-tight" style={{ color: '#ffffff' }}>
             Amida
           </span>
@@ -93,14 +87,11 @@ export function Header() {
                 href={item.href}
                 className={cn(
                   'relative flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium',
-                  !isActive && 'header-nav-link'
+                  !isActive && 'header-nav-link',
                 )}
                 style={{ color: isActive ? '#ffffff' : '#94a3b8' }}
               >
-                <item.icon
-                  className="h-3.5 w-3.5 shrink-0"
-                  style={{ color: isActive ? '#F59E0B' : undefined }}
-                />
+                <item.icon className="h-3.5 w-3.5 shrink-0" style={{ color: isActive ? '#F59E0B' : undefined }} />
                 <span className="hidden lg:inline">{t(item.nameKey)}</span>
                 {isActive && (
                   <motion.div
@@ -118,6 +109,17 @@ export function Header() {
         {/* Right side */}
         <div className="flex-1 md:hidden" />
         <div className="flex items-center gap-2 shrink-0">
+          {isSharedMode && (
+            <button
+              onClick={toggleShowOnlyMine}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors hover:bg-white/10"
+              style={{ color: showOnlyMine ? '#c4b5fd' : '#94a3b8' }}
+              title={showOnlyMine ? t('showingMyGigs') : t('showingTeamGigs')}
+            >
+              {showOnlyMine ? <User className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">{showOnlyMine ? t('showingMyGigs') : t('showingTeamGigs')}</span>
+            </button>
+          )}
           <UserMenu />
         </div>
       </div>
