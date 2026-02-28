@@ -8,13 +8,13 @@ import { z } from 'zod'
  * Optional vars (AI, Stripe price IDs) are validated only if present.
  */
 const serverEnvSchema = z.object({
-  // Supabase (required)
+  // Supabase (required — app cannot function without these)
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-  // Stripe (required for billing)
-  STRIPE_SECRET_KEY: z.string().min(1),
+  // Stripe (optional at startup — billing features degrade gracefully)
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
 
   // AI features (optional — app works without them)
@@ -34,6 +34,14 @@ export function validateEnv(): ServerEnv {
     const formatted = result.error.issues.map((issue) => `  ${issue.path.join('.')}: ${issue.message}`).join('\n')
     console.error(`\n❌ Invalid environment variables:\n${formatted}\n`)
     throw new Error('Missing or invalid environment variables. See above for details.')
+  }
+
+  // Warn about missing optional vars that affect features
+  const optionalKeys = ['STRIPE_SECRET_KEY', 'ANTHROPIC_API_KEY'] as const
+  for (const key of optionalKeys) {
+    if (!process.env[key]) {
+      console.warn(`⚠️  ${key} is not set — related features will be unavailable`)
+    }
   }
 
   _validated = true
