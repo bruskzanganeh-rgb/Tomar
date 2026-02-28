@@ -76,6 +76,7 @@ export default function SettingsPage() {
   const locale = useLocale()
 
   const [settings, setSettings] = useState<CompanySettings | null>(null)
+  const [fullName, setFullName] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -152,7 +153,12 @@ export default function SettingsPage() {
       }
 
       // Load company info from companies table
-      const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
+      const { data: membership } = await supabase
+        .from('company_members')
+        .select('company_id, full_name')
+        .limit(1)
+        .single()
+      if (membership?.full_name) setFullName(membership.full_name)
 
       if (membership) {
         const { data: company, error: compError } = await supabase
@@ -245,6 +251,13 @@ export default function SettingsPage() {
         return
       }
     }
+
+    // Save personal name to company_members
+    await supabase
+      .from('company_members')
+      .update({ full_name: fullName || null })
+      .eq('company_id', companyId)
+      .eq('user_id', userId)
 
     // Save personal prefs to company_settings
     const { error } = await supabase
@@ -411,6 +424,17 @@ export default function SettingsPage() {
                 <CardDescription>{t('companyInfoDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="full_name">{t('yourName')}</Label>
+                  <Input
+                    id="full_name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder={t('yourNamePlaceholder')}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('yourNameHint')}</p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="company_name">{t('companyName')}</Label>
                   <Input

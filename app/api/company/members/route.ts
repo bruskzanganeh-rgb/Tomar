@@ -27,7 +27,7 @@ export async function GET() {
   // Get all members of this company (including soft-deleted for identity display)
   const { data: rawMembers } = await supabase
     .from('company_members')
-    .select('id, user_id, role, joined_at, removed_at')
+    .select('id, user_id, role, joined_at, removed_at, full_name')
     .eq('company_id', membership.company_id)
     .order('joined_at')
 

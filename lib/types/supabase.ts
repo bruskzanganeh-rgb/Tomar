@@ -386,6 +386,7 @@ export type Database = {
           role: string
           joined_at: string | null
           removed_at: string | null
+          full_name: string | null
         }
         Insert: {
           id?: string
@@ -394,6 +395,7 @@ export type Database = {
           role?: string
           joined_at?: string | null
           removed_at?: string | null
+          full_name?: string | null
         }
         Update: {
           id?: string
@@ -402,6 +404,7 @@ export type Database = {
           role?: string
           joined_at?: string | null
           removed_at?: string | null
+          full_name?: string | null
         }
         Relationships: []
       }

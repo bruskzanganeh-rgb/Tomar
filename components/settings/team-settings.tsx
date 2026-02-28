@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Users, Copy, Check, Loader2, UserPlus, Crown, Trash2 } from 'lucide-react'
+import { Users, Copy, Check, Loader2, UserPlus, Crown, Trash2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useTranslations } from 'next-intl'
@@ -26,6 +26,9 @@ export function TeamSettings() {
   const [copied, setCopied] = useState(false)
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null)
   const [showOnlyMyData, setShowOnlyMyData] = useState(false)
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [savingName, setSavingName] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -126,6 +129,24 @@ export function TeamSettings() {
     }
   }
 
+  async function handleSaveMemberName() {
+    if (!editingMemberId) return
+    setSavingName(true)
+    const { error } = await supabase
+      .from('company_members')
+      .update({ full_name: editName || null })
+      .eq('id', editingMemberId)
+
+    if (error) {
+      toast.error(tc('saveError'))
+    } else {
+      mutate()
+      toast.success(tc('saved'))
+      setEditingMemberId(null)
+    }
+    setSavingName(false)
+  }
+
   if (!isTeam) {
     return (
       <Card>
@@ -156,25 +177,72 @@ export function TeamSettings() {
         </CardHeader>
         <CardContent className="space-y-3">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{member.email || member.user_id.slice(0, 8) + '...'}</span>
-                {member.role === 'owner' && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Crown className="h-3 w-3" />
-                    {t('owner')}
-                  </Badge>
+            <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50 gap-2">
+              <div className="flex-1 min-w-0">
+                {editingMemberId === member.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder={t('namePlaceholder')}
+                      className="h-7 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveMemberName()
+                        if (e.key === 'Escape') setEditingMemberId(null)
+                      }}
+                      autoFocus
+                    />
+                    <Button size="sm" className="h-7 text-xs px-2" onClick={handleSaveMemberName} disabled={savingName}>
+                      {savingName ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0">
+                      {member.full_name && (
+                        <span className="text-sm font-medium block truncate">{member.full_name}</span>
+                      )}
+                      <span
+                        className={`text-sm truncate block ${member.full_name ? 'text-muted-foreground text-xs' : 'font-medium'}`}
+                      >
+                        {member.email || member.user_id.slice(0, 8) + '...'}
+                      </span>
+                    </div>
+                    {member.role === 'owner' && (
+                      <Badge variant="secondary" className="gap-1 shrink-0">
+                        <Crown className="h-3 w-3" />
+                        {t('owner')}
+                      </Badge>
+                    )}
+                  </div>
                 )}
               </div>
-              {isOwner && member.role !== 'owner' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setRemoveMemberId(member.id)}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              {editingMemberId !== member.id && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {isOwner && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingMemberId(member.id)
+                        setEditName(member.full_name || '')
+                      }}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  {isOwner && member.role !== 'owner' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRemoveMemberId(member.id)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           ))}

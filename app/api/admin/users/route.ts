@@ -151,7 +151,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
   }
-  const { email, password, company_name, mode } = parsed.data
+  const { email, password, company_name, full_name, mode } = parsed.data
 
   let newUserId: string
 
@@ -160,6 +160,7 @@ export async function POST(request: Request) {
       email,
       password,
       email_confirm: true,
+      user_metadata: full_name ? { full_name } : undefined,
     })
     if (error || !newUser.user) {
       return NextResponse.json({ error: error?.message || 'Failed to create user' }, { status: 500 })
@@ -168,6 +169,7 @@ export async function POST(request: Request) {
   } else {
     const { data: invited, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://amida.babalisk.com'}/auth/confirm`,
+      data: full_name ? { full_name } : undefined,
     })
     if (error || !invited.user) {
       return NextResponse.json({ error: error?.message || 'Failed to invite user' }, { status: 500 })

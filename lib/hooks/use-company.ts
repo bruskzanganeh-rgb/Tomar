@@ -42,6 +42,7 @@ export type CompanyMember = {
   joined_at: string
   email?: string | null
   removed_at?: string | null
+  full_name?: string | null
 }
 
 export function useCompany() {
@@ -109,6 +110,7 @@ export function useCompany() {
     companyId: data?.company?.id ?? null,
     role: data?.membership?.role ?? null,
     isOwner: data?.membership?.role === 'owner',
+    fullName: data?.membership?.full_name ?? null,
     members: activeMembers,
     allMembers,
     loading: isLoading,

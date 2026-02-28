@@ -599,6 +599,9 @@
     "smtpUserPlaceholder": "your@email.com",
     "smtpFromPlaceholder": "invoice@yourcompany.com",
     "smtpFromNamePlaceholder": "Your Company Ltd",
+    "yourName": "Your name",
+    "yourNamePlaceholder": "First and last name",
+    "yourNameHint": "Your personal name — shown in the greeting and used for reference",
     "emailProvider": "Email provider",
     "platformEmail": "Platform email",
     "ownSmtp": "Own SMTP",
@@ -640,7 +643,8 @@
     "personalFilter": "Personal filter",
     "personalFilterDescription": "Filter all views to show only your own data",
     "showOnlyMyData": "Show only my gigs",
-    "showOnlyMyDataDesc": "When enabled, only your own gigs, invoices and expenses are shown across all views"
+    "showOnlyMyDataDesc": "When enabled, only your own gigs, invoices and expenses are shown across all views",
+    "namePlaceholder": "First and last name"
   },
   "currency": {
     "SEK": "Swedish krona",
@@ -729,7 +733,18 @@
     "uploadReceipt": "Receipt",
     "viewCalendar": "Calendar",
     "timeline": "Timeline",
-    "compare": "Compare"
+    "compare": "Compare",
+    "welcome": "Welcome, {name}",
+    "welcomeHint": "Your dashboard comes alive as you create your first gig.",
+    "startHere": "Start here",
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening",
+    "nextGig": "Next gig: {name} — {date}",
+    "nextGigToday": "You have a gig today — {name}",
+    "noUpcomingRelaxed": "No upcoming gigs — enjoy the calm.",
+    "thisWeek": "This week",
+    "week": "Week {num}"
   },
   "auth": {
     "login": "Log in",
@@ -810,7 +825,9 @@
     "onboardingSaveError": "Could not save settings",
     "country": "Country",
     "countryDesc": "Select the country you operate in. This controls VAT rates, currency and field labels.",
-    "selectCountry": "Select country"
+    "selectCountry": "Select country",
+    "yourName": "Your name",
+    "yourNamePlaceholder": "First and last name"
   },
   "subscription": {
     "yourPlan": "Your plan",
@@ -960,6 +977,8 @@
     "createMode": "Account is created directly with a password",
     "email": "Email",
     "companyName": "Company name",
+    "fullName": "Name",
+    "fullNamePlaceholder": "First and last name",
     "password": "Password",
     "minPassword": "At least 6 characters",
     "userCreated": "User created",

@@ -94,7 +94,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
   // Add user dialog
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [addMode, setAddMode] = useState<'invite' | 'create'>('invite')
-  const [addForm, setAddForm] = useState({ email: '', password: '', company_name: '' })
+  const [addForm, setAddForm] = useState({ email: '', password: '', company_name: '', full_name: '' })
   const [addSaving, setAddSaving] = useState(false)
 
   // Invite member dialog
@@ -225,6 +225,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
         email: addForm.email,
         password: addMode === 'create' ? addForm.password : undefined,
         company_name: addForm.company_name || undefined,
+        full_name: addForm.full_name || undefined,
         mode: addMode,
       }),
     })
@@ -232,7 +233,7 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
     if (res.ok) {
       toast.success(addMode === 'invite' ? t('inviteSent') : t('userCreated'))
       setAddDialogOpen(false)
-      setAddForm({ email: '', password: '', company_name: '' })
+      setAddForm({ email: '', password: '', company_name: '', full_name: '' })
       onReload()
     } else {
       const data = await res.json()
@@ -570,6 +571,15 @@ export function OrganizationsTab({ users, setUsers, onReload }: Props) {
                 value={addForm.email}
                 onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="user@example.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t('fullName')}</Label>
+              <Input
+                value={addForm.full_name}
+                onChange={(e) => setAddForm((f) => ({ ...f, full_name: e.target.value }))}
+                placeholder={t('fullNamePlaceholder')}
               />
             </div>
 

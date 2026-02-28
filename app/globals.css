@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -47,71 +47,71 @@
   --radius: 0.625rem;
 
   /* ===== LIGHT MODE (Default) ===== */
-  --background: #f8fafc;        /* slate-50 - soft off-white */
-  --foreground: #0f172a;        /* slate-900 - high contrast */
+  --background: #f8fafc; /* slate-50 - soft off-white */
+  --foreground: #0f172a; /* slate-900 - high contrast */
 
   /* Cards - clean white */
-  --card: #ffffff;              /* white */
-  --card-foreground: #0f172a;   /* slate-900 */
-  --popover: #ffffff;           /* white */
+  --card: #ffffff; /* white */
+  --card-foreground: #0f172a; /* slate-900 */
+  --popover: #ffffff; /* white */
   --popover-foreground: #0f172a;
 
   /* Primary - Amida blue */
-  --primary: #2F80ED;           /* Amida blue */
+  --primary: #2f80ed; /* Amida blue */
   --primary-foreground: #ffffff;
 
   /* Secondary */
-  --secondary: #f1f5f9;         /* slate-100 */
+  --secondary: #f1f5f9; /* slate-100 */
   --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;             /* slate-100 */
-  --muted-foreground: #64748b;  /* slate-500 */
-  --accent: #f1f5f9;            /* slate-100 */
+  --muted: #f1f5f9; /* slate-100 */
+  --muted-foreground: #64748b; /* slate-500 */
+  --accent: #f1f5f9; /* slate-100 */
   --accent-foreground: #0f172a;
-  --destructive: #ef4444;       /* red-500 */
+  --destructive: #ef4444; /* red-500 */
 
   /* Borders - subtle */
-  --border: #e8ecf1;            /* softened slate-200 */
-  --input: #e2e8f0;             /* slate-200 */
-  --ring: #2F80ED;              /* Amida blue */
+  --border: #e8ecf1; /* softened slate-200 */
+  --input: #e2e8f0; /* slate-200 */
+  --ring: #2f80ed; /* Amida blue */
 
   /* Chart colors */
-  --chart-1: #2F80ED;           /* Amida blue */
-  --chart-2: #10b981;           /* emerald-500 */
-  --chart-3: #8b5cf6;           /* violet-500 */
-  --chart-4: #f59e0b;           /* amber-500 */
-  --chart-5: #ef4444;           /* red-500 */
+  --chart-1: #2f80ed; /* Amida blue */
+  --chart-2: #10b981; /* emerald-500 */
+  --chart-3: #8b5cf6; /* violet-500 */
+  --chart-4: #f59e0b; /* amber-500 */
+  --chart-5: #ef4444; /* red-500 */
 
   /* Sidebar - light */
-  --sidebar: #ffffff;           /* white */
+  --sidebar: #ffffff; /* white */
   --sidebar-foreground: #0f172a;
-  --sidebar-primary: #2F80ED;
+  --sidebar-primary: #2f80ed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;    /* slate-100 */
+  --sidebar-accent: #f1f5f9; /* slate-100 */
   --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #e2e8f0;    /* slate-200 */
-  --sidebar-ring: #2F80ED;
+  --sidebar-border: #e2e8f0; /* slate-200 */
+  --sidebar-ring: #2f80ed;
 }
 
 /* ===== DARK MODE (Amida brand) ===== */
 .dark {
-  --background: #0B1E3A;        /* Deep Navy */
+  --background: #0b1e3a; /* Deep Navy */
   --foreground: #f8fafc;
 
   /* Cards */
-  --card: #102544;              /* Card Navy */
+  --card: #102544; /* Card Navy */
   --card-foreground: #f8fafc;
   --popover: #102544;
   --popover-foreground: #f8fafc;
 
   /* Primary - Amida blue */
-  --primary: #2F80ED;
+  --primary: #2f80ed;
   --primary-foreground: #ffffff;
 
   /* Secondary */
   --secondary: #1a3a5c;
   --secondary-foreground: #f1f5f9;
   --muted: #1a3a5c;
-  --muted-foreground: #C7D2FE;  /* Logo secondary text */
+  --muted-foreground: #c7d2fe; /* Logo secondary text */
   --accent: #1a3a5c;
   --accent-foreground: #f8fafc;
   --destructive: #ef4444;
@@ -119,24 +119,24 @@
   /* Borders */
   --border: #1a3a5c;
   --input: #1a3a5c;
-  --ring: #2F80ED;
+  --ring: #2f80ed;
 
   /* Chart colors */
-  --chart-1: #2F80ED;           /* Blue */
-  --chart-2: #F59E0B;           /* Amber */
-  --chart-3: #FBBF24;           /* Gold */
+  --chart-1: #2f80ed; /* Blue */
+  --chart-2: #f59e0b; /* Amber */
+  --chart-3: #fbbf24; /* Gold */
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
 
   /* Sidebar */
-  --sidebar: #0B1E3A;
+  --sidebar: #0b1e3a;
   --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #2F80ED;
+  --sidebar-primary: #2f80ed;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #102544;
   --sidebar-accent-foreground: #f8fafc;
   --sidebar-border: #1a3a5c;
-  --sidebar-ring: #2F80ED;
+  --sidebar-ring: #2f80ed;
 }
 
 @layer base {
@@ -156,7 +156,7 @@
 }
 
 /* Smooth card transitions */
-[data-slot="card"] {
+[data-slot='card'] {
   transition: box-shadow 0.2s ease;
 }
 
@@ -181,19 +181,19 @@
 @media (min-width: 768px) {
   body[data-authed] {
     background:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(47, 128, 237, 0.03) 0%, transparent 60%),
-      var(--background);
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(47, 128, 237, 0.03) 0%, transparent 60%), var(--background);
   }
   .dark body[data-authed] {
     background:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(47, 128, 237, 0.06) 0%, transparent 60%),
-      var(--background);
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(47, 128, 237, 0.06) 0%, transparent 60%), var(--background);
   }
 }
 
 /* ===== Header Nav ===== */
 .header-nav-link {
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 .header-nav-link:hover {
   color: #ffffff !important;
@@ -201,6 +201,20 @@
 }
 
 /* ===== Utility Classes ===== */
+
+/* Gentle pulse — subtle opacity breathing for action indicators */
+@keyframes gentle-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.animate-gentle-pulse {
+  animation: gentle-pulse 3s ease-in-out infinite;
+}
 
 /* Hide scrollbar but keep scrolling */
 .scrollbar-hide {

@@ -599,6 +599,9 @@
     "smtpUserPlaceholder": "din@email.com",
     "smtpFromPlaceholder": "faktura@dittforetag.se",
     "smtpFromNamePlaceholder": "Ditt Företag AB",
+    "yourName": "Ditt namn",
+    "yourNamePlaceholder": "För- och efternamn",
+    "yourNameHint": "Ditt personliga namn — visas i hälsningen och används som referens",
     "emailProvider": "E-postleverantör",
     "platformEmail": "Appens e-post",
     "ownSmtp": "Egen SMTP",
@@ -640,7 +643,8 @@
     "personalFilter": "Personligt filter",
     "personalFilterDescription": "Filtrera alla vyer till att bara visa dina egna data",
     "showOnlyMyData": "Visa bara mina uppdrag",
-    "showOnlyMyDataDesc": "När aktiverat visas bara dina egna uppdrag, fakturor och utgifter i alla vyer"
+    "showOnlyMyDataDesc": "När aktiverat visas bara dina egna uppdrag, fakturor och utgifter i alla vyer",
+    "namePlaceholder": "För- och efternamn"
   },
   "currency": {
     "SEK": "Svensk krona",
@@ -729,7 +733,18 @@
     "uploadReceipt": "Kvitto",
     "viewCalendar": "Kalender",
     "timeline": "Tidslinje",
-    "compare": "Jämför"
+    "compare": "Jämför",
+    "welcome": "Hej, {name}",
+    "welcomeHint": "Din dashboard fylls på automatiskt när du skapar ditt första uppdrag.",
+    "startHere": "Börja här",
+    "goodMorning": "God morgon",
+    "goodAfternoon": "God eftermiddag",
+    "goodEvening": "God kväll",
+    "nextGig": "Nästa uppdrag: {name} — {date}",
+    "nextGigToday": "Du har ett uppdrag idag — {name}",
+    "noUpcomingRelaxed": "Inga kommande uppdrag — njut av lugnet.",
+    "thisWeek": "Denna vecka",
+    "week": "Vecka {num}"
   },
   "auth": {
     "login": "Logga in",
@@ -810,7 +825,9 @@
     "onboardingSaveError": "Kunde inte spara inställningar",
     "country": "Land",
     "countryDesc": "Välj vilket land du är verksam i. Detta styr momssatser, valuta och fältetiketter.",
-    "selectCountry": "Välj land"
+    "selectCountry": "Välj land",
+    "yourName": "Ditt namn",
+    "yourNamePlaceholder": "För- och efternamn"
   },
   "subscription": {
     "yourPlan": "Din plan",
@@ -960,6 +977,8 @@
     "createMode": "Kontot skapas direkt med lösenord",
     "email": "E-post",
     "companyName": "Företagsnamn",
+    "fullName": "Namn",
+    "fullNamePlaceholder": "För- och efternamn",
     "password": "Lösenord",
     "minPassword": "Minst 6 tecken",
     "userCreated": "Användare skapad",

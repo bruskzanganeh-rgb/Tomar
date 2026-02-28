@@ -3,18 +3,18 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import { useGigFilter } from '@/lib/hooks/use-gig-filter'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-400',
+  tentative: 'bg-yellow-400',
   accepted: 'bg-green-500',
-  declined: 'bg-red-400',
   completed: 'bg-blue-500',
   invoiced: 'bg-purple-500',
   paid: 'bg-green-800',
@@ -26,7 +26,11 @@ type DayGig = {
   label: string
 }
 
-export function MiniCalendar() {
+type MiniCalendarProps = {
+  className?: string
+}
+
+export function MiniCalendar({ className }: MiniCalendarProps) {
   const dateLocale = useDateLocale()
   const router = useRouter()
   const { shouldFilter, currentUserId } = useGigFilter()
@@ -95,94 +99,101 @@ export function MiniCalendar() {
   const todayDate = now.getDate()
   const monthLabel = format(currentDate, 'LLLL yyyy', { locale: dateLocale })
 
+  // Split calendar days into weeks for stagger animation
+  const weeks: (number | null)[][] = []
+  for (let i = 0; i < calendarDays.length; i += 7) {
+    weeks.push(calendarDays.slice(i, i + 7))
+  }
+
   return (
-    <Card className="h-full flex flex-col min-h-0">
-      <CardHeader className="pb-1 pt-4 px-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            <span className="capitalize">{monthLabel}</span>
-          </CardTitle>
-          <div className="flex items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+    <div className={cn('', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium capitalize">{monthLabel}</span>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {dayNames.map((name, i) => (
+          <div key={i} className="text-center text-[11px] font-medium text-muted-foreground">
+            {name}
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="px-3 pb-3 pt-1 flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-7 gap-1 h-full" style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
-          {/* Day headers */}
-          {dayNames.map((name, i) => (
-            <div key={i} className="text-center text-[10px] font-medium text-muted-foreground">
-              {name}
-            </div>
-          ))}
+        ))}
+      </div>
 
-          {/* Calendar days */}
-          {calendarDays.map((day, i) => {
-            if (day === null) {
-              return <div key={`e-${i}`} />
-            }
+      {/* Calendar weeks — stagger entrance */}
+      <div className="space-y-1">
+        {weeks.map((week, weekIdx) => (
+          <motion.div
+            key={weekIdx}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: weekIdx * 0.03, duration: 0.3 }}
+            className="grid grid-cols-7 gap-1"
+          >
+            {week.map((day, dayIdx) => {
+              if (day === null) {
+                return <div key={`e-${weekIdx}-${dayIdx}`} className="aspect-square" />
+              }
 
-            const gigs = getGigsForDay(day)
-            const isToday = isCurrentMonth && day === todayDate
+              const gigs = getGigsForDay(day)
+              const isToday = isCurrentMonth && day === todayDate
+              const tooltipText = gigs.map((g) => g.label || '—').join(', ')
 
-            return (
-              <div
-                key={day}
-                className={cn(
-                  'rounded-md p-0.5 cursor-pointer transition-colors hover:bg-secondary/80 overflow-hidden min-h-0',
-                  isToday && 'bg-blue-50 ring-1 ring-blue-400',
-                )}
-                onClick={() => router.push('/calendar')}
-              >
+              return (
                 <div
+                  key={day}
                   className={cn(
-                    'text-[10px] leading-tight',
-                    isToday ? 'font-bold text-blue-600' : 'text-foreground',
-                    gigs.length === 0 && !isToday && 'text-muted-foreground',
+                    'aspect-square rounded-md flex flex-col items-center justify-center cursor-pointer transition-all duration-150',
+                    'hover:bg-secondary/80 hover:-translate-y-px',
+                    isToday && 'bg-primary/10 ring-1 ring-primary',
                   )}
+                  onClick={() => router.push('/calendar')}
+                  title={gigs.length > 0 ? tooltipText : undefined}
                 >
-                  {day}
-                </div>
-                {gigs.length > 0 && (
-                  <div className="space-y-px mt-px overflow-hidden">
-                    {gigs.slice(0, 2).map((gig, j) => (
-                      <div
-                        key={j}
-                        className={cn(
-                          'text-[8px] leading-tight px-0.5 rounded truncate text-white',
-                          statusColors[gig.status] || 'bg-gray-400',
-                        )}
-                        title={gig.label}
-                      >
-                        {gig.label || '—'}
-                      </div>
-                    ))}
-                    {gigs.length > 2 && (
-                      <div className="text-[8px] leading-tight text-muted-foreground">+{gigs.length - 2}</div>
+                  <span
+                    className={cn(
+                      'text-xs leading-none',
+                      isToday ? 'font-bold text-primary' : 'text-foreground',
+                      gigs.length === 0 && !isToday && 'text-muted-foreground',
                     )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+                  >
+                    {day}
+                  </span>
+                  {gigs.length > 0 && (
+                    <div className="flex items-center gap-0.5 mt-1">
+                      {gigs.slice(0, 3).map((gig, j) => (
+                        <div
+                          key={j}
+                          className={cn('w-1.5 h-1.5 rounded-full', statusColors[gig.status] || 'bg-gray-400')}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </motion.div>
+        ))}
+      </div>
+    </div>
   )
 }

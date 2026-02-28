@@ -54,6 +54,9 @@ function formatGigDate(gig: NeedsActionGig, locale: Locale): string {
   return `${start} - ${end}`
 }
 
+/**
+ * Full card version (kept for backwards compatibility if needed elsewhere).
+ */
 export function ActionRequiredCard({
   pendingGigs,
   needsActionGigs,
@@ -80,7 +83,6 @@ export function ActionRequiredCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-4 space-y-4 divide-y divide-amber-200 dark:divide-amber-800 [&>*]:pt-4 [&>*:first-child]:pt-0">
-        {/* Section 1: Needs your response (pending/tentative) */}
         {pendingGigs.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -129,7 +131,6 @@ export function ActionRequiredCard({
           </div>
         )}
 
-        {/* Section 2: Needs action (past gigs) */}
         {needsActionGigs.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -215,7 +216,6 @@ export function ActionRequiredCard({
           </div>
         )}
 
-        {/* Section 3: To invoice (just count + link) */}
         {toInvoiceCount > 0 && (
           <div>
             <div className="flex items-center justify-between">
@@ -234,5 +234,53 @@ export function ActionRequiredCard({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * Compact inline version for the new dashboard hero zone.
+ * Shows action items as a minimal list with pulsing amber dots.
+ */
+type InlineProps = {
+  pendingCount: number
+  needsActionCount: number
+  toInvoiceCount: number
+}
+
+export function ActionRequiredInline({ pendingCount, needsActionCount, toInvoiceCount }: InlineProps) {
+  const t = useTranslations('dashboard')
+  const tGig = useTranslations('gig')
+  const tInvoice = useTranslations('invoice')
+
+  const total = pendingCount + needsActionCount + toInvoiceCount
+  if (total === 0) return null
+
+  const items: { label: string; count: number; href: string }[] = []
+  if (pendingCount > 0) {
+    items.push({ label: t('needsResponse'), count: pendingCount, href: '/gigs' })
+  }
+  if (needsActionCount > 0) {
+    items.push({ label: tGig('needsAction'), count: needsActionCount, href: '/gigs' })
+  }
+  if (toInvoiceCount > 0) {
+    items.push({ label: tInvoice('toInvoice'), count: toInvoiceCount, href: '/finance' })
+  }
+
+  return (
+    <div className="mt-4 space-y-1.5">
+      {items.map((item) => (
+        <Link
+          key={item.href + item.label}
+          href={item.href}
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-gentle-pulse shrink-0" />
+          <span>
+            {item.count} {item.label.toLowerCase()}
+          </span>
+          <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </Link>
+      ))}
+    </div>
   )
 }

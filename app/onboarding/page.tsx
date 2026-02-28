@@ -100,7 +100,8 @@ export default function OnboardingPage() {
   const [countryCode, setCountryCode] = useState('SE')
   const countryConfig = getCountryConfig(countryCode)
 
-  // Step 2: Company info
+  // Step 2: Personal name + Company info
+  const [fullName, setFullName] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [orgNumber, setOrgNumber] = useState('')
   const [address, setAddress] = useState('')
@@ -128,6 +129,14 @@ export default function OnboardingPage() {
   }, [])
 
   async function loadData() {
+    // Pre-fill name from user_metadata (set by admin when creating user)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user?.user_metadata?.full_name && !fullName) {
+      setFullName(user.user_metadata.full_name)
+    }
+
     // Load company settings (pre-filled from signup)
     const { data: settings } = await supabase
       .from('company_settings')
@@ -221,6 +230,7 @@ export default function OnboardingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          full_name: fullName || undefined,
           company_info: {
             company_name: companyName,
             org_number: orgNumber,
@@ -381,6 +391,15 @@ export default function OnboardingPage() {
               <CardDescription>{t('companyInfoDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">{t('yourName')}</Label>
+                <Input
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder={t('yourNamePlaceholder')}
+                />
+              </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">{tSettings('companyName')}</Label>

@@ -602,28 +602,13 @@ export function GigDialog({
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-border/50 shrink-0">
             <DialogHeader>
-              <div className="flex items-center justify-between pr-8">
-                <div>
-                  <DialogTitle className="text-base font-semibold tracking-tight">
-                    {isEditing ? t('editGig') : t('newGig')}
-                  </DialogTitle>
-                  <DialogDescription className="text-sm text-muted-foreground mt-0.5">
-                    {isEditing ? t('editGigDescription') : t('createGigDescription')}
-                  </DialogDescription>
-                </div>
-                {/* Status in header */}
-                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                  <SelectTrigger className="w-[190px] h-8 text-sm" data-testid="gig-status-select">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div>
+                <DialogTitle className="text-base font-semibold tracking-tight">
+                  {isEditing ? t('editGig') : t('newGig')}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                  {isEditing ? t('editGigDescription') : t('createGigDescription')}
+                </DialogDescription>
               </div>
             </DialogHeader>
           </div>
@@ -760,6 +745,24 @@ export function GigDialog({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className={fieldLabel}>{t('status')}</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  >
+                    <SelectTrigger className="h-9 w-full" data-testid="gig-status-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {(formData.status === 'pending' || formData.status === 'tentative') && (
                   <div className="space-y-1">

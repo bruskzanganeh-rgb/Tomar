@@ -1,14 +1,17 @@
 import { z } from 'zod'
 
-export const createUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6).optional(),
-  company_name: z.string().max(200).optional(),
-  mode: z.enum(['invite', 'create']),
-}).refine(
-  (data) => data.mode !== 'create' || (data.password && data.password.length >= 6),
-  { message: 'Password required for create mode', path: ['password'] }
-)
+export const createUserSchema = z
+  .object({
+    email: z.string().email(),
+    password: z.string().min(6).optional(),
+    company_name: z.string().max(200).optional(),
+    full_name: z.string().max(200).optional(),
+    mode: z.enum(['invite', 'create']),
+  })
+  .refine((data) => data.mode !== 'create' || (data.password && data.password.length >= 6), {
+    message: 'Password required for create mode',
+    path: ['password'],
+  })
 
 export const changeTierSchema = z.object({
   plan: z.enum(['free', 'pro', 'team']),

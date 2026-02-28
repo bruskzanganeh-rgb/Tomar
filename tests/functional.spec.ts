@@ -43,8 +43,10 @@ test.describe('Navigation', () => {
   for (const pg of pages) {
     test(`${pg.name} loads without errors`, async ({ page }) => {
       const errors = await loadPage(page, pg.path)
-      // Filter out known benign errors (e.g., ResizeObserver, third-party)
-      const criticalErrors = errors.filter((e) => !e.includes('ResizeObserver') && !e.includes('Script error'))
+      // Filter out known benign errors (e.g., ResizeObserver, third-party, Vercel analytics)
+      const criticalErrors = errors.filter(
+        (e) => !e.includes('ResizeObserver') && !e.includes('Script error') && !e.includes('vercel-scripts.com'),
+      )
       expect(criticalErrors).toHaveLength(0)
     })
   }
