@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,13 +20,13 @@ const statusColors: Record<string, string> = {
   paid: 'bg-green-800',
 }
 
-type GigDate = {
+type DayGig = {
   date: string
-  gig: { status: string; user_id: string } | null
+  status: string
+  label: string
 }
 
 export function MiniCalendar() {
-  const t = useTranslations('dashboard')
   const dateLocale = useDateLocale()
   const router = useRouter()
   const { shouldFilter, currentUserId } = useGigFilter()
@@ -35,7 +34,7 @@ export function MiniCalendar() {
 
   const now = new Date()
   const [currentDate, setCurrentDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
-  const [gigDates, setGigDates] = useState<GigDate[]>([])
+  const [dayGigs, setDayGigs] = useState<DayGig[]>([])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -48,19 +47,25 @@ export function MiniCalendar() {
 
       const { data } = await supabase
         .from('gig_dates')
-        .select('date, gig:gigs(status, user_id)')
+        .select('date, gig:gigs(status, user_id, project_name, client:clients(name))')
         .gte('date', start)
         .lte('date', end)
 
       if (data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const filtered = (data as any[]).filter((d) => {
-          if (!d.gig) return false
-          if (d.gig.status === 'cancelled' || d.gig.status === 'declined') return false
-          if (shouldFilter && currentUserId && d.gig.user_id !== currentUserId) return false
-          return true
-        })
-        setGigDates(filtered)
+        const filtered = (data as any[])
+          .filter((d) => {
+            if (!d.gig) return false
+            if (d.gig.status === 'cancelled' || d.gig.status === 'declined') return false
+            if (shouldFilter && currentUserId && d.gig.user_id !== currentUserId) return false
+            return true
+          })
+          .map((d) => ({
+            date: d.date,
+            status: d.gig.status,
+            label: d.gig.project_name || d.gig.client?.name || '',
+          }))
+        setDayGigs(filtered)
       }
     }
     load()
@@ -69,27 +74,25 @@ export function MiniCalendar() {
   // Calendar grid
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const firstDay = new Date(year, month, 1).getDay()
-  const firstDayMon = firstDay === 0 ? 6 : firstDay - 1 // Monday-first
+  const firstDayMon = firstDay === 0 ? 6 : firstDay - 1
 
   const calendarDays: (number | null)[] = []
   for (let i = 0; i < firstDayMon; i++) calendarDays.push(null)
   for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d)
 
-  // Day names (Mon-Sun, short)
+  // Day names (Mon-Sun, single letter)
   const dayNames = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(2024, 0, 1 + i) // 2024-01-01 is Monday
-    return format(d, 'EEEEE', { locale: dateLocale }) // Single letter
+    const d = new Date(2024, 0, 1 + i)
+    return format(d, 'EEEEE', { locale: dateLocale })
   })
 
-  // Group gigs by day
-  function getGigsForDay(day: number): string[] {
+  function getGigsForDay(day: number): DayGig[] {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    return gigDates.filter((gd) => gd.date === dateStr && gd.gig).map((gd) => gd.gig!.status)
+    return dayGigs.filter((g) => g.date === dateStr)
   }
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth()
   const todayDate = now.getDate()
-
   const monthLabel = format(currentDate, 'LLLL yyyy', { locale: dateLocale })
 
   return (
@@ -120,11 +123,11 @@ export function MiniCalendar() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-1 flex-1 min-h-0">
-        <div className="grid grid-cols-7 gap-px">
+      <CardContent className="px-3 pb-3 pt-1 flex-1 min-h-0 overflow-hidden">
+        <div className="grid grid-cols-7 gap-1 h-full" style={{ gridAutoRows: 'minmax(0, 1fr)' }}>
           {/* Day headers */}
           {dayNames.map((name, i) => (
-            <div key={i} className="text-center text-[10px] font-medium text-muted-foreground pb-1">
+            <div key={i} className="text-center text-[10px] font-medium text-muted-foreground">
               {name}
             </div>
           ))}
@@ -132,36 +135,47 @@ export function MiniCalendar() {
           {/* Calendar days */}
           {calendarDays.map((day, i) => {
             if (day === null) {
-              return <div key={`e-${i}`} className="aspect-square" />
+              return <div key={`e-${i}`} />
             }
 
-            const statuses = getGigsForDay(day)
+            const gigs = getGigsForDay(day)
             const isToday = isCurrentMonth && day === todayDate
-            const uniqueStatuses = [...new Set(statuses)]
 
             return (
               <div
                 key={day}
                 className={cn(
-                  'aspect-square flex flex-col items-center justify-center rounded-md cursor-pointer transition-colors hover:bg-secondary/80',
+                  'rounded-md p-0.5 cursor-pointer transition-colors hover:bg-secondary/80 overflow-hidden min-h-0',
                   isToday && 'bg-blue-50 ring-1 ring-blue-400',
                 )}
                 onClick={() => router.push('/calendar')}
               >
-                <span
+                <div
                   className={cn(
-                    'text-[11px] leading-none',
+                    'text-[10px] leading-tight',
                     isToday ? 'font-bold text-blue-600' : 'text-foreground',
-                    statuses.length === 0 && !isToday && 'text-muted-foreground',
+                    gigs.length === 0 && !isToday && 'text-muted-foreground',
                   )}
                 >
                   {day}
-                </span>
-                {uniqueStatuses.length > 0 && (
-                  <div className="flex gap-px mt-0.5">
-                    {uniqueStatuses.slice(0, 3).map((status, j) => (
-                      <div key={j} className={cn('w-1 h-1 rounded-full', statusColors[status] || 'bg-gray-400')} />
+                </div>
+                {gigs.length > 0 && (
+                  <div className="space-y-px mt-px overflow-hidden">
+                    {gigs.slice(0, 2).map((gig, j) => (
+                      <div
+                        key={j}
+                        className={cn(
+                          'text-[8px] leading-tight px-0.5 rounded truncate text-white',
+                          statusColors[gig.status] || 'bg-gray-400',
+                        )}
+                        title={gig.label}
+                      >
+                        {gig.label || '—'}
+                      </div>
                     ))}
+                    {gigs.length > 2 && (
+                      <div className="text-[8px] leading-tight text-muted-foreground">+{gigs.length - 2}</div>
+                    )}
                   </div>
                 )}
               </div>
