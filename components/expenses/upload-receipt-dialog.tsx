@@ -423,15 +423,15 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
               {file ? (
                 <div className="space-y-4">
                   {preview ? (
-                    <NextImage
-                      src={preview}
-                      alt=""
-                      width={0}
-                      height={0}
-                      sizes="100vw"
-                      className="max-h-48 w-auto mx-auto rounded-lg shadow-sm"
-                      unoptimized
-                    />
+                    <div className="relative max-h-48 h-48 w-full mx-auto">
+                      <NextImage
+                        src={preview}
+                        alt=""
+                        fill
+                        className="object-contain rounded-lg shadow-sm"
+                        unoptimized
+                      />
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <FileText className="h-16 w-16 text-red-500" />
@@ -481,15 +481,9 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
               <Label className="text-sm font-medium">{t('receipt')}</Label>
               {file &&
                 (preview ? (
-                  <NextImage
-                    src={preview}
-                    alt=""
-                    width={0}
-                    height={0}
-                    sizes="100vw"
-                    className="w-full h-40 md:h-56 object-cover rounded-lg border shadow-sm"
-                    unoptimized
-                  />
+                  <div className="relative w-full h-40 md:h-56 rounded-lg border shadow-sm overflow-hidden">
+                    <NextImage src={preview} alt="" fill className="object-cover" unoptimized />
+                  </div>
                 ) : (
                   <div className="w-full h-40 md:h-56 rounded-lg border flex flex-col items-center justify-center bg-gray-50">
                     <FileText className="h-12 w-12 text-red-500" />

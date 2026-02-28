@@ -647,15 +647,15 @@ export default function SettingsPage() {
                   {/* Preview */}
                   <div className="w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50">
                     {logoPreview ? (
-                      <NextImage
-                        src={logoPreview}
-                        alt="Company logo"
-                        width={0}
-                        height={0}
-                        sizes="192px"
-                        className="max-w-full max-h-full object-contain p-2"
-                        unoptimized
-                      />
+                      <div className="relative w-full h-full">
+                        <NextImage
+                          src={logoPreview}
+                          alt="Company logo"
+                          fill
+                          className="object-contain p-2"
+                          unoptimized
+                        />
+                      </div>
                     ) : (
                       <div className="text-center text-muted-foreground">
                         <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />

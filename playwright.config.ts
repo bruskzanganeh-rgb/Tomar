@@ -30,6 +30,12 @@ export default defineConfig({
       testMatch: /auth-member\.setup\.ts/,
     },
 
+    // Security header tests (no auth needed)
+    {
+      name: 'security',
+      testMatch: /security-headers\.spec\.ts/,
+    },
+
     // Public pages (no auth needed)
     {
       name: 'iPhone',

@@ -307,16 +307,13 @@ export function EditExpenseDialog({ expense, open, onOpenChange, onSuccess, gigs
                 </div>
               ) : hasAttachment && attachmentUrl ? (
                 <div className="space-y-2">
-                  <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
-                    <NextImage
-                      src={attachmentUrl}
-                      alt=""
-                      width={0}
-                      height={0}
-                      sizes="100vw"
-                      className="w-full h-40 md:h-56 object-cover rounded-lg border shadow-sm hover:opacity-90 transition-opacity"
-                      unoptimized
-                    />
+                  <a
+                    href={attachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block relative w-full h-40 md:h-56 rounded-lg border shadow-sm overflow-hidden hover:opacity-90 transition-opacity"
+                  >
+                    <NextImage src={attachmentUrl} alt="" fill className="object-cover" unoptimized />
                   </a>
                   <div className="flex gap-1">
                     <Button

@@ -10,10 +10,15 @@ import { test, expect, Page } from '@playwright/test'
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Wait for page load and check no console errors */
+/** Wait for page load and check no console errors (including CSP violations) */
 async function loadPage(page: Page, path: string) {
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(err.message))
+  page.on('console', (msg) => {
+    if (msg.type() === 'error' && /Refused to load|Content Security Policy/i.test(msg.text())) {
+      errors.push(`CSP: ${msg.text()}`)
+    }
+  })
 
   await page.goto(path, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1000)
@@ -39,10 +44,7 @@ test.describe('Navigation', () => {
     test(`${pg.name} loads without errors`, async ({ page }) => {
       const errors = await loadPage(page, pg.path)
       // Filter out known benign errors (e.g., ResizeObserver, third-party)
-      const criticalErrors = errors.filter(e =>
-        !e.includes('ResizeObserver') &&
-        !e.includes('Script error')
-      )
+      const criticalErrors = errors.filter((e) => !e.includes('ResizeObserver') && !e.includes('Script error'))
       expect(criticalErrors).toHaveLength(0)
     })
   }
@@ -143,7 +145,9 @@ test.describe('Gigs', () => {
     const dateStr = today.toISOString().split('T')[0]
 
     // Set project name
-    const projectInput = page.locator('input[name="project_name"], input[placeholder*="project"], input[placeholder*="Projekt"]').first()
+    const projectInput = page
+      .locator('input[name="project_name"], input[placeholder*="project"], input[placeholder*="Projekt"]')
+      .first()
     if (await projectInput.isVisible()) {
       await projectInput.fill('E2E Test Gig')
     }
@@ -208,7 +212,9 @@ test.describe('Clients', () => {
       await addBtn.click()
       await page.waitForTimeout(500)
 
-      const nameInput = page.locator('input[name="name"], input[placeholder*="name"], input[placeholder*="namn"]').first()
+      const nameInput = page
+        .locator('input[name="name"], input[placeholder*="name"], input[placeholder*="namn"]')
+        .first()
       if (await nameInput.isVisible()) {
         await nameInput.fill('E2E Test Client')
       }
@@ -231,7 +237,7 @@ test.describe('Finance', () => {
     // Should have invoice and expense tabs
     const invoiceTab = page.getByRole('tab', { name: /invoices|fakturor/i })
     const expenseTab = page.getByRole('tab', { name: /expenses|utgifter/i })
-    expect(await invoiceTab.isVisible() || await expenseTab.isVisible()).toBeTruthy()
+    expect((await invoiceTab.isVisible()) || (await expenseTab.isVisible())).toBeTruthy()
   })
 
   test('new invoice dialog opens without errors', async ({ page }) => {
@@ -268,9 +274,7 @@ test.describe('Calendar', () => {
     // Should have calendar or availability tab
     const calendarTab = page.getByRole('tab', { name: /calendar|kalender/i }).first()
     const availabilityTab = page.getByRole('tab', { name: /availability|tillgänglighet/i }).first()
-    expect(
-      await calendarTab.isVisible() || await availabilityTab.isVisible()
-    ).toBeTruthy()
+    expect((await calendarTab.isVisible()) || (await availabilityTab.isVisible())).toBeTruthy()
   })
 
   test('availability tab shows week grid', async ({ page }) => {
