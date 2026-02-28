@@ -270,12 +270,12 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* 3-Column Layout: Upcoming | Unpaid | Availability (golden ratio) */}
+        {/* 3-Column Layout: Upcoming | Unpaid | Calendar (equal width) */}
         <motion.div
           variants={itemVariants}
           className="grid gap-4 md:flex-1 md:min-h-0 md:overflow-clip"
           style={{
-            gridTemplateColumns: gridHeight ? (isDesktop ? '2.618fr 1.618fr 1fr' : '1.618fr 1fr') : undefined,
+            gridTemplateColumns: gridHeight ? (isDesktop ? '1fr 1fr 1fr' : '1fr 1fr') : undefined,
             gridTemplateRows: gridHeight ? (isDesktop ? 'minmax(0, 1fr)' : 'minmax(0, 3fr) minmax(0, 2fr)') : undefined,
           }}
         >
