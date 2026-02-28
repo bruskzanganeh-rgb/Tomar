@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, MapPin, Pencil, Edit, Trash2, Receipt } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, Calendar as CalendarIcon, MapPin, Pencil, Edit, Trash2, Receipt } from 'lucide-react'
 import { GigDialog } from '@/components/gigs/gig-dialog'
 import { GigAttachments } from '@/components/gigs/gig-attachments'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
@@ -109,7 +109,17 @@ export default function CalendarPage() {
   const [preselectedDate, setPreselectedDate] = useState<Date | undefined>(undefined)
   const [memberFilter, setMemberFilter] = useState<string>('all')
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [panelCanScrollUp, setPanelCanScrollUp] = useState(false)
+  const [panelCanScrollDown, setPanelCanScrollDown] = useState(false)
+  const panelScrollRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+
+  const updatePanelScroll = useCallback(() => {
+    const el = panelScrollRef.current
+    if (!el) return
+    setPanelCanScrollUp(el.scrollTop > 10)
+    setPanelCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 10)
+  }, [])
 
   useEffect(() => {
     loadGigs()
@@ -129,8 +139,12 @@ export default function CalendarPage() {
   useEffect(() => {
     if (selectedGig) {
       loadGigExpenses(selectedGig.id)
+      // Check scroll state after panel renders
+      setTimeout(updatePanelScroll, 100)
     } else {
       setGigExpenses([])
+      setPanelCanScrollUp(false)
+      setPanelCanScrollDown(false)
     }
   }, [selectedGig?.id])
 
@@ -313,7 +327,9 @@ export default function CalendarPage() {
 
   return (
     <PageTransition>
-    <div className="space-y-2">
+    <div className={cn("lg:flex", selectedGig && "lg:h-[calc(100vh-9.5rem)] overflow-hidden")} style={{ gap: '16px' }}>
+      {/* Main content */}
+      <div className={cn("flex-1 min-w-0 space-y-2 transition-all duration-300", selectedGig && "lg:overflow-y-auto")}>
       <Card>
         <CardHeader className="py-3">
           <div className="flex flex-wrap items-center justify-between gap-y-2">
@@ -322,10 +338,10 @@ export default function CalendarPage() {
                 <CalendarIcon className="h-5 w-5" />
                 {viewMode === 'year' ? year : `${monthNames[month]} ${year}`}
               </CardTitle>
-              {/* Compact legend */}
-              <div className="hidden lg:flex items-center gap-3 text-xs text-muted-foreground">
+              {/* Compact legend — hides overflow when panel compresses calendar */}
+              <div className="hidden lg:flex items-center gap-3 text-xs text-muted-foreground overflow-hidden whitespace-nowrap min-w-0">
                 {Object.entries(statusColors).map(([status, color]) => (
-                  <div key={status} className="flex items-center gap-1">
+                  <div key={status} className="flex items-center gap-1 shrink-0">
                     <div className={cn('w-2 h-2 rounded-full', color)} />
                     <span>{tStatus(status)}</span>
                   </div>
@@ -573,277 +589,302 @@ export default function CalendarPage() {
         gigTitle={selectedGig?.project_name || selectedGig?.gig_type?.name}
       />
 
-      {/* Detail Panel Backdrop */}
-      <div
-        className={`fixed inset-0 z-40 transition-all duration-300 ${
-          selectedGig
-            ? 'bg-black/50 backdrop-blur-sm opacity-100'
-            : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setSelectedGig(null)}
-      />
+      </div>{/* End main content */}
 
-      {/* Detail Panel - Bottom Sheet */}
+      {/* Desktop Side Panel (lg+) */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-          selectedGig ? 'translate-y-0' : 'translate-y-full'
-        }`}
-        style={{ height: '50vh', minHeight: '320px' }}
+        className={cn(
+          "hidden lg:block transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden",
+          selectedGig ? "opacity-100" : "opacity-0"
+        )}
+        style={{ flex: '0 0 auto', width: selectedGig ? '50%' : 0 }}
       >
-        <div className="h-full bg-gradient-to-b from-background/95 to-background/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
-          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-
-          <div className="flex justify-center pt-2 pb-0">
-            <div className="w-10 h-1 rounded-full bg-gray-300/80" />
-          </div>
-
-          {selectedGig && (
-            <div className="h-full flex flex-col px-5">
-              {/* Header */}
-              <div className="flex items-start justify-between py-3">
-                <div className="flex items-start gap-3">
-                  <div
-                    className="w-1 h-12 rounded-full mt-0.5"
-                    style={{ backgroundColor: selectedGig.gig_type?.color || '#6366f1' }}
-                  />
-                  <div className="space-y-0.5">
-                    <h2 className="text-xl font-semibold tracking-tight text-gray-900">
-                      {selectedGig.project_name || selectedGig.gig_type?.name || tGig('newGig')}
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      {selectedGig.client?.name || <span className="italic">{tGig('clientNotSpecified')}</span>}
-                    </p>
-                    <div className="flex items-center gap-2 pt-0.5">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          statusConfigColors[selectedGig.status] || 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {tStatus(selectedGig.status)}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {selectedGig.gig_type?.name}
-                        {selectedGig.position && ` · ${selectedGig.position.name}`}
-                      </span>
+        <div className="min-w-0 h-full">
+          <Card className="h-full flex flex-col overflow-hidden">
+            {selectedGig && (
+              <>
+                {/* Header — compact 2-row */}
+                <div className="px-4 pt-3 pb-2.5 border-b">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-1 h-6 rounded-full shrink-0"
+                        style={{ backgroundColor: selectedGig.gig_type?.color || '#6366f1' }}
+                      />
+                      <h2 className="text-sm font-semibold tracking-tight truncate">
+                        {selectedGig.project_name || selectedGig.gig_type?.name || tGig('newGig')}
+                      </h2>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setEditingGig(selectedGig)} title={tc('edit')}>
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowReceiptDialog(true)} title={tGig('addReceipt')}>
+                        <Receipt className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => confirmDeleteGig(selectedGig.id)} title={tc('delete')}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setSelectedGig(null)}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 mt-1 ml-[18px]">
+                    <span className="text-xs text-muted-foreground truncate">
+                      {selectedGig.client?.name || <span className="italic">{tGig('clientNotSpecified')}</span>}
+                    </span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className={`inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium ${statusConfigColors[selectedGig.status] || 'bg-gray-100 text-gray-800'}`}>
+                      {tStatus(selectedGig.status)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {selectedGig.gig_type?.name}
+                      {selectedGig.position && ` · ${selectedGig.position.name}`}
+                    </span>
+                  </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full hover:bg-gray-100 -mt-1"
-                  onClick={() => setSelectedGig(null)}
-                >
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                </Button>
-              </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto pb-2">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                  {/* Column 1 - Arvode, Plats, Datum */}
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 border border-emerald-100">
-                        <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{tGig('fee')}</p>
-                        <p className="text-base font-bold text-emerald-700">
-                          {selectedGig.fee !== null
-                            ? `${selectedGig.fee.toLocaleString(formatLocale)} ${tc('kr')}`
-                            : '—'
-                          }
+                {/* Scrollable content with scroll indicators */}
+                <div className="relative flex-1 overflow-hidden">
+                  <div
+                    ref={panelScrollRef}
+                    className="h-full overflow-y-auto px-4 py-3 space-y-3"
+                    onScroll={updatePanelScroll}
+                  >
+                  {/* Fee + Venue */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-lg p-2.5 border border-emerald-100">
+                      <p className="text-[9px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{tGig('fee')}</p>
+                      <p className="text-sm font-bold text-emerald-700">
+                        {selectedGig.fee !== null ? `${selectedGig.fee.toLocaleString(formatLocale)} ${tc('kr')}` : '—'}
+                      </p>
+                      {selectedGig.travel_expense && (
+                        <p className="text-[10px] text-emerald-600 mt-0.5">
+                          + {selectedGig.travel_expense.toLocaleString(formatLocale)} {tc('kr')} {tGig('travelShort')}
                         </p>
-                        {selectedGig.travel_expense && (
-                          <p className="text-xs text-emerald-600 mt-1">
-                            + {selectedGig.travel_expense.toLocaleString(formatLocale)} {tc('kr')} {tGig('travelShort')}
-                          </p>
-                        )}
-                      </div>
-                      {selectedGig.venue ? (
-                        <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <MapPin className="h-3 w-3 text-gray-400" />
-                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{tGig('venue')}</p>
-                          </div>
-                          <p className="text-sm font-medium text-gray-900">{selectedGig.venue}</p>
-                        </div>
-                      ) : (
-                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{tGig('venue')}</p>
-                          <p className="text-sm text-gray-400">—</p>
-                        </div>
                       )}
                     </div>
-                    {/* Datum */}
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-3 border border-gray-100">
-                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-                        {tGig('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
+                    {selectedGig.venue ? (
+                      <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <MapPin className="h-2.5 w-2.5 text-muted-foreground" />
+                          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">{tGig('venue')}</p>
+                        </div>
+                        <p className="text-xs font-medium">{selectedGig.venue}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-secondary/50 rounded-lg p-2.5 border">
+                        <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">{tGig('venue')}</p>
+                        <p className="text-xs text-muted-foreground">—</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dates */}
+                  <div className="bg-secondary/30 rounded-lg p-2.5 border">
+                    <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                      {tGig('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
+                    </p>
+                    {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedGig.gig_dates
+                          .sort((a, b) => a.date.localeCompare(b.date))
+                          .map((gd, i) => {
+                            const dateObj = new Date(gd.date + 'T12:00:00')
+                            const dayName = format(dateObj, 'EEE', { locale: dateLocale })
+                            const dayNum = format(dateObj, 'd', { locale: dateLocale })
+                            const mon = format(dateObj, 'MMM', { locale: dateLocale })
+                            return (
+                              <div key={i} className="flex flex-col items-center bg-card rounded px-1.5 py-0.5 border shadow-sm min-w-[38px]">
+                                <span className="text-[7px] font-medium text-muted-foreground uppercase">{dayName}</span>
+                                <span className="text-xs font-bold">{dayNum}</span>
+                                <span className="text-[7px] font-medium text-muted-foreground">{mon}</span>
+                              </div>
+                            )
+                          })}
+                      </div>
+                    ) : (
+                      <p className="text-xs font-semibold">
+                        {format(new Date(selectedGig.date), 'PPP', { locale: dateLocale })}
                       </p>
-                      {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {selectedGig.gig_dates
-                            .sort((a, b) => a.date.localeCompare(b.date))
-                            .map((gd, i) => {
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">{tGig('notes')}</p>
+                      {!editingNotes && (
+                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setNotesText(selectedGig.notes || ''); setEditingNotes(true) }}>
+                          <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                    {editingNotes ? (
+                      <div className="space-y-2">
+                        <Textarea value={notesText} onChange={(e) => setNotesText(e.target.value)} className="text-xs min-h-[80px] resize-none" placeholder={tc('writeNotesHere')} autoFocus />
+                        <div className="flex gap-1.5 justify-end">
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingNotes(false)}>{tc('cancel')}</Button>
+                          <Button size="sm" className="h-7 text-xs" onClick={() => saveNotes(selectedGig.id, notesText)}>{tc('save')}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-snug">
+                        {selectedGig.notes || <span className="italic">{tc('noNotes')}</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                    <GigAttachments gigId={selectedGig.id} />
+                  </div>
+
+                  {/* Receipts */}
+                  <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Receipt className="h-2.5 w-2.5" />
+                        {tGig('receipts')} ({gigExpenses.length})
+                      </p>
+                    </div>
+                    {gigExpenses.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">{tGig('noReceiptsLinked')}</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {gigExpenses.map((exp) => (
+                          <li key={exp.id} className="flex items-center justify-between text-xs">
+                            <span className="truncate">{exp.supplier}</span>
+                            <span className="font-medium shrink-0 ml-2">
+                              {exp.amount.toLocaleString(formatLocale)} {exp.currency === 'SEK' ? tc('kr') : exp.currency}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  </div>
+                  {/* Scroll up indicator */}
+                  <div className={cn(
+                    "pointer-events-none absolute top-0 left-0 right-0 flex flex-col items-center pt-1 bg-gradient-to-b from-card via-card/80 to-transparent h-8 transition-opacity duration-300",
+                    panelCanScrollUp ? "opacity-100" : "opacity-0"
+                  )}>
+                    <ChevronUp className="h-4 w-4 text-muted-foreground/60 animate-bounce" />
+                  </div>
+                  {/* Scroll down indicator */}
+                  <div className={cn(
+                    "pointer-events-none absolute bottom-0 left-0 right-0 flex flex-col items-center pb-1 bg-gradient-to-t from-card via-card/80 to-transparent h-8 transition-opacity duration-300",
+                    panelCanScrollDown ? "opacity-100" : "opacity-0"
+                  )}>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground/60 animate-bounce mt-auto" />
+                  </div>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet (<lg) */}
+      <div className="lg:hidden">
+        {/* Backdrop */}
+        <div
+          className={`fixed inset-0 z-40 transition-all duration-300 ${
+            selectedGig ? 'bg-black/50 backdrop-blur-sm opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={() => setSelectedGig(null)}
+        />
+        {/* Bottom Sheet */}
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+            selectedGig ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ height: '50vh', minHeight: '320px' }}
+        >
+          <div className="h-full bg-gradient-to-b from-background/95 to-background/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
+            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+            <div className="flex justify-center pt-2 pb-0">
+              <div className="w-10 h-1 rounded-full bg-gray-300/80" />
+            </div>
+            {selectedGig && (
+              <div className="h-full flex flex-col px-5">
+                <div className="flex items-start justify-between py-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-1 h-12 rounded-full mt-0.5" style={{ backgroundColor: selectedGig.gig_type?.color || '#6366f1' }} />
+                    <div className="space-y-0.5">
+                      <h2 className="text-xl font-semibold tracking-tight text-gray-900">{selectedGig.project_name || selectedGig.gig_type?.name || tGig('newGig')}</h2>
+                      <p className="text-sm text-gray-500">{selectedGig.client?.name || <span className="italic">{tGig('clientNotSpecified')}</span>}</p>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfigColors[selectedGig.status] || 'bg-gray-100 text-gray-800'}`}>{tStatus(selectedGig.status)}</span>
+                        <span className="text-xs text-gray-400">{selectedGig.gig_type?.name}{selectedGig.position && ` · ${selectedGig.position.name}`}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-gray-100 -mt-1" onClick={() => setSelectedGig(null)}>
+                    <ChevronDown className="h-5 w-5 text-gray-400" />
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto pb-2">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 border border-emerald-100">
+                          <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{tGig('fee')}</p>
+                          <p className="text-base font-bold text-emerald-700">{selectedGig.fee !== null ? `${selectedGig.fee.toLocaleString(formatLocale)} ${tc('kr')}` : '—'}</p>
+                        </div>
+                        {selectedGig.venue ? (
+                          <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <MapPin className="h-3 w-3 text-gray-400" />
+                              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{tGig('venue')}</p>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900">{selectedGig.venue}</p>
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{tGig('venue')}</p>
+                            <p className="text-sm text-gray-400">—</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">{tGig('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})</p>
+                        {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {selectedGig.gig_dates.sort((a, b) => a.date.localeCompare(b.date)).map((gd, i) => {
                               const dateObj = new Date(gd.date + 'T12:00:00')
-                              const dayName = format(dateObj, 'EEE', { locale: dateLocale })
-                              const dayNum = format(dateObj, 'd', { locale: dateLocale })
-                              const mon = format(dateObj, 'MMM', { locale: dateLocale })
                               return (
-                                <div
-                                  key={i}
-                                  className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]"
-                                >
-                                  <span className="text-[8px] font-medium text-gray-400 uppercase">{dayName}</span>
-                                  <span className="text-sm font-bold text-gray-900">{dayNum}</span>
-                                  <span className="text-[8px] font-medium text-gray-500">{mon}</span>
+                                <div key={i} className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]">
+                                  <span className="text-[8px] font-medium text-gray-400 uppercase">{format(dateObj, 'EEE', { locale: dateLocale })}</span>
+                                  <span className="text-sm font-bold text-gray-900">{format(dateObj, 'd', { locale: dateLocale })}</span>
+                                  <span className="text-[8px] font-medium text-gray-500">{format(dateObj, 'MMM', { locale: dateLocale })}</span>
                                 </div>
                               )
                             })}
-                        </div>
-                      ) : (
-                        <p className="text-sm font-semibold text-gray-900">
-                          {format(new Date(selectedGig.date), 'PPP', { locale: dateLocale })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Column 2 - Notes */}
-                  <div>
-                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm h-full">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{tGig('notes')}</p>
-                        {!editingNotes && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => {
-                              setNotesText(selectedGig.notes || '')
-                              setEditingNotes(true)
-                            }}
-                          >
-                            <Pencil className="h-3 w-3 text-gray-400" />
-                          </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm font-semibold text-gray-900">{format(new Date(selectedGig.date), 'PPP', { locale: dateLocale })}</p>
                         )}
                       </div>
-                      {editingNotes ? (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={notesText}
-                            onChange={(e) => setNotesText(e.target.value)}
-                            className="text-sm min-h-[120px] resize-none"
-                            placeholder={tc('writeNotesHere')}
-                            autoFocus
-                          />
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingNotes(false)}
-                            >
-                              {tc('cancel')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => saveNotes(selectedGig.id, notesText)}
-                            >
-                              {tc('save')}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap leading-snug">
-                          {selectedGig.notes || <span className="text-gray-400 italic">{tc('noNotes')}</span>}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Column 3 - Attachments & Expenses */}
-                  <div className="space-y-3">
-                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                      <GigAttachments gigId={selectedGig.id} />
-                    </div>
-
-                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <Receipt className="h-3 w-3" />
-                          {tGig('receipts')} ({gigExpenses.length})
-                        </p>
-                      </div>
-                      {gigExpenses.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">{tGig('noReceiptsLinked')}</p>
-                      ) : (
-                        <ul className="space-y-1.5">
-                          {gigExpenses.map((exp) => (
-                            <li key={exp.id} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {exp.attachment_url && (
-                                  <a
-                                    href={exp.attachment_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-500 hover:text-blue-700 shrink-0"
-                                    title={t('viewReceipt')}
-                                  >
-                                    <Receipt className="h-3.5 w-3.5" />
-                                  </a>
-                                )}
-                                <span className="text-gray-700 truncate">{exp.supplier}</span>
-                                {exp.category && (
-                                  <span className="text-[10px] text-gray-400 shrink-0">({exp.category})</span>
-                                )}
-                              </div>
-                              <span className="font-medium text-gray-900 shrink-0 ml-2">
-                                {exp.amount.toLocaleString(formatLocale)} {exp.currency === 'SEK' ? tc('kr') : exp.currency}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {gigExpenses.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-sm">
-                          <span className="text-gray-500">{tc('total')}</span>
-                          <span className="font-semibold text-gray-900">
-                            {gigExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString(formatLocale)} {tc('kr')}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
+                <div className="py-3 pb-5 border-t border-gray-100 flex items-center gap-2">
+                  <Button className="bg-gray-900 hover:bg-gray-800 text-white rounded-lg px-4 h-9 text-sm shadow-lg shadow-gray-900/10" onClick={() => setEditingGig(selectedGig)}>
+                    <Edit className="h-3.5 w-3.5 mr-1.5" />{tc('edit')}
+                  </Button>
+                  <Button variant="outline" className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50" onClick={() => setShowReceiptDialog(true)}>
+                    <Receipt className="h-3.5 w-3.5 mr-1.5" />{tGig('addReceipt')}
+                  </Button>
+                  <div className="flex-1" />
+                  <Button variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 h-9 text-sm" onClick={() => confirmDeleteGig(selectedGig.id)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />{tc('delete')}
+                  </Button>
+                </div>
               </div>
-
-              {/* Footer with actions */}
-              <div className="py-3 pb-5 border-t border-gray-100 flex items-center gap-2">
-                <Button
-                  className="bg-gray-900 hover:bg-gray-800 text-white rounded-lg px-4 h-9 text-sm shadow-lg shadow-gray-900/10"
-                  onClick={() => setEditingGig(selectedGig)}
-                >
-                  <Edit className="h-3.5 w-3.5 mr-1.5" />
-                  {tc('edit')}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
-                  onClick={() => setShowReceiptDialog(true)}
-                >
-                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                  {tGig('addReceipt')}
-                </Button>
-                <div className="flex-1" />
-                <Button
-                  variant="ghost"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 h-9 text-sm"
-                  onClick={() => confirmDeleteGig(selectedGig.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  {tc('delete')}
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

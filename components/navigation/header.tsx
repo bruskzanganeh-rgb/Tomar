@@ -30,7 +30,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b" style={{ backgroundColor: '#0B1E3A', borderColor: '#102544' }}>
-      <div className="container mx-auto flex h-14 items-center gap-4 px-4">
+      <div className="flex h-11 items-center gap-3 px-4 md:px-6">
         {/* Mobile: hamburger (left) */}
         <div className="md:hidden">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -75,10 +75,10 @@ export function Header() {
           <Image
             src="/logo.png"
             alt="Amida"
-            width={32}
-            height={32}
+            width={24}
+            height={24}
           />
-          <span className="text-xl font-bold tracking-tight" style={{ color: '#ffffff' }}>
+          <span className="text-[15px] font-bold tracking-tight" style={{ color: '#ffffff' }}>
             Amida
           </span>
         </Link>
@@ -92,20 +92,20 @@ export function Header() {
                 key={item.nameKey}
                 href={item.href}
                 className={cn(
-                  'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium',
+                  'relative flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium',
                   !isActive && 'header-nav-link'
                 )}
                 style={{ color: isActive ? '#ffffff' : '#94a3b8' }}
               >
                 <item.icon
-                  className="h-4 w-4 shrink-0"
+                  className="h-3.5 w-3.5 shrink-0"
                   style={{ color: isActive ? '#F59E0B' : undefined }}
                 />
                 <span className="hidden lg:inline">{t(item.nameKey)}</span>
                 {isActive && (
                   <motion.div
                     layoutId="activeHeaderNav"
-                    className="absolute inset-x-1 -bottom-[calc(0.5rem+1px)] h-0.5 rounded-full"
+                    className="absolute inset-x-1 -bottom-[calc(0.375rem+1px)] h-0.5 rounded-full"
                     style={{ backgroundColor: '#F59E0B' }}
                     transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
                   />

@@ -74,9 +74,10 @@ test.describe('Client CRUD', () => {
       await page.waitForTimeout(1000)
     }
 
-    // Find and click edit button on an E2E client
-    const clientRow = page.getByText(`${E2E} Client AB`).locator('..')
-    const editBtn = page.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first()
+    // Find E2E client row and click its edit button
+    const clientRow = page.locator('tr, [class*="card"]').filter({ hasText: E2E }).first()
+    await expect(clientRow).toBeVisible({ timeout: 5000 })
+    const editBtn = clientRow.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first()
 
     if (await editBtn.isVisible()) {
       await editBtn.click()
@@ -105,8 +106,10 @@ test.describe('Client CRUD', () => {
       await page.waitForTimeout(1000)
     }
 
-    // Click delete on a test client
-    const trashBtn = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2, svg.lucide-trash') }).first()
+    // Find E2E client row and click its delete button
+    const clientRow = page.locator('tr, [class*="card"]').filter({ hasText: E2E }).first()
+    await expect(clientRow).toBeVisible({ timeout: 5000 })
+    const trashBtn = clientRow.locator('button').filter({ has: page.locator('svg.lucide-trash-2, svg.lucide-trash') }).first()
     if (await trashBtn.isVisible()) {
       await trashBtn.click()
       await page.waitForTimeout(500)

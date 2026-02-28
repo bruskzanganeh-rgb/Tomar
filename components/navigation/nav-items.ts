@@ -2,9 +2,8 @@ import {
   LayoutDashboard,
   Calendar,
   CalendarDays,
-  Wallet,
-  BarChart3,
-  SlidersHorizontal,
+  FileText,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -17,8 +16,7 @@ export type NavItem = {
 export const navigationItems: NavItem[] = [
   { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { nameKey: 'gigs', href: '/gigs', icon: Calendar },
-  { nameKey: 'finance', href: '/finance', icon: Wallet },
   { nameKey: 'calendar', href: '/calendar', icon: CalendarDays },
-  { nameKey: 'analytics', href: '/analytics', icon: BarChart3 },
-  { nameKey: 'config', href: '/config', icon: SlidersHorizontal },
+  { nameKey: 'finance', href: '/finance', icon: FileText },
+  { nameKey: 'expenses', href: '/expenses', icon: Receipt },
 ]

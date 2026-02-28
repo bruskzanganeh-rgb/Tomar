@@ -139,5 +139,68 @@ export default defineConfig({
         storageState: 'tests/.auth/state.json',
       },
     },
+
+    // Team visibility tests (owner, desktop) — gig visibility toggle
+    {
+      name: 'team-visibility',
+      testMatch: /team-visibility\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Subscription tier tests (owner, desktop) — plan-dependent UI
+    // Must run AFTER team-visibility (both modify the same subscription/company)
+    {
+      name: 'subscription',
+      testMatch: /subscription-tier\.spec\.ts/,
+      dependencies: ['setup', 'team-visibility'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Layout regression tests (owner, desktop) — catch button cutoffs, width issues
+    {
+      name: 'layout-regression',
+      testMatch: /layout-regression\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
+
+    // Auth flow tests (public, no auth needed)
+    {
+      name: 'auth-flow',
+      testMatch: /auth-flow\.spec\.ts/,
+      use: {
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+
+    // Contract signing tests (public pages, no auth needed)
+    {
+      name: 'contract-signing',
+      testMatch: /contract-signing\.spec\.ts/,
+      use: {
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+
+    // Onboarding tests (owner auth, temporarily resets onboarding_completed)
+    {
+      name: 'onboarding',
+      testMatch: /onboarding\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        viewport: { width: 1440, height: 900 },
+        storageState: 'tests/.auth/state.json',
+      },
+    },
   ],
 })

@@ -136,40 +136,41 @@ test.describe('Gig CRUD', () => {
   test('edit gig fields', async ({ page }) => {
     await loadPage(page, '/gigs')
 
-    // Click edit on the first gig row (Edit/Pencil button)
-    const editBtn = page.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first()
-    if (await editBtn.isVisible()) {
-      await editBtn.click()
-      const dialog = await waitForDialog(page)
+    // Find the E2E-created gig row and click its edit button
+    const e2eRow = page.locator('tr, [class*="card"]').filter({ hasText: E2E }).first()
+    await expect(e2eRow).toBeVisible({ timeout: 5000 })
+    const editBtn = e2eRow.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first()
+    await editBtn.click()
+    const dialog = await waitForDialog(page)
 
-      // Change project name
-      const inputs = dialog.locator('input[type="text"], input:not([type])')
-      for (let i = 0; i < await inputs.count(); i++) {
-        const input = inputs.nth(i)
-        const value = await input.inputValue()
-        const placeholder = await input.getAttribute('placeholder')
-        if (placeholder && (placeholder.toLowerCase().includes('project') || placeholder.toLowerCase().includes('projekt'))) {
-          await input.clear()
-          await input.fill(`${E2E} Edited`)
-          break
-        }
+    // Change project name
+    const inputs = dialog.locator('input[type="text"], input:not([type])')
+    for (let i = 0; i < await inputs.count(); i++) {
+      const input = inputs.nth(i)
+      const placeholder = await input.getAttribute('placeholder')
+      if (placeholder && (placeholder.toLowerCase().includes('project') || placeholder.toLowerCase().includes('projekt'))) {
+        await input.clear()
+        await input.fill(`${E2E} Edited`)
+        break
       }
-
-      // Save changes
-      const saveBtn = page.getByRole('button', { name: /save|spara/i }).first()
-      await saveBtn.click()
-      await page.waitForTimeout(2000)
-
-      // Verify dialog closed
-      await expect(dialog).not.toBeVisible({ timeout: 5000 })
     }
+
+    // Save changes
+    const saveBtn = page.getByRole('button', { name: /save|spara/i }).first()
+    await saveBtn.click()
+    await page.waitForTimeout(2000)
+
+    // Verify dialog closed
+    await expect(dialog).not.toBeVisible({ timeout: 5000 })
   })
 
   test('change gig status', async ({ page }) => {
     await loadPage(page, '/gigs')
 
-    // Open edit on first gig
-    const editBtn = page.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first()
+    // Find E2E-created gig row and click its edit button
+    const e2eRow = page.locator('tr, [class*="card"]').filter({ hasText: E2E }).first()
+    await expect(e2eRow).toBeVisible({ timeout: 5000 })
+    const editBtn = e2eRow.locator('button').filter({ has: page.locator('svg.lucide-pencil, svg.lucide-edit') }).first()
     if (await editBtn.isVisible()) {
       await editBtn.click()
       const dialog = await waitForDialog(page)
@@ -196,8 +197,10 @@ test.describe('Gig CRUD', () => {
   test('duplicate gig', async ({ page }) => {
     await loadPage(page, '/gigs')
 
-    // Click duplicate button (Copy icon)
-    const copyBtn = page.locator('button').filter({ has: page.locator('svg.lucide-copy') }).first()
+    // Find E2E-created gig row and click its duplicate button
+    const e2eRow = page.locator('tr, [class*="card"]').filter({ hasText: E2E }).first()
+    await expect(e2eRow).toBeVisible({ timeout: 5000 })
+    const copyBtn = e2eRow.locator('button').filter({ has: page.locator('svg.lucide-copy') }).first()
     if (await copyBtn.isVisible()) {
       await copyBtn.click()
       await page.waitForTimeout(1000)
@@ -219,12 +222,10 @@ test.describe('Gig CRUD', () => {
   test('delete gig', async ({ page }) => {
     await loadPage(page, '/gigs')
 
-    // Count gigs before
-    const rows = page.locator('table tbody tr, [class*="card"]')
-    const countBefore = await rows.count()
-
-    // Click delete button (Trash icon)
-    const trashBtn = page.locator('button').filter({ has: page.locator('svg.lucide-trash-2, svg.lucide-trash') }).first()
+    // Find E2E-created gig row and click its delete button
+    const e2eRow = page.locator('tr, [class*="card"]').filter({ hasText: E2E }).first()
+    await expect(e2eRow).toBeVisible({ timeout: 5000 })
+    const trashBtn = e2eRow.locator('button').filter({ has: page.locator('svg.lucide-trash-2, svg.lucide-trash') }).first()
     if (await trashBtn.isVisible()) {
       await trashBtn.click()
       await page.waitForTimeout(500)

@@ -127,6 +127,21 @@ export async function cleanupTestData() {
       await supabase.from('invoices').delete().in('id', ids)
     }
 
+    // Clean up orphaned draft gigs (empty project_name, created by test failures)
+    const { data: orphans } = await supabase
+      .from('gigs')
+      .select('id')
+      .eq('status', 'draft')
+      .or('project_name.is.null,project_name.eq.')
+
+    if (orphans?.length) {
+      const ids = orphans.map(g => g.id)
+      await supabase.from('invoice_gigs').delete().in('gig_id', ids)
+      await supabase.from('gig_dates').delete().in('gig_id', ids)
+      await supabase.from('expenses').delete().in('gig_id', ids)
+      await supabase.from('gigs').delete().in('id', ids)
+    }
+
     await supabase.from('expenses').delete().ilike('supplier', 'E2E%')
     await supabase.from('clients').delete().ilike('name', 'E2E%')
     await supabase.from('positions').delete().ilike('name', 'E2E%')
@@ -155,4 +170,34 @@ export async function selectOption(page: Page, trigger: ReturnType<Page['locator
   await expect(option).toBeVisible({ timeout: 3000 })
   await option.click()
   await page.waitForTimeout(200)
+}
+
+// ---------------------------------------------------------------------------
+// Subscription & usage helpers (for tier/subscription E2E tests)
+// ---------------------------------------------------------------------------
+const TEST_COMPANY_ID = '11111111-1111-1111-1111-111111111111'
+const TEST_OWNER_ID = 'be0fbfb1-dc14-4512-9d46-90ac0ed69ea2'
+
+export { TEST_COMPANY_ID, TEST_OWNER_ID }
+
+/** Set test company subscription plan via service role */
+export async function setTestPlan(plan: 'free' | 'pro' | 'team') {
+  const supabase = getAdminClient()
+  await supabase.from('subscriptions')
+    .update({ plan, status: 'active' })
+    .eq('company_id', TEST_COMPANY_ID)
+}
+
+/** Reset usage_tracking for test owner */
+export async function resetUsageTracking() {
+  const supabase = getAdminClient()
+  await supabase.from('usage_tracking').delete().eq('user_id', TEST_OWNER_ID)
+}
+
+/** Set gig visibility for test company */
+export async function setGigVisibility(mode: 'personal' | 'shared') {
+  const supabase = getAdminClient()
+  await supabase.from('companies')
+    .update({ gig_visibility: mode })
+    .eq('id', TEST_COMPANY_ID)
 }

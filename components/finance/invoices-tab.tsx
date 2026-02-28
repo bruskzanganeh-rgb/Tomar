@@ -116,6 +116,13 @@ export default function InvoicesTab() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  // Listen for create-invoice event from page-level button
+  useEffect(() => {
+    const handler = () => setShowCreateDialog(true)
+    window.addEventListener('create-invoice', handler)
+    return () => window.removeEventListener('create-invoice', handler)
+  }, [])
   const [showSendDialog, setShowSendDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
@@ -410,13 +417,6 @@ export default function InvoicesTab() {
   return (
     <PageTransition>
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('newInvoice')}
-        </Button>
-      </div>
-
       {/* Stats */}
       {(() => {
         const currentYear = new Date().getFullYear()

@@ -70,7 +70,7 @@
   --destructive: #ef4444;       /* red-500 */
 
   /* Borders - subtle */
-  --border: #e2e8f0;            /* slate-200 */
+  --border: #e8ecf1;            /* softened slate-200 */
   --input: #e2e8f0;             /* slate-200 */
   --ring: #2F80ED;              /* Amida blue */
 
@@ -148,12 +148,46 @@
   }
 }
 
-@media (min-width: 1280px) {
+/* Compact desktop density — zoom-out feel like Vercel/Linear/GitHub */
+@media (min-width: 1024px) {
+  html {
+    zoom: 0.9;
+  }
+}
+
+/* Smooth card transitions */
+[data-slot="card"] {
+  transition: box-shadow 0.2s ease;
+}
+
+/* Refined scrollbars — desktop only */
+@media (min-width: 768px) {
+  .overflow-y-auto::-webkit-scrollbar {
+    width: 4px;
+  }
+  .overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .overflow-y-auto::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 4px;
+  }
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+/* Subtle background depth — desktop only */
+@media (min-width: 768px) {
   body[data-authed] {
-    transform: scale(0.65);
-    transform-origin: top left;
-    width: calc(100% / 0.65);
-    min-height: calc(100vh / 0.65);
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(47, 128, 237, 0.03) 0%, transparent 60%),
+      var(--background);
+  }
+  .dark body[data-authed] {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(47, 128, 237, 0.06) 0%, transparent 60%),
+      var(--background);
   }
 }
 
@@ -167,3 +201,12 @@
 }
 
 /* ===== Utility Classes ===== */
+
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

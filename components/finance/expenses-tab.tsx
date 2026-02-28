@@ -84,7 +84,7 @@ export default function ExpensesTab() {
   const [currentUserId, setCurrentUserId] = useState<string>('')
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [yearFilter, setYearFilter] = useState<string>('all')
+  const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString())
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [supplierFilter, setSupplierFilter] = useState<string>('all')
   const [gigFilter, setGigFilter] = useState<string>('all')
@@ -192,23 +192,23 @@ export default function ExpensesTab() {
     }
   }).sort((a, b) => parseInt(a.year) - parseInt(b.year))
 
+  useEffect(() => {
+    function handleUpload() { setShowUploadDialog(true) }
+    function handleExport() { setShowExportDialog(true) }
+    window.addEventListener('upload-receipt', handleUpload)
+    window.addEventListener('export-expenses', handleExport)
+    return () => {
+      window.removeEventListener('upload-receipt', handleUpload)
+      window.removeEventListener('export-expenses', handleExport)
+    }
+  }, [])
+
   return (
     <PageTransition>
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
-        <Button variant="outline" onClick={() => setShowExportDialog(true)} className="w-full sm:w-auto">
-          <Download className="mr-2 h-4 w-4" />
-          {tc('export')}
-        </Button>
-        <Button onClick={() => setShowUploadDialog(true)} className="w-full sm:w-auto">
-          <Upload className="mr-2 h-4 w-4" />
-          {t('uploadReceipt')}
-        </Button>
-      </div>
-
       {/* Filter */}
-      <div className="grid grid-cols-2 gap-2 md:flex md:gap-4">
-        <div className="md:w-32">
+      <div className="flex flex-wrap gap-2">
+        <div>
           <Select value={yearFilter} onValueChange={setYearFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allYears')} />
@@ -221,7 +221,7 @@ export default function ExpensesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="md:w-48">
+        <div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allCategories')} />
@@ -234,7 +234,7 @@ export default function ExpensesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="md:w-56">
+        <div>
           <Select value={supplierFilter} onValueChange={setSupplierFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allSuppliers')} />
@@ -247,7 +247,7 @@ export default function ExpensesTab() {
             </SelectContent>
           </Select>
         </div>
-        <div className="md:w-44">
+        <div>
           <Select value={gigFilter} onValueChange={setGigFilter}>
             <SelectTrigger>
               <SelectValue placeholder={t('allGigs')} />
@@ -261,7 +261,7 @@ export default function ExpensesTab() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">

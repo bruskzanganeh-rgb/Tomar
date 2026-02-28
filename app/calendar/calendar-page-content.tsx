@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useRouter, usePathname } from 'next/navigation'
 import { CalendarDays, CalendarCheck } from 'lucide-react'
+import { PageTransition } from '@/components/ui/page-transition'
 
 import dynamic from 'next/dynamic'
 
@@ -39,7 +40,8 @@ export function CalendarPageContent() {
   }
 
   return (
-    <div>
+    <PageTransition>
+    <div className="space-y-6">
       <Tabs value={currentTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="calendar" className="gap-2">
@@ -52,7 +54,7 @@ export function CalendarPageContent() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendar" className="mt-3">
+        <TabsContent value="calendar" className="mt-4">
           <ErrorBoundary>
             <Suspense fallback={<TabSkeleton />}>
               <CalendarTab />
@@ -60,7 +62,7 @@ export function CalendarPageContent() {
           </ErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="availability" className="mt-3">
+        <TabsContent value="availability" className="mt-4">
           <ErrorBoundary>
             <Suspense fallback={<TabSkeleton />}>
               <AvailabilityTab />
@@ -69,5 +71,6 @@ export function CalendarPageContent() {
         </TabsContent>
       </Tabs>
     </div>
+    </PageTransition>
   )
 }

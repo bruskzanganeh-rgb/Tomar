@@ -130,8 +130,8 @@ export function AvailableWeeks() {
     <Card className="h-full min-h-0 flex flex-col overflow-hidden" style={{ minHeight: 0 }}>
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-            <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
             {t('availableWeeks')}
           </CardTitle>
           <div className="flex items-center gap-1">

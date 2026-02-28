@@ -31,6 +31,12 @@ export default function GigTypesPage() {
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setShowCreateDialog(true)
+    window.addEventListener('create-gig-type', handler)
+    return () => window.removeEventListener('create-gig-type', handler)
+  }, [])
   const [selectedGigType, setSelectedGigType] = useState<GigType | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -77,13 +83,6 @@ export default function GigTypesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {tGigTypes('newGigType')}
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -86,11 +86,9 @@ export default function DashboardPage() {
   const [isDesktop, setIsDesktop] = useState(false)
   const supabase = createClient()
 
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
-
-  useEffect(() => {
+  // useLayoutEffect runs synchronously before browser paint — no visual flash
+  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+  useIsomorphicLayoutEffect(() => {
     function updateHeight() {
       if (window.innerWidth < 768) {
         setGridHeight(undefined)
@@ -99,14 +97,17 @@ export default function DashboardPage() {
       }
       const desktop = window.innerWidth >= 1280
       setIsDesktop(desktop)
-      const zoom = desktop ? 0.65 : 1
       const header = 56
-      const padding = 64
-      setGridHeight(window.innerHeight / zoom - header - padding)
+      const padding = 44  // 20 (top) + 24 (bottom)
+      setGridHeight(window.innerHeight - header - padding)
     }
     updateHeight()
     window.addEventListener('resize', updateHeight)
     return () => window.removeEventListener('resize', updateHeight)
+  }, [])
+
+  useEffect(() => {
+    loadDashboardData()
   }, [])
 
   async function loadDashboardData() {
@@ -114,64 +115,61 @@ export default function DashboardPage() {
 
     const today = new Date().toISOString().split('T')[0]
 
-    // Get upcoming accepted gigs with details
-    const { data: upcoming } = await supabase
-      .from('gigs')
-      .select('id, date, fee, project_name, client:clients(name), gig_type:gig_types(name)')
-      .gte('date', today)
-      .eq('status', 'accepted')
-      .order('date', { ascending: true })
+    // Phase 1 — all independent queries in parallel
+    const [upcomingRes, pendingRes, needsActionRes, completedRes] = await Promise.all([
+      supabase
+        .from('gigs')
+        .select('id, date, fee, project_name, client:clients(name), gig_type:gig_types(name)')
+        .gte('date', today)
+        .eq('status', 'accepted')
+        .order('date', { ascending: true }),
+      supabase
+        .from('gigs')
+        .select('id, date, fee, status, response_deadline, client:clients(name)')
+        .in('status', ['pending', 'tentative'])
+        .order('response_deadline', { ascending: true, nullsFirst: false })
+        .limit(5),
+      supabase
+        .from('gigs')
+        .select('id, date, fee, status, currency, total_days, start_date, end_date, project_name, client:clients(name), gig_type:gig_types(name, color)')
+        .in('status', ['accepted', 'pending', 'tentative'])
+        .order('date', { ascending: false }),
+      supabase
+        .from('gigs')
+        .select('id')
+        .eq('status', 'completed')
+        .not('fee', 'is', null)
+        .not('client_id', 'is', null),
+    ])
 
-    const upcomingList = (upcoming || []) as unknown as UpcomingGig[]
+    const upcomingList = (upcomingRes.data || []) as unknown as UpcomingGig[]
     setUpcomingGigs(upcomingList)
     setUpcomingRevenue(upcomingList.reduce((sum, g) => sum + (g.fee || 0), 0))
 
-    // Get unique upcoming work days
-    if (upcomingList.length > 0) {
-      const gigIds = upcomingList.map(g => g.id)
-      const { data: gigDates } = await supabase
-        .from('gig_dates')
-        .select('date')
-        .in('gig_id', gigIds)
-        .gte('date', today)
+    setPendingGigs((pendingRes.data || []) as unknown as PendingGig[])
 
-      setUpcomingDays(new Set(gigDates?.map(d => d.date) || []).size)
-    }
-
-    // Get pending and tentative gigs (need response)
-    const { data: pending } = await supabase
-      .from('gigs')
-      .select('id, date, fee, status, response_deadline, client:clients(name)')
-      .in('status', ['pending', 'tentative'])
-      .order('response_deadline', { ascending: true, nullsFirst: false })
-      .limit(5)
-
-    setPendingGigs((pending || []) as unknown as PendingGig[])
-
-    // Get past gigs needing action (accepted/pending/tentative where end_date has passed)
-    const { data: needsAction } = await supabase
-      .from('gigs')
-      .select('id, date, fee, status, currency, total_days, start_date, end_date, project_name, client:clients(name), gig_type:gig_types(name, color)')
-      .in('status', ['accepted', 'pending', 'tentative'])
-      .order('date', { ascending: false })
-
-    // Filter in JS: gig has passed when its last date (end_date or date) < today
-    const pastNeedingAction = ((needsAction || []) as unknown as NeedsActionGig[])
+    const pastNeedingAction = ((needsActionRes.data || []) as unknown as NeedsActionGig[])
       .filter(g => (g.end_date || g.date) < today)
     setNeedsActionGigs(pastNeedingAction)
 
-    // Count completed gigs that need invoicing
-    const { data: completedGigs } = await supabase
-      .from('gigs')
-      .select('id')
-      .eq('status', 'completed')
-      .not('fee', 'is', null)
-      .not('client_id', 'is', null)
-    const { data: invoicedGigs } = await supabase
-      .from('invoice_gigs')
-      .select('gig_id')
-    const invoicedSet = new Set((invoicedGigs || []).map((g: any) => g.gig_id))
-    setToInvoiceCount((completedGigs || []).filter(g => !invoicedSet.has(g.id)).length)
+    // Phase 2 — dependent queries in parallel
+    const [gigDatesRes, invoicedRes] = await Promise.all([
+      upcomingList.length > 0
+        ? supabase
+            .from('gig_dates')
+            .select('date')
+            .in('gig_id', upcomingList.map(g => g.id))
+            .gte('date', today)
+        : Promise.resolve({ data: [] as { date: string }[] }),
+      supabase
+        .from('invoice_gigs')
+        .select('gig_id'),
+    ])
+
+    setUpcomingDays(new Set(gigDatesRes.data?.map(d => d.date) || []).size)
+
+    const invoicedSet = new Set((invoicedRes.data || []).map((g: any) => g.gig_id))
+    setToInvoiceCount((completedRes.data || []).filter(g => !invoicedSet.has(g.id)).length)
 
     setLoading(false)
   }
@@ -187,10 +185,11 @@ export default function DashboardPage() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-4"
+      className="space-y-4 md:space-y-0 md:flex md:flex-col md:gap-3"
+      style={gridHeight ? { height: gridHeight, maxHeight: gridHeight } : undefined}
     >
       {/* Mobile Quick Actions */}
-      <motion.div variants={itemVariants} className="lg:hidden">
+      <motion.div variants={itemVariants} className="lg:hidden shrink-0">
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => setShowGigDialog(true)}
@@ -223,8 +222,13 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Action Required Card */}
-      {!loading && (
-        <motion.div variants={itemVariants}>
+      {!loading && (pendingGigs.length > 0 || needsActionGigs.length > 0 || toInvoiceCount > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.25, 0.4, 0.25, 1] }}
+          className="shrink-0"
+        >
           <ActionRequiredCard
             pendingGigs={pendingGigs}
             needsActionGigs={needsActionGigs}
@@ -240,9 +244,8 @@ export default function DashboardPage() {
       {/* 3-Column Layout: Upcoming | Unpaid | Availability (golden ratio) */}
       <motion.div
         variants={itemVariants}
-        className="grid gap-4"
+        className="grid gap-4 md:flex-1 md:min-h-0 md:overflow-clip"
         style={{
-          ...(gridHeight ? { height: gridHeight, maxHeight: gridHeight, overflow: 'hidden' } : {}),
           gridTemplateColumns: gridHeight
             ? (isDesktop ? '2.618fr 1.618fr 1fr' : '1.618fr 1fr')
             : undefined,
@@ -256,8 +259,8 @@ export default function DashboardPage() {
         <Card className="overflow-hidden md:h-full md:flex md:flex-col md:min-h-0">
           <CardHeader className="pb-2 pt-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" />
+              <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
                 {t('upcoming')}
               </CardTitle>
               <span className="text-xs text-muted-foreground">

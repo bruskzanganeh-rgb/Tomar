@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -43,6 +43,12 @@ type Client = {
 
 export default function ClientsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setShowCreateDialog(true)
+    window.addEventListener('create-client', handler)
+    return () => window.removeEventListener('create-client', handler)
+  }, [])
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
@@ -99,7 +105,7 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-[280px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
@@ -109,10 +115,6 @@ export default function ClientsPage() {
             className="pl-8 h-9 text-sm"
           />
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('newClient')}
-        </Button>
       </div>
 
       <Card>

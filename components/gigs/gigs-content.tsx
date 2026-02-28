@@ -18,7 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown, Search, Copy } from 'lucide-react'
+import { Plus, Calendar, Check, X, Clock, FileText, DollarSign, Trash2, Edit, MapPin, ChevronDown, ChevronUp, Pencil, HelpCircle, AlertTriangle, Receipt, ArrowRight, History, Ban, ArrowUpDown, ArrowUp, ArrowDown, Search, Copy } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { GigAttachments } from '@/components/gigs/gig-attachments'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
@@ -200,10 +200,20 @@ export default function GigsPage() {
   const [showScrollHint, setShowScrollHint] = useState(true)
   const [memberFilter, setMemberFilter] = useState<string>('all')
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [panelCanScrollUp, setPanelCanScrollUp] = useState(false)
+  const [panelCanScrollDown, setPanelCanScrollDown] = useState(false)
+  const panelScrollRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const upcomingScrollRef = useRef<HTMLDivElement>(null)
   const historyScrollRef = useRef<HTMLDivElement>(null)
   const declinedScrollRef = useRef<HTMLDivElement>(null)
+
+  const updatePanelScroll = useCallback(() => {
+    const el = panelScrollRef.current
+    if (!el) return
+    setPanelCanScrollUp(el.scrollTop > 10)
+    setPanelCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 10)
+  }, [])
 
   const { data: gigs = [], isLoading: loading, mutate: mutateGigs } = useSWR<Gig[]>(
     'gigs-full',
@@ -264,8 +274,11 @@ export default function GigsPage() {
   useEffect(() => {
     if (selectedGig) {
       loadGigExpenses(selectedGig.id)
+      setTimeout(updatePanelScroll, 100)
     } else {
       setGigExpenses([])
+      setPanelCanScrollUp(false)
+      setPanelCanScrollDown(false)
     }
   }, [selectedGig?.id])
 
@@ -469,7 +482,9 @@ export default function GigsPage() {
 
   return (
     <PageTransition>
-    <div className="space-y-6">
+    <div className={cn("lg:flex", selectedGig && "lg:h-[calc(100vh-7rem)]")} style={{ gap: '16px' }}>
+      {/* Main content */}
+      <div className={cn("flex-1 min-w-0 space-y-6 transition-all duration-300", selectedGig && "lg:overflow-y-auto")}>
       {/* Section 1: Past gigs needing action */}
       {pastNeedingAction.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
@@ -630,103 +645,60 @@ export default function GigsPage() {
         </Card>
       )}
 
-      {/* Main 3-tab card */}
-      <Card>
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setShowScrollHint(true) }}>
-          <CardHeader>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <TabsList>
-                  <TabsTrigger value="upcoming" className="gap-1.5">
-                    <Calendar className="h-4 w-4 shrink-0 hidden sm:block" />
-                    {t('upcoming')} ({sortedUpcoming.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="history" className="gap-1.5">
-                    <History className="h-4 w-4 shrink-0 hidden sm:block" />
-                    {t('history')} ({sortedHistory.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="declined" className="gap-1.5">
-                    <Ban className="h-4 w-4 shrink-0 hidden sm:block" />
-                    {t('declined')} ({sortedDeclined.length})
-                  </TabsTrigger>
-                </TabsList>
-                <Button onClick={() => setShowCreateDialog(true)} size="sm" className="shrink-0">
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">{t('newGig')}</span>
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative min-w-[140px] max-w-[240px]">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder={tc('search') + '...'}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 h-8 text-sm"
-                  />
-                </div>
-                {isSharedMode && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant={memberFilter === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => setMemberFilter('all')}
-                    >
-                      {tTeam('allMembers')}
-                    </Button>
-                    {members.map(m => (
-                      <Button
-                        key={m.user_id}
-                        variant={memberFilter === m.user_id ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => setMemberFilter(m.user_id)}
-                      >
-                        {getMemberLabel(m.user_id)}
-                      </Button>
-                    ))}
+      {/* Tabs + action button (page-level toolbar) */}
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setShowScrollHint(true) }}>
+        <div className="flex items-center justify-between gap-2">
+          <TabsList>
+            <TabsTrigger value="upcoming" className="gap-1.5">
+              <Calendar className="h-4 w-4 shrink-0 hidden sm:block" />
+              {t('upcoming')} ({sortedUpcoming.length})
+            </TabsTrigger>
+            <TabsTrigger value="history" className="gap-1.5">
+              <History className="h-4 w-4 shrink-0 hidden sm:block" />
+              {t('history')} ({sortedHistory.length})
+            </TabsTrigger>
+            <TabsTrigger value="declined" className="gap-1.5">
+              <Ban className="h-4 w-4 shrink-0 hidden sm:block" />
+              {t('declined')} ({sortedDeclined.length})
+            </TabsTrigger>
+          </TabsList>
+          <Button onClick={() => setShowCreateDialog(true)} size="sm" className="shrink-0">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t('newGig')}</span>
+          </Button>
+        </div>
+
+        {/* Upcoming */}
+        <TabsContent value="upcoming" className="mt-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  {t('upcoming')} ({sortedUpcoming.length})
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {isSharedMode && (
+                    <>
+                      <Button variant={memberFilter === 'all' ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => setMemberFilter('all')}>{tTeam('allMembers')}</Button>
+                      {members.map(m => (
+                        <Button key={m.user_id} variant={memberFilter === m.user_id ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => setMemberFilter(m.user_id)}>{getMemberLabel(m.user_id)}</Button>
+                      ))}
+                    </>
+                  )}
+                  <div className="relative w-full max-w-xs">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder={`${tc('search')}...`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
-                )}
+                </div>
               </div>
-            </div>
-            {activeTab === 'history' && (
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                {pipelineCounts.completed > 0 && (
-                  <Badge className="bg-blue-100 text-blue-800">
-                    <Check className="h-3 w-3 mr-1" />
-                    {pipelineCounts.completed} {t('completedPipeline')}
-                  </Badge>
-                )}
-                {pipelineCounts.completed > 0 && pipelineCounts.invoiced > 0 && (
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                )}
-                {pipelineCounts.invoiced > 0 && (
-                  <Badge className="bg-purple-100 text-purple-800">
-                    <FileText className="h-3 w-3 mr-1" />
-                    {pipelineCounts.invoiced} {t('invoicedPipeline')}
-                  </Badge>
-                )}
-                {pipelineCounts.invoiced > 0 && pipelineCounts.paid > 0 && (
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                )}
-                {pipelineCounts.paid > 0 && (
-                  <Badge className="bg-green-200 text-green-900">
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    {pipelineCounts.paid} {t('paidPipeline')}
-                  </Badge>
-                )}
-              </div>
-            )}
-            {activeTab === 'declined' && sortedDeclined.length > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
-                {tc('total')}: {sortedDeclined.reduce((sum, g) => sum + (g.fee_base || g.fee || 0), 0).toLocaleString(formatLocale)} {tc('kr')}
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            {/* Upcoming */}
-            <TabsContent value="upcoming" className="mt-0">
+            </CardHeader>
+            <CardContent>
               {loading ? (
                 <TableSkeleton columns={7} rows={5} />
               ) : sortedUpcoming.length === 0 ? (
@@ -892,10 +864,61 @@ export default function GigsPage() {
                 </div>
                 </>
               )}
-            </TabsContent>
+            </CardContent>
+          </Card>
+          </TabsContent>
 
-            {/* History */}
-            <TabsContent value="history" className="mt-0">
+          {/* History */}
+          <TabsContent value="history" className="mt-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    {t('history')} ({sortedHistory.length})
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {activeTab === 'history' && (
+                      <>
+                        {pipelineCounts.completed > 0 && (
+                          <Badge className="bg-blue-100 text-blue-800">
+                            <Check className="h-3 w-3 mr-1" />
+                            {pipelineCounts.completed} {t('completedPipeline')}
+                          </Badge>
+                        )}
+                        {pipelineCounts.completed > 0 && pipelineCounts.invoiced > 0 && (
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        {pipelineCounts.invoiced > 0 && (
+                          <Badge className="bg-purple-100 text-purple-800">
+                            <FileText className="h-3 w-3 mr-1" />
+                            {pipelineCounts.invoiced} {t('invoicedPipeline')}
+                          </Badge>
+                        )}
+                        {pipelineCounts.invoiced > 0 && pipelineCounts.paid > 0 && (
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        )}
+                        {pipelineCounts.paid > 0 && (
+                          <Badge className="bg-green-200 text-green-900">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            {pipelineCounts.paid} {t('paidPipeline')}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                    <div className="relative w-full max-w-xs">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder={`${tc('search')}...`}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
               {sortedHistory.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1025,10 +1048,38 @@ export default function GigsPage() {
                 </div>
                 </>
               )}
-            </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Declined */}
-            <TabsContent value="declined" className="mt-0">
+          {/* Declined */}
+          <TabsContent value="declined" className="mt-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Ban className="h-5 w-5" />
+                    {t('declined')} ({sortedDeclined.length})
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {activeTab === 'declined' && sortedDeclined.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {tc('total')}: {sortedDeclined.reduce((sum, g) => sum + (g.fee_base || g.fee || 0), 0).toLocaleString(formatLocale)} {tc('kr')}
+                      </p>
+                    )}
+                    <div className="relative w-full max-w-xs">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder={`${tc('search')}...`}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
               {sortedDeclined.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Ban className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1158,10 +1209,10 @@ export default function GigsPage() {
                 </div>
                 </>
               )}
-            </TabsContent>
-          </CardContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
-      </Card>
 
       {/* Mobile FAB */}
       <Button
@@ -1219,6 +1270,254 @@ export default function GigsPage() {
         gigTitle={selectedGig?.project_name || selectedGig?.gig_type.name}
       />
 
+      </div>{/* End main content */}
+
+      {/* Desktop Side Panel (lg+) */}
+      <div
+        className={cn(
+          "hidden lg:block transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden",
+          selectedGig ? "opacity-100" : "opacity-0"
+        )}
+        style={{ flex: '0 0 auto', width: selectedGig ? '50%' : 0 }}
+      >
+        <div className="min-w-0 h-full">
+          <Card className="h-full flex flex-col overflow-hidden">
+            {selectedGig && (
+              <>
+                {/* Header */}
+                <div className="px-4 pt-3 pb-2.5 border-b">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-1 h-6 rounded-full shrink-0"
+                        style={{ backgroundColor: selectedGig.gig_type.color || '#6366f1' }}
+                      />
+                      <h2 className="text-sm font-semibold tracking-tight truncate">
+                        {selectedGig.project_name || selectedGig.gig_type.name}
+                      </h2>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setEditingGig(selectedGig)} title={tc('edit')}>
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowReceiptDialog(true)} title={t('addReceipt')}>
+                        <Receipt className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => handleDuplicate(selectedGig)} title={t('duplicateGig')}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => confirmDeleteGig(selectedGig.id)} title={tc('delete')}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setSelectedGig(null)}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 ml-[18px]">
+                    <span className="text-xs text-muted-foreground truncate">
+                      {selectedGig.client?.name || <span className="italic">{t('clientNotSpecified')}</span>}
+                    </span>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span className={`inline-flex items-center px-1.5 py-0 rounded-full text-[10px] font-medium ${statusConfig[selectedGig.status as keyof typeof statusConfig]?.color}`}>
+                      {tStatus(selectedGig.status)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {selectedGig.gig_type.name}
+                      {selectedGig.position && ` · ${selectedGig.position.name}`}
+                    </span>
+                    {isSharedMode && selectedGig.user_id !== currentUserId && (
+                      <>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400">{getMemberLabel(selectedGig.user_id)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scrollable content */}
+                <div className="relative flex-1 overflow-hidden">
+                <div ref={panelScrollRef} className="h-full overflow-y-auto px-4 py-3 space-y-3" onScroll={updatePanelScroll}>
+                  {/* Fee + Venue */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-lg p-2.5 border border-emerald-100">
+                      <p className="text-[9px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{t('fee')}</p>
+                      <p className="text-sm font-bold text-emerald-700">
+                        {selectedGig.fee !== null ? fmtFee(selectedGig.fee, selectedGig.currency) : '—'}
+                      </p>
+                      {selectedGig.travel_expense && (
+                        <p className="text-[10px] text-emerald-600 mt-0.5">
+                          + {fmtFee(selectedGig.travel_expense, selectedGig.currency)} {t('travelShort')}
+                        </p>
+                      )}
+                    </div>
+                    {selectedGig.venue ? (
+                      <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <MapPin className="h-2.5 w-2.5 text-muted-foreground" />
+                          <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">{t('venue')}</p>
+                        </div>
+                        <p className="text-xs font-medium">{selectedGig.venue}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-secondary/50 rounded-lg p-2.5 border">
+                        <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">{t('venue')}</p>
+                        <p className="text-xs text-muted-foreground">—</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dates */}
+                  <div className="bg-secondary/30 rounded-lg p-2.5 border">
+                    <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                      {t('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
+                    </p>
+                    {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {selectedGig.gig_dates
+                            .sort((a, b) => a.date.localeCompare(b.date))
+                            .map((gd, i) => {
+                              const date = new Date(gd.date + 'T12:00:00')
+                              const dayName = format(date, 'EEE', { locale: dateLocale })
+                              const dayNum = format(date, 'd', { locale: dateLocale })
+                              const mon = format(date, 'MMM', { locale: dateLocale })
+                              return (
+                                <div key={i} className="flex flex-col items-center bg-card rounded px-1.5 py-0.5 border shadow-sm min-w-[38px]">
+                                  <span className="text-[7px] font-medium text-muted-foreground uppercase">{dayName}</span>
+                                  <span className="text-xs font-bold">{dayNum}</span>
+                                  <span className="text-[7px] font-medium text-muted-foreground">{mon}</span>
+                                </div>
+                              )
+                            })}
+                        </div>
+                        {selectedGig.gig_dates.some(gd => gd.sessions && gd.sessions.length > 0) && (
+                          <div className="space-y-0.5 pt-1">
+                            {selectedGig.gig_dates
+                              .sort((a, b) => a.date.localeCompare(b.date))
+                              .filter(gd => gd.sessions && gd.sessions.length > 0)
+                              .map((gd, i) => {
+                                const date = new Date(gd.date + 'T12:00:00')
+                                return (
+                                  <div key={i} className="flex items-baseline gap-1.5 text-[10px]">
+                                    <span className="text-muted-foreground w-[55px] shrink-0">
+                                      {format(date, 'EEE d MMM', { locale: dateLocale })}
+                                    </span>
+                                    <span className="text-foreground/80">
+                                      {gd.sessions!.map((s, j) => (
+                                        <span key={j}>
+                                          {j > 0 && <span className="text-muted-foreground/50 mx-0.5">&middot;</span>}
+                                          {s.label && <span className="font-medium">{s.label} </span>}
+                                          {s.start}{s.end && `\u2013${s.end}`}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs font-semibold">
+                        {formatGigDates(selectedGig, dateLocale)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider">{t('notes')}</p>
+                      {!editingNotes && (
+                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setNotesText(selectedGig.notes || ''); setEditingNotes(true) }}>
+                          <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
+                        </Button>
+                      )}
+                    </div>
+                    {editingNotes ? (
+                      <div className="space-y-2">
+                        <Textarea value={notesText} onChange={(e) => setNotesText(e.target.value)} className="text-xs min-h-[80px] resize-none" placeholder={tc('writeNotesHere')} autoFocus />
+                        <div className="flex gap-1.5 justify-end">
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingNotes(false)}>{tc('cancel')}</Button>
+                          <Button size="sm" className="h-7 text-xs" onClick={() => saveNotes(selectedGig.id, notesText)}>{tc('save')}</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-snug">
+                        {selectedGig.notes || <span className="italic">{tc('noNotes')}</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                    <GigAttachments gigId={selectedGig.id} />
+                  </div>
+
+                  {/* Receipts */}
+                  <div className="bg-card rounded-lg p-2.5 border shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Receipt className="h-2.5 w-2.5" />
+                        {t('receipts')} ({gigExpenses.length})
+                      </p>
+                    </div>
+                    {gigExpenses.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">{t('noReceiptsLinked')}</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {gigExpenses.map((exp) => (
+                          <li key={exp.id} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {exp.attachment_url && (
+                                <a href={exp.attachment_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700 shrink-0">
+                                  <Receipt className="h-3 w-3" />
+                                </a>
+                              )}
+                              <span className="truncate">{exp.supplier}</span>
+                            </div>
+                            <span className="font-medium shrink-0 ml-2">
+                              {exp.amount.toLocaleString(formatLocale)} {exp.currency === 'SEK' ? tc('kr') : exp.currency}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {gigExpenses.length > 0 && (
+                      <div className="mt-1.5 pt-1.5 border-t flex justify-between text-xs">
+                        <span className="text-muted-foreground">{tc('total')}</span>
+                        <span className="font-semibold">
+                          {gigExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString(formatLocale)} {tc('kr')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scroll up indicator */}
+                <div className={cn(
+                  "pointer-events-none absolute top-0 left-0 right-0 flex flex-col items-center pt-1 bg-gradient-to-b from-card via-card/80 to-transparent h-8 transition-opacity duration-300",
+                  panelCanScrollUp ? "opacity-100" : "opacity-0"
+                )}>
+                  <ChevronUp className="h-4 w-4 text-muted-foreground/60 animate-bounce" />
+                </div>
+                {/* Scroll down indicator */}
+                <div className={cn(
+                  "pointer-events-none absolute bottom-0 left-0 right-0 flex flex-col items-center pb-1 bg-gradient-to-t from-card via-card/80 to-transparent h-8 transition-opacity duration-300",
+                  panelCanScrollDown ? "opacity-100" : "opacity-0"
+                )}>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground/60 animate-bounce mt-auto" />
+                </div>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet (<lg) */}
+      <div className="lg:hidden">
       {/* Detail Panel Backdrop */}
       <div
         className={`fixed inset-0 z-40 transition-all duration-300 ${
@@ -1229,19 +1528,15 @@ export default function GigsPage() {
         onClick={() => setSelectedGig(null)}
       />
 
-      {/* Detail Panel - Premium 2025 Design */}
+      {/* Detail Panel - Bottom Sheet */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           selectedGig ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ height: '50vh', minHeight: '320px' }}
       >
-        {/* Glass effect container */}
         <div className="h-full bg-gradient-to-b from-background/95 to-background/98 backdrop-blur-xl border-t border-white/20 shadow-[0_-20px_60px_-15px_rgba(0,0,0,0.2)]">
-          {/* Decorative top bar */}
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-
-          {/* Drag handle */}
           <div className="flex justify-center pt-2 pb-0">
             <div className="w-10 h-1 rounded-full bg-gray-300/80" />
           </div>
@@ -1251,7 +1546,6 @@ export default function GigsPage() {
               {/* Header */}
               <div className="flex items-start justify-between py-3">
                 <div className="flex items-start gap-3">
-                  {/* Color accent */}
                   <div
                     className="w-1 h-12 rounded-full mt-0.5"
                     style={{ backgroundColor: selectedGig.gig_type.color || '#6366f1' }}
@@ -1264,16 +1558,12 @@ export default function GigsPage() {
                       {selectedGig.client?.name || <span className="italic">{t('clientNotSpecified')}</span>}
                     </p>
                     <div className="flex items-center gap-2 pt-0.5">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          statusConfig[selectedGig.status as keyof typeof statusConfig]?.color
-                        }`}
-                      >
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[selectedGig.status as keyof typeof statusConfig]?.color}`}>
                         {tStatus(selectedGig.status)}
                       </span>
                       <span className="text-xs text-gray-400">
                         {selectedGig.gig_type.name}
-                        {selectedGig.position && ` • ${selectedGig.position.name}`}
+                        {selectedGig.position && ` · ${selectedGig.position.name}`}
                       </span>
                       {isSharedMode && selectedGig.user_id !== currentUserId && (
                         <span className="text-xs text-blue-600 dark:text-blue-400">{getMemberLabel(selectedGig.user_id)}</span>
@@ -1281,263 +1571,82 @@ export default function GigsPage() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full hover:bg-gray-100 -mt-1"
-                  onClick={() => setSelectedGig(null)}
-                >
+                <Button variant="ghost" size="icon" className="rounded-full hover:bg-gray-100 -mt-1" onClick={() => setSelectedGig(null)}>
                   <ChevronDown className="h-5 w-5 text-gray-400" />
                 </Button>
               </div>
-
-              {/* Content */}
+              {/* Content - single column for mobile */}
               <div className="flex-1 overflow-y-auto pb-2">
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                  {/* Column 1 - Fee, Date, Venue */}
-                  <div className="space-y-3">
-                    {/* Fee + Venue on same row */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 border border-emerald-100">
-                        <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{t('fee')}</p>
-                        <p className="text-base font-bold text-emerald-700">
-                          {selectedGig.fee !== null
-                            ? fmtFee(selectedGig.fee, selectedGig.currency)
-                            : '—'
-                          }
-                        </p>
-                        {selectedGig.travel_expense && (
-                          <p className="text-xs text-emerald-600 mt-1">
-                            + {fmtFee(selectedGig.travel_expense, selectedGig.currency)} {t('travelShort')}
-                          </p>
-                        )}
-                      </div>
-                      {selectedGig.venue ? (
-                        <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <MapPin className="h-3 w-3 text-gray-400" />
-                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{t('venue')}</p>
-                          </div>
-                          <p className="text-sm font-medium text-gray-900">{selectedGig.venue}</p>
-                        </div>
-                      ) : (
-                        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{t('venue')}</p>
-                          <p className="text-sm text-gray-400">—</p>
-                        </div>
-                      )}
-                    </div>
-                    {/* Dates */}
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-3 border border-gray-100">
-                      <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
-                        {t('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 border border-emerald-100">
+                      <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-wider mb-0.5">{t('fee')}</p>
+                      <p className="text-base font-bold text-emerald-700">
+                        {selectedGig.fee !== null ? fmtFee(selectedGig.fee, selectedGig.currency) : '—'}
                       </p>
-                      {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
-                        <div className="space-y-1.5">
-                          <div className="flex flex-wrap gap-1">
-                            {selectedGig.gig_dates
-                              .sort((a, b) => a.date.localeCompare(b.date))
-                              .map((gd, i) => {
-                                const date = new Date(gd.date + 'T12:00:00')
-                                const dayName = format(date, 'EEE', { locale: dateLocale })
-                                const dayNum = format(date, 'd', { locale: dateLocale })
-                                const month = format(date, 'MMM', { locale: dateLocale })
-                                return (
-                                  <div
-                                    key={i}
-                                    className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]"
-                                  >
-                                    <span className="text-[8px] font-medium text-gray-400 uppercase">{dayName}</span>
-                                    <span className="text-sm font-bold text-gray-900">{dayNum}</span>
-                                    <span className="text-[8px] font-medium text-gray-500">{month}</span>
-                                  </div>
-                                )
-                              })}
-                          </div>
-                          {/* Sessions per day */}
-                          {selectedGig.gig_dates.some(gd => gd.sessions && gd.sessions.length > 0) && (
-                            <div className="space-y-0.5 pt-1">
-                              {selectedGig.gig_dates
-                                .sort((a, b) => a.date.localeCompare(b.date))
-                                .filter(gd => gd.sessions && gd.sessions.length > 0)
-                                .map((gd, i) => {
-                                  const date = new Date(gd.date + 'T12:00:00')
-                                  return (
-                                    <div key={i} className="flex items-baseline gap-1.5 text-[11px]">
-                                      <span className="text-gray-400 w-[60px] shrink-0">
-                                        {format(date, 'EEE d MMM', { locale: dateLocale })}
-                                      </span>
-                                      <span className="text-gray-600">
-                                        {gd.sessions!.map((s, j) => (
-                                          <span key={j}>
-                                            {j > 0 && <span className="text-gray-300 mx-1">&middot;</span>}
-                                            {s.label && <span className="font-medium">{s.label} </span>}
-                                            {s.start}{s.end && `\u2013${s.end}`}
-                                          </span>
-                                        ))}
-                                      </span>
-                                    </div>
-                                  )
-                                })}
+                      {selectedGig.travel_expense && (
+                        <p className="text-xs text-emerald-600 mt-1">+ {fmtFee(selectedGig.travel_expense, selectedGig.currency)} {t('travelShort')}</p>
+                      )}
+                    </div>
+                    {selectedGig.venue ? (
+                      <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <MapPin className="h-3 w-3 text-gray-400" />
+                          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{t('venue')}</p>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">{selectedGig.venue}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-0.5">{t('venue')}</p>
+                        <p className="text-sm text-gray-400">—</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl p-3 border border-gray-100">
+                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
+                      {t('date')} ({selectedGig.gig_dates?.length || selectedGig.total_days} {tc('days')})
+                    </p>
+                    {selectedGig.gig_dates && selectedGig.gig_dates.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedGig.gig_dates.sort((a, b) => a.date.localeCompare(b.date)).map((gd, i) => {
+                          const date = new Date(gd.date + 'T12:00:00')
+                          return (
+                            <div key={i} className="flex flex-col items-center bg-white rounded-lg px-2 py-1 border border-gray-200 shadow-sm min-w-[44px]">
+                              <span className="text-[8px] font-medium text-gray-400 uppercase">{format(date, 'EEE', { locale: dateLocale })}</span>
+                              <span className="text-sm font-bold text-gray-900">{format(date, 'd', { locale: dateLocale })}</span>
+                              <span className="text-[8px] font-medium text-gray-500">{format(date, 'MMM', { locale: dateLocale })}</span>
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-sm font-semibold text-gray-900">
-                          {formatGigDates(selectedGig, dateLocale)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Column 2 - Notes */}
-                  <div>
-                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm h-full">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{t('notes')}</p>
-                        {!editingNotes && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => {
-                              setNotesText(selectedGig.notes || '')
-                              setEditingNotes(true)
-                            }}
-                          >
-                            <Pencil className="h-3 w-3 text-gray-400" />
-                          </Button>
-                        )}
+                          )
+                        })}
                       </div>
-                      {editingNotes ? (
-                        <div className="space-y-2">
-                          <Textarea
-                            value={notesText}
-                            onChange={(e) => setNotesText(e.target.value)}
-                            className="text-sm min-h-[120px] resize-none"
-                            placeholder={tc('writeNotesHere')}
-                            autoFocus
-                          />
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingNotes(false)}
-                            >
-                              {tc('cancel')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => saveNotes(selectedGig.id, notesText)}
-                            >
-                              {tc('save')}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap leading-snug">
-                          {selectedGig.notes || <span className="text-gray-400 italic">{tc('noNotes')}</span>}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Column 3 - Attachments & Expenses */}
-                  <div className="space-y-3">
-                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                      <GigAttachments gigId={selectedGig.id} />
-                    </div>
-
-                    {/* Linked receipts */}
-                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                          <Receipt className="h-3 w-3" />
-                          {t('receipts')} ({gigExpenses.length})
-                        </p>
-                      </div>
-                      {gigExpenses.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">{t('noReceiptsLinked')}</p>
-                      ) : (
-                        <ul className="space-y-1.5">
-                          {gigExpenses.map((exp) => (
-                            <li key={exp.id} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {exp.attachment_url && (
-                                  <a
-                                    href={exp.attachment_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-500 hover:text-blue-700 shrink-0"
-                                    title={t('receipts')}
-                                  >
-                                    <Receipt className="h-3.5 w-3.5" />
-                                  </a>
-                                )}
-                                <span className="text-gray-700 truncate">{exp.supplier}</span>
-                                {exp.category && (
-                                  <span className="text-[10px] text-gray-400 shrink-0">({exp.category})</span>
-                                )}
-                              </div>
-                              <span className="font-medium text-gray-900 shrink-0 ml-2">
-                                {exp.amount.toLocaleString(formatLocale)} {exp.currency === 'SEK' ? tc('kr') : exp.currency}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {gigExpenses.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-sm">
-                          <span className="text-gray-500">{tc('total')}</span>
-                          <span className="font-semibold text-gray-900">
-                            {gigExpenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString(formatLocale)} {tc('kr')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <p className="text-sm font-semibold text-gray-900">{formatGigDates(selectedGig, dateLocale)}</p>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Footer with actions */}
+              {/* Footer */}
               <div className="py-3 pb-5 border-t border-gray-100 flex items-center gap-2">
-                <Button
-                  className="bg-gray-900 hover:bg-gray-800 text-white rounded-lg px-4 h-9 text-sm shadow-lg shadow-gray-900/10"
-                  onClick={() => setEditingGig(selectedGig)}
-                >
-                  <Edit className="h-3.5 w-3.5 mr-1.5" />
-                  {tc('edit')}
+                <Button className="bg-gray-900 hover:bg-gray-800 text-white rounded-lg px-4 h-9 text-sm shadow-lg shadow-gray-900/10" onClick={() => setEditingGig(selectedGig)}>
+                  <Edit className="h-3.5 w-3.5 mr-1.5" />{tc('edit')}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
-                  onClick={() => setShowReceiptDialog(true)}
-                >
-                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                  {t('addReceipt')}
+                <Button variant="outline" className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50" onClick={() => setShowReceiptDialog(true)}>
+                  <Receipt className="h-3.5 w-3.5 mr-1.5" />{t('addReceipt')}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50"
-                  onClick={() => handleDuplicate(selectedGig)}
-                >
-                  <Copy className="h-3.5 w-3.5 mr-1.5" />
-                  {t('duplicateGig')}
+                <Button variant="outline" className="rounded-lg px-4 h-9 text-sm border-gray-200 hover:bg-gray-50" onClick={() => handleDuplicate(selectedGig)}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />{t('duplicateGig')}
                 </Button>
                 <div className="flex-1" />
-                <Button
-                  variant="ghost"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 h-9 text-sm"
-                  onClick={() => confirmDeleteGig(selectedGig.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  {tc('delete')}
+                <Button variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg px-3 h-9 text-sm" onClick={() => confirmDeleteGig(selectedGig.id)}>
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />{tc('delete')}
                 </Button>
               </div>
             </div>
           )}
         </div>
       </div>
+      </div>{/* End mobile bottom sheet */}
 
       <ConfirmDialog
         open={deleteConfirmOpen}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
@@ -35,6 +35,12 @@ export default function PositionsPage() {
   const tPositions = useTranslations('positions')
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setShowCreateDialog(true)
+    window.addEventListener('create-position', handler)
+    return () => window.removeEventListener('create-position', handler)
+  }, [])
   const [newPositionName, setNewPositionName] = useState('')
   const [saving, setSaving] = useState(false)
   const [editingPosition, setEditingPosition] = useState<Position | null>(null)
@@ -151,13 +157,6 @@ export default function PositionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {tPositions('newPosition')}
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

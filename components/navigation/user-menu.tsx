@@ -71,13 +71,13 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="header-nav-link flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium"
+          className="header-nav-link flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium"
           style={{ color: '#C7D2FE', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           <span className="max-w-[100px] sm:max-w-[180px] truncate">
             {companyName || userEmail}
           </span>
-          <ChevronDown className="h-3.5 w-3.5" />
+          <ChevronDown className="h-3 w-3" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-56">
