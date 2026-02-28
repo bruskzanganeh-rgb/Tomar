@@ -46,5 +46,5 @@ export function validateEnv(): ServerEnv {
   }
 
   _validated = true
-  return result.data
+  return (result.success ? result.data : process.env) as unknown as ServerEnv
 }
