@@ -401,7 +401,7 @@ describe('Contract token security', () => {
 
     const res = await fetch(`${BASE_URL}/api/contracts/sign/${usedSigningToken}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '10.0.0.101' },
       body: JSON.stringify({
         signer_name: 'Already Signed Signer',
         signer_title: 'CEO',
@@ -445,7 +445,7 @@ describe('Contract token security', () => {
     // POST with empty body — missing signer_name and signature_image
     const res = await fetch(`${BASE_URL}/api/contracts/sign/${validToken}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '10.0.0.102' },
       body: JSON.stringify({}),
     })
     expect(res.status).toBe(400)
@@ -485,7 +485,7 @@ describe('Contract token security', () => {
     // POST with signature_image under 100 chars
     const res = await fetch(`${BASE_URL}/api/contracts/sign/${validToken}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '10.0.0.103' },
       body: JSON.stringify({
         signer_name: 'Short Sig Signer',
         signer_title: 'CEO',
