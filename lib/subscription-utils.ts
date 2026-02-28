@@ -30,7 +30,7 @@ export function parseJsonArray(value: string | undefined, fallback: readonly str
   }
 }
 
-export function buildTier(prefix: string, config: Record<string, string>, defaults: typeof TIER_DEFAULTS.free): TierData {
+export function buildTier(prefix: string, config: Record<string, string>, defaults: (typeof TIER_DEFAULTS)[Plan]): TierData {
   return {
     invoiceLimit: parseInt(config[`${prefix}_invoice_limit`] ?? String(defaults.invoiceLimit)),
     receiptScanLimit: parseInt(config[`${prefix}_receipt_scan_limit`] ?? String(defaults.receiptScanLimit)),
