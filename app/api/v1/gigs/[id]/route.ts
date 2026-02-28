@@ -74,7 +74,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { dates, ...updateData } = parsed.data
 
     // Verify the gig exists and belongs to this user
-    const { data: existing, error: existError } = await supabase
+    const { error: existError } = await supabase
       .from('gigs')
       .select('id')
       .eq('id', id)

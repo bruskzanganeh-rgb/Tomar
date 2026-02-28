@@ -2,12 +2,6 @@ import { distance } from 'fastest-levenshtein'
 import { createClient } from '@/lib/supabase/server'
 import type { ClientMatchResult } from '@/lib/types/import'
 
-type Client = {
-  id: string
-  name: string
-  client_code: string | null
-}
-
 /**
  * Calculate similarity between two strings (0-1 scale)
  */
@@ -56,16 +50,11 @@ function tokenBasedSimilarity(name1: string, name2: string): number {
  * Match extracted client name to existing clients in database
  * Uses multi-level matching strategy
  */
-export async function matchClient(
-  extractedName: string
-): Promise<ClientMatchResult> {
+export async function matchClient(extractedName: string): Promise<ClientMatchResult> {
   const supabase = await createClient()
 
   // Get all clients from database
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('id, name, client_code')
-    .order('name')
+  const { data: clients } = await supabase.from('clients').select('id, name, client_code').order('name')
 
   if (!clients || clients.length === 0) {
     return {
@@ -78,9 +67,7 @@ export async function matchClient(
   const normalized = extractedName.trim()
 
   // Level 1: Exact match (case-insensitive)
-  const exactMatch = clients.find(
-    (c) => c.name.toLowerCase() === normalized.toLowerCase()
-  )
+  const exactMatch = clients.find((c) => c.name.toLowerCase() === normalized.toLowerCase())
   if (exactMatch) {
     return {
       clientId: exactMatch.id,
@@ -96,9 +83,7 @@ export async function matchClient(
     similarity: calculateSimilarity(normalized, client.name),
   }))
 
-  const bestFuzzyMatch = fuzzyScores.reduce((best, current) =>
-    current.similarity > best.similarity ? current : best
-  )
+  const bestFuzzyMatch = fuzzyScores.reduce((best, current) => (current.similarity > best.similarity ? current : best))
 
   if (bestFuzzyMatch.similarity >= 0.85) {
     return {
@@ -123,9 +108,7 @@ export async function matchClient(
     similarity: tokenBasedSimilarity(normalized, client.name),
   }))
 
-  const bestTokenMatch = tokenScores.reduce((best, current) =>
-    current.similarity > best.similarity ? current : best
-  )
+  const bestTokenMatch = tokenScores.reduce((best, current) => (current.similarity > best.similarity ? current : best))
 
   if (bestTokenMatch.similarity >= 0.7) {
     return {
@@ -165,10 +148,7 @@ export async function matchClient(
 /**
  * Manually set client match (user selection)
  */
-export async function setClientMatch(
-  extractedName: string,
-  clientId: string
-): Promise<void> {
+export async function setClientMatch(extractedName: string, clientId: string): Promise<void> {
   // In the future, we could store these manual mappings in a cache table
   // for faster matching of similar names
   console.log(`Manual match set: "${extractedName}" → ${clientId}`)

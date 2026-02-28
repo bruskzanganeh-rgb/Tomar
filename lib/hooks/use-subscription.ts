@@ -76,69 +76,71 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
+  const [refreshKey, setRefreshKey] = useState(0)
+
   useEffect(() => {
+    async function loadTierConfig() {
+      try {
+        const res = await fetch('/api/config/tiers')
+        if (res.ok) {
+          const data = await res.json()
+          setTierConfig(data)
+        }
+      } catch {
+        // Use defaults on failure
+      }
+    }
+
+    async function loadStorageQuota() {
+      try {
+        const res = await fetch('/api/storage/quota')
+        if (res.ok) {
+          const data = await res.json()
+          setStorageQuota(data)
+        }
+      } catch {
+        // Ignore - storage quota is non-critical
+      }
+    }
+
+    async function loadSubscription() {
+      const { data: sub } = await supabase.from('subscriptions').select('*').limit(1).single()
+
+      // Sync with Stripe if user has a Stripe customer ID
+      if (sub?.stripe_customer_id) {
+        try {
+          await fetch('/api/stripe/sync', { method: 'POST' })
+          // Re-fetch after sync to get updated data
+          const { data: refreshed } = await supabase.from('subscriptions').select('*').limit(1).single()
+          if (refreshed) {
+            setSubscription(refreshed)
+          } else {
+            setSubscription(sub)
+          }
+        } catch {
+          setSubscription(sub)
+        }
+      } else {
+        setSubscription(sub)
+      }
+
+      const now = new Date()
+      const { data: usageData } = await supabase
+        .from('usage_tracking')
+        .select('invoice_count, receipt_scan_count')
+        .eq('year', now.getFullYear())
+        .eq('month', now.getMonth() + 1)
+        .limit(1)
+        .single()
+
+      setUsage(usageData || { invoice_count: 0, receipt_scan_count: 0 })
+      setLoading(false)
+    }
+
     loadSubscription()
     loadTierConfig()
     loadStorageQuota()
-  }, [])
-
-  async function loadTierConfig() {
-    try {
-      const res = await fetch('/api/config/tiers')
-      if (res.ok) {
-        const data = await res.json()
-        setTierConfig(data)
-      }
-    } catch {
-      // Use defaults on failure
-    }
-  }
-
-  async function loadStorageQuota() {
-    try {
-      const res = await fetch('/api/storage/quota')
-      if (res.ok) {
-        const data = await res.json()
-        setStorageQuota(data)
-      }
-    } catch {
-      // Ignore - storage quota is non-critical
-    }
-  }
-
-  async function loadSubscription() {
-    const { data: sub } = await supabase.from('subscriptions').select('*').limit(1).single()
-
-    // Sync with Stripe if user has a Stripe customer ID
-    if (sub?.stripe_customer_id) {
-      try {
-        await fetch('/api/stripe/sync', { method: 'POST' })
-        // Re-fetch after sync to get updated data
-        const { data: refreshed } = await supabase.from('subscriptions').select('*').limit(1).single()
-        if (refreshed) {
-          setSubscription(refreshed)
-        } else {
-          setSubscription(sub)
-        }
-      } catch {
-        setSubscription(sub)
-      }
-    } else {
-      setSubscription(sub)
-    }
-
-    const now = new Date()
-    const { data: usageData } = await supabase
-      .from('usage_tracking')
-      .select('invoice_count, receipt_scan_count')
-      .eq('year', now.getFullYear())
-      .eq('month', now.getMonth() + 1)
-      .limit(1)
-      .single()
-
-    setUsage(usageData || { invoice_count: 0, receipt_scan_count: 0 })
-    setLoading(false)
-  }
+  }, [supabase, refreshKey])
 
   const isPro = (subscription?.plan === 'pro' || subscription?.plan === 'team') && subscription?.status === 'active'
   const isTeam = subscription?.plan === 'team' && subscription?.status === 'active'
@@ -165,6 +167,6 @@ export function useSubscription() {
     canScanReceipt,
     storageQuota,
     tierConfig,
-    refresh: loadSubscription,
+    refresh: () => setRefreshKey((k) => k + 1),
   }
 }

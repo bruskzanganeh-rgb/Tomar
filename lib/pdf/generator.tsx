@@ -706,6 +706,7 @@ function InvoicePDF({
             {/* Column 1: Logo (only if show_logo_on_invoice is true and logo exists) */}
             {company.show_logo_on_invoice !== false && company.logo_url && (
               <View style={styles.footerColumn}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image does not support alt */}
                 <Image src={company.logo_url} style={styles.footerLogo} />
               </View>
             )}
@@ -786,6 +787,7 @@ function InvoicePDF({
                   {' | '}
                   {l.poweredBy}
                 </Text>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image does not support alt */}
                 {sponsor.logo_url && <Image src={sponsor.logo_url} style={{ height: 10 }} />}
                 <Text style={{ fontSize: 7, color: colors.muted }}>{sponsor.name}</Text>
               </View>

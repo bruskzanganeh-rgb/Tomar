@@ -8,7 +8,9 @@ export async function POST() {
   if (!rl) return rateLimitResponse()
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,22 +31,18 @@ export async function POST() {
     const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
 
     if (stripeSub.schedule) {
-      const scheduleId = typeof stripeSub.schedule === 'string'
-        ? stripeSub.schedule
-        : stripeSub.schedule.id
+      const scheduleId = typeof stripeSub.schedule === 'string' ? stripeSub.schedule : stripeSub.schedule.id
 
       await stripe.subscriptionSchedules.release(scheduleId)
     }
 
     // Clear pending_plan in DB
-    await supabase
-      .from('subscriptions')
-      .update({ pending_plan: null })
-      .eq('user_id', user.id)
+    await supabase.from('subscriptions').update({ pending_plan: null }).eq('user_id', user.id)
 
     return NextResponse.json({ success: true })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Cancel downgrade error:', err)
-    return NextResponse.json({ error: err.message || 'Failed to cancel downgrade' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Failed to cancel downgrade'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

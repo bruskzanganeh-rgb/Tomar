@@ -19,7 +19,7 @@ type Props = {
   clientName: string
 }
 
-export function ClientInvoiceChart({ invoices, clientName }: Props) {
+export function ClientInvoiceChart({ invoices }: Props) {
   const t = useTranslations('client')
   const tc = useTranslations('common')
   const td = useTranslations('dashboard')

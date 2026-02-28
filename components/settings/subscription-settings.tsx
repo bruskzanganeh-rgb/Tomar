@@ -31,10 +31,9 @@ export function SubscriptionSettings() {
   // Sync subscription from Stripe after successful checkout
   useEffect(() => {
     if (searchParams.get('upgrade') === 'success') {
-      fetch('/api/stripe/sync', { method: 'POST' })
-        .then(() => refresh())
+      fetch('/api/stripe/sync', { method: 'POST' }).then(() => refresh())
     }
-  }, [searchParams])
+  }, [searchParams, refresh])
 
   async function handleUpgrade(priceId: string, plan: 'pro' | 'team' = 'pro') {
     setUpgrading(true)
@@ -51,8 +50,8 @@ export function SubscriptionSettings() {
       } else {
         throw new Error(data.error || tToast('checkoutError'))
       }
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : tToast('checkoutError'))
       setUpgrading(false)
     }
   }
@@ -75,8 +74,8 @@ export function SubscriptionSettings() {
         toast.success(t('changePlanSuccess'))
       }
       refresh()
-    } catch (err: any) {
-      toast.error(err.message || t('changePlanError'))
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t('changePlanError'))
     } finally {
       setChangingPlan(false)
       setShowDowngradeConfirm(null)
@@ -91,8 +90,8 @@ export function SubscriptionSettings() {
       if (!res.ok) throw new Error(data.error)
       toast.success(t('downgradeCancelled'))
       refresh()
-    } catch (err: any) {
-      toast.error(err.message || t('changePlanError'))
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : t('changePlanError'))
     } finally {
       setChangingPlan(false)
     }
@@ -106,7 +105,7 @@ export function SubscriptionSettings() {
       if (!res.ok) throw new Error(data.error)
       toast.success(t('reactivateSuccess'))
       refresh()
-    } catch (err: any) {
+    } catch {
       toast.error(t('reactivateError'))
     } finally {
       setReactivating(false)
@@ -121,7 +120,7 @@ export function SubscriptionSettings() {
       if (!res.ok) throw new Error(data.error)
       toast.success(t('cancelSuccess'))
       refresh()
-    } catch (err: any) {
+    } catch {
       toast.error(t('cancelError'))
     } finally {
       setCancelling(false)
@@ -144,8 +143,6 @@ export function SubscriptionSettings() {
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
   }
-
-  const planLabel = isTeam ? t('team') : isPro ? t('pro') : t('free')
 
   return (
     <div className="space-y-6">
@@ -174,9 +171,7 @@ export function SubscriptionSettings() {
         <CardContent>
           {isPro ? (
             <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                {isTeam ? t('teamAccess') : t('unlimitedAccess')}
-              </p>
+              <p className="text-sm text-muted-foreground mb-2">{isTeam ? t('teamAccess') : t('unlimitedAccess')}</p>
               {subscription?.current_period_end && (
                 <p className="text-xs text-muted-foreground">
                   {t('renewsAt', { date: new Date(subscription.current_period_end).toLocaleDateString('sv-SE') })}
@@ -190,7 +185,10 @@ export function SubscriptionSettings() {
                       {t('storage')}
                     </span>
                     <span>
-                      {t('storageUsed', { used: formatBytes(storageQuota.usedBytes), limit: formatBytes(storageQuota.limitBytes) })}
+                      {t('storageUsed', {
+                        used: formatBytes(storageQuota.usedBytes),
+                        limit: formatBytes(storageQuota.limitBytes),
+                      })}
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-1.5">
@@ -203,15 +201,8 @@ export function SubscriptionSettings() {
               )}
               {subscription?.cancel_at_period_end && (
                 <div className="mt-2">
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {t('cancelledActiveUntil')}
-                  </p>
-                  <Button
-                    onClick={handleReactivate}
-                    size="sm"
-                    className="mt-2"
-                    disabled={reactivating}
-                  >
+                  <p className="text-xs text-amber-600 dark:text-amber-400">{t('cancelledActiveUntil')}</p>
+                  <Button onClick={handleReactivate} size="sm" className="mt-2" disabled={reactivating}>
                     {reactivating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
                     {t('reactivate')}
                   </Button>
@@ -234,9 +225,7 @@ export function SubscriptionSettings() {
             </div>
           ) : (
             <div>
-              <p className="text-sm text-muted-foreground mb-3">
-                {t('usageThisMonth')}
-              </p>
+              <p className="text-sm text-muted-foreground mb-3">{t('usageThisMonth')}</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{t('invoicesUsage')}</span>
@@ -252,14 +241,20 @@ export function SubscriptionSettings() {
                 </div>
                 <div className="flex justify-between text-sm mt-3">
                   <span>{t('receiptScans')}</span>
-                  <span className={usage && usage.receipt_scan_count >= limits.receiptScans ? 'text-red-500 font-medium' : ''}>
+                  <span
+                    className={
+                      usage && usage.receipt_scan_count >= limits.receiptScans ? 'text-red-500 font-medium' : ''
+                    }
+                  >
                     {usage?.receipt_scan_count || 0} / {limits.receiptScans}
                   </span>
                 </div>
                 <div className="w-full bg-secondary rounded-full h-1.5">
                   <div
                     className="bg-primary rounded-full h-1.5 transition-all"
-                    style={{ width: `${Math.min(((usage?.receipt_scan_count || 0) / limits.receiptScans) * 100, 100)}%` }}
+                    style={{
+                      width: `${Math.min(((usage?.receipt_scan_count || 0) / limits.receiptScans) * 100, 100)}%`,
+                    }}
                   />
                 </div>
                 {storageQuota && (
@@ -269,8 +264,13 @@ export function SubscriptionSettings() {
                         <HardDrive className="h-3.5 w-3.5" />
                         {t('storage')}
                       </span>
-                      <span className={storageQuota.usedBytes >= storageQuota.limitBytes ? 'text-red-500 font-medium' : ''}>
-                        {t('storageUsed', { used: formatBytes(storageQuota.usedBytes), limit: formatBytes(storageQuota.limitBytes) })}
+                      <span
+                        className={storageQuota.usedBytes >= storageQuota.limitBytes ? 'text-red-500 font-medium' : ''}
+                      >
+                        {t('storageUsed', {
+                          used: formatBytes(storageQuota.usedBytes),
+                          limit: formatBytes(storageQuota.limitBytes),
+                        })}
                       </span>
                     </div>
                     <div className="w-full bg-secondary rounded-full h-1.5">
@@ -294,9 +294,7 @@ export function SubscriptionSettings() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                  {t('pastDueWarning')}
-                </p>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">{t('pastDueWarning')}</p>
               </div>
             </div>
           </CardContent>
@@ -308,9 +306,7 @@ export function SubscriptionSettings() {
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-              <p className="text-sm text-muted-foreground">
-                {t('canceledInfo')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('canceledInfo')}</p>
             </div>
           </CardContent>
         </Card>
@@ -341,7 +337,7 @@ export function SubscriptionSettings() {
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 mb-4">
-                {tierConfig.pro.features.map(key => (
+                {tierConfig.pro.features.map((key) => (
                   <li key={key} className="flex items-center gap-2 text-sm">
                     <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                     {t(key)}
@@ -373,7 +369,7 @@ export function SubscriptionSettings() {
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 mb-4">
-                {tierConfig.pro.features.map(key => (
+                {tierConfig.pro.features.map((key) => (
                   <li key={key} className="flex items-center gap-2 text-sm">
                     <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                     {t(key)}
@@ -411,7 +407,7 @@ export function SubscriptionSettings() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-4">
-                  {tierConfig.team.features.map(key => (
+                  {tierConfig.team.features.map((key) => (
                     <li key={key} className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       {t(key)}
@@ -419,15 +415,16 @@ export function SubscriptionSettings() {
                   ))}
                 </ul>
                 <Button
-                  onClick={() => subscription?.stripe_subscription_id
-                    ? handleChangePlan('team', 'monthly')
-                    : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '', 'team')
+                  onClick={() =>
+                    subscription?.stripe_subscription_id
+                      ? handleChangePlan('team', 'monthly')
+                      : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_MONTHLY_PRICE_ID || '', 'team')
                   }
                   disabled={upgrading || changingPlan}
                   className="w-full"
                   variant="outline"
                 >
-                  {(upgrading || changingPlan) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {upgrading || changingPlan ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {isPro ? t('upgradeToTeam') : t('upgrade')}
                 </Button>
               </CardContent>
@@ -449,7 +446,7 @@ export function SubscriptionSettings() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 mb-4">
-                  {tierConfig.team.features.map(key => (
+                  {tierConfig.team.features.map((key) => (
                     <li key={key} className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                       {t(key)}
@@ -457,14 +454,15 @@ export function SubscriptionSettings() {
                   ))}
                 </ul>
                 <Button
-                  onClick={() => subscription?.stripe_subscription_id
-                    ? handleChangePlan('team', 'yearly')
-                    : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '', 'team')
+                  onClick={() =>
+                    subscription?.stripe_subscription_id
+                      ? handleChangePlan('team', 'yearly')
+                      : handleUpgrade(process.env.NEXT_PUBLIC_STRIPE_TEAM_YEARLY_PRICE_ID || '', 'team')
                   }
                   disabled={upgrading || changingPlan}
                   className="w-full"
                 >
-                  {(upgrading || changingPlan) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {upgrading || changingPlan ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {isPro ? t('upgradeToTeam') : t('upgrade')}
                 </Button>
               </CardContent>
@@ -515,16 +513,9 @@ export function SubscriptionSettings() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800 dark:text-amber-300">
-                  {t('pendingDowngradeNotice')}
-                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-300">{t('pendingDowngradeNotice')}</p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelDowngrade}
-                disabled={changingPlan}
-              >
+              <Button variant="outline" size="sm" onClick={handleCancelDowngrade} disabled={changingPlan}>
                 {changingPlan ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : null}
                 {tc('cancel')}
               </Button>
@@ -535,7 +526,9 @@ export function SubscriptionSettings() {
 
       <ConfirmDialog
         open={!!showDowngradeConfirm}
-        onOpenChange={(open) => { if (!open) setShowDowngradeConfirm(null) }}
+        onOpenChange={(open) => {
+          if (!open) setShowDowngradeConfirm(null)
+        }}
         title={t('downgradeConfirmTitle')}
         description={t('downgradeConfirmDesc')}
         confirmLabel={t('downgrade')}

@@ -1,15 +1,9 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   uploadGigAttachment,
   deleteGigAttachment,
@@ -17,7 +11,7 @@ import {
   getSignedUrl,
   updateGigAttachmentCategory,
   type GigAttachment,
-  type AttachmentCategory
+  type AttachmentCategory,
 } from '@/lib/supabase/storage'
 import { FileText, Upload, Trash2, Download, Loader2, AlertCircle } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -42,7 +36,16 @@ type AttachmentRowProps = {
   deleteFileLabel: string
 }
 
-function AttachmentRow({ attachment, onDownload, onDelete, onCategoryChange, disabled, categoryLabels, openFileLabel, deleteFileLabel }: AttachmentRowProps) {
+function AttachmentRow({
+  attachment,
+  onDownload,
+  onDelete,
+  onCategoryChange,
+  disabled,
+  categoryLabels,
+  openFileLabel,
+  deleteFileLabel,
+}: AttachmentRowProps) {
   const category = attachment.category || 'gig_info'
 
   return (
@@ -112,6 +115,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
 
   useEffect(() => {
     loadAttachments()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadAttachments uses gigId which is already in deps
   }, [gigId])
 
   async function loadAttachments() {
@@ -147,7 +151,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
         }
 
         const attachment = await uploadGigAttachment(gigId, file)
-        setAttachments(prev => [attachment, ...prev])
+        setAttachments((prev) => [attachment, ...prev])
       }
     } catch (err) {
       if (err instanceof Error && err.message === 'STORAGE_QUOTA_EXCEEDED') {
@@ -167,7 +171,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
     try {
       setError(null)
       const updated = await updateGigAttachmentCategory(attachment.id, category)
-      setAttachments(prev => prev.map(a => a.id === updated.id ? updated : a))
+      setAttachments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('updateError'))
     }
@@ -182,7 +186,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
     try {
       setError(null)
       await deleteGigAttachment(attachment.id, attachment.file_path)
-      setAttachments(prev => prev.filter(a => a.id !== attachment.id))
+      setAttachments((prev) => prev.filter((a) => a.id !== attachment.id))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('deleteError'))
     }
@@ -224,11 +228,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || uploading}
           >
-            {uploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           </Button>
         </div>
       </div>
@@ -249,7 +249,7 @@ export function GigAttachments({ gigId, disabled }: GigAttachmentsProps) {
         </div>
       ) : (
         <div className="space-y-1.5">
-          {attachments.map(attachment => (
+          {attachments.map((attachment) => (
             <AttachmentRow
               key={attachment.id}
               attachment={attachment}

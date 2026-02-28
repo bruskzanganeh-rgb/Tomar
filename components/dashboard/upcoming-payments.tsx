@@ -31,22 +31,21 @@ export function UpcomingPayments({ className }: { className?: string }) {
   const supabase = createClient()
 
   useEffect(() => {
+    async function loadInvoices() {
+      setLoading(true)
+
+      const { data } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, total, currency, due_date, status, client:clients(name)')
+        .in('status', ['sent', 'overdue'])
+        .order('due_date', { ascending: true })
+        .limit(8)
+
+      setInvoices((data || []) as unknown as Invoice[])
+      setLoading(false)
+    }
     loadInvoices()
-  }, [])
-
-  async function loadInvoices() {
-    setLoading(true)
-
-    const { data } = await supabase
-      .from('invoices')
-      .select('id, invoice_number, total, currency, due_date, status, client:clients(name)')
-      .in('status', ['sent', 'overdue'])
-      .order('due_date', { ascending: true })
-      .limit(8)
-
-    setInvoices((data || []) as unknown as Invoice[])
-    setLoading(false)
-  }
+  }, [supabase])
 
   function getDaysUntilDue(dueDate: string): number {
     return differenceInDays(new Date(dueDate), new Date())
@@ -92,7 +91,9 @@ export function UpcomingPayments({ className }: { className?: string }) {
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{t('unpaidInvoices')}</CardTitle>
-          <span className="text-sm font-semibold">{totalUnpaid.toLocaleString(formatLocale)} {tc('kr')}</span>
+          <span className="text-sm font-semibold">
+            {totalUnpaid.toLocaleString(formatLocale)} {tc('kr')}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="pb-4 flex-1 flex flex-col" style={{ minHeight: 0 }}>
@@ -129,7 +130,9 @@ export function UpcomingPayments({ className }: { className?: string }) {
                       <span className="font-medium truncate block">{invoice.client.name}</span>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="font-semibold">{formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}</span>
+                      <span className="font-semibold">
+                        {formatCurrency(invoice.total, (invoice.currency || 'SEK') as SupportedCurrency)}
+                      </span>
                       {getStatusBadge(daysUntil)}
                     </div>
                   </div>

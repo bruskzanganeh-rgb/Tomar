@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
@@ -13,14 +13,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Loader2, Trash2, ExternalLink, Upload, Image, X } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Loader2, Trash2, Upload, Image as ImageIcon, X } from 'lucide-react'
+import NextImage from 'next/image'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { GigCombobox } from '@/components/expenses/gig-combobox'
@@ -79,17 +74,10 @@ const categories = [
 
 const currencies = ['SEK', 'EUR', 'USD', 'GBP', 'DKK', 'NOK']
 
-export function EditExpenseDialog({
-  expense,
-  open,
-  onOpenChange,
-  onSuccess,
-  gigs,
-}: EditExpenseDialogProps) {
+export function EditExpenseDialog({ expense, open, onOpenChange, onSuccess, gigs }: EditExpenseDialogProps) {
   const t = useTranslations('expense')
   const tc = useTranslations('common')
   const tt = useTranslations('toast')
-  const tg = useTranslations('gig')
   const [saving, setSaving] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -132,6 +120,7 @@ export function EditExpenseDialog({
         setAttachmentUrl(null)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadAttachment is stable; only re-run when expense or open changes
   }, [expense, open])
 
   // Rensa state när dialogen stängs
@@ -302,9 +291,7 @@ export function EditExpenseDialog({
         <DialogContent className="max-h-[90vh] flex flex-col w-[95vw] md:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{t('editExpense')}</DialogTitle>
-            <DialogDescription>
-              {t('editExpenseDescription')}
-            </DialogDescription>
+            <DialogDescription>{t('editExpenseDescription')}</DialogDescription>
           </DialogHeader>
 
           {/* Responsive layout: stacked on mobile, 3 columns on desktop */}
@@ -321,10 +308,14 @@ export function EditExpenseDialog({
               ) : hasAttachment && attachmentUrl ? (
                 <div className="space-y-2">
                   <a href={attachmentUrl} target="_blank" rel="noopener noreferrer">
-                    <img
+                    <NextImage
                       src={attachmentUrl}
-                      alt={t('receipt')}
+                      alt=""
+                      width={0}
+                      height={0}
+                      sizes="100vw"
                       className="w-full h-40 md:h-56 object-cover rounded-lg border shadow-sm hover:opacity-90 transition-opacity"
+                      unoptimized
                     />
                   </a>
                   <div className="flex gap-1">
@@ -383,7 +374,7 @@ export function EditExpenseDialog({
                     className="w-full h-40 md:h-56 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Image className="h-8 w-8 text-gray-300 mb-2" />
+                    <ImageIcon className="h-8 w-8 text-gray-300 mb-2" />
                     <p className="text-xs text-gray-400">{t('noImage')}</p>
                   </div>
                   <Button
@@ -457,7 +448,9 @@ export function EditExpenseDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {currencies.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -475,7 +468,9 @@ export function EditExpenseDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -511,9 +506,7 @@ export function EditExpenseDialog({
                   onValueChange={(value) => setFormData({ ...formData, gig_id: value })}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t('linkExpenseToGigHint')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('linkExpenseToGigHint')}</p>
             </div>
           </div>
 

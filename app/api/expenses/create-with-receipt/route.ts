@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -21,19 +23,16 @@ export async function POST(request: NextRequest) {
     const date = formData.get('date') as string
     const supplier = formData.get('supplier') as string
     const amount = parseFloat(formData.get('amount') as string)
-    const currency = formData.get('currency') as string || 'SEK'
+    const currency = (formData.get('currency') as string) || 'SEK'
     const amountSek = parseFloat(formData.get('amount_base') as string) || amount
-    const category = formData.get('category') as string || 'Övrigt'
-    const notes = formData.get('notes') as string || null
-    const gigId = formData.get('gig_id') as string || null
+    const category = (formData.get('category') as string) || 'Övrigt'
+    const notes = (formData.get('notes') as string) || null
+    const gigId = (formData.get('gig_id') as string) || null
     const forceSave = formData.get('forceSave') === 'true'
 
     // Validera obligatoriska fält
     if (!date || !supplier || isNaN(amount)) {
-      return NextResponse.json(
-        { error: 'Date, supplier, and amount are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Date, supplier, and amount are required' }, { status: 400 })
     }
 
     // Dublettkontroll med fuzzy matching (om inte forceSave)
@@ -46,10 +45,7 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
 
       if (existingExpenses && existingExpenses.length > 0) {
-        const duplicateResult = findDuplicateExpense(
-          { date, supplier, amount },
-          existingExpenses as DuplicateExpense[]
-        )
+        const duplicateResult = findDuplicateExpense({ date, supplier, amount }, existingExpenses as DuplicateExpense[])
 
         if (duplicateResult.isDuplicate && duplicateResult.existingExpense) {
           const existing = duplicateResult.existingExpense
@@ -73,7 +69,7 @@ export async function POST(request: NextRequest) {
       if (!quota.allowed) {
         return NextResponse.json(
           { error: 'Storage quota exceeded. Upgrade your plan for more storage.' },
-          { status: 403 }
+          { status: 403 },
         )
       }
 
@@ -84,21 +80,17 @@ export async function POST(request: NextRequest) {
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
-      const { data: uploadData, error: uploadError } = await serviceSupabase.storage
-        .from('expenses')
-        .upload(filePath, buffer, {
-          contentType: file.type,
-          upsert: false,
-        })
+      const { error: uploadError } = await serviceSupabase.storage.from('expenses').upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: false,
+      })
 
       if (uploadError) {
         console.error('Upload error:', uploadError)
         // Fortsätt ändå - spara utgiften utan bilaga
       } else {
         // Hämta public URL
-        const { data: urlData } = serviceSupabase.storage
-          .from('expenses')
-          .getPublicUrl(filePath)
+        const { data: urlData } = serviceSupabase.storage.from('expenses').getPublicUrl(filePath)
 
         attachmentUrl = urlData.publicUrl
         fileSize = buffer.length
@@ -127,10 +119,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Insert error:', insertError)
-      return NextResponse.json(
-        { error: 'Could not save expense' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Could not save expense' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -139,9 +128,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Create expense error:', error)
-    return NextResponse.json(
-      { error: 'Could not create expense' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Could not create expense' }, { status: 500 })
   }
 }

@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
@@ -8,15 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Music, Trash2, ArrowUp, ArrowDown, Pencil } from 'lucide-react'
+import { Music, Trash2, ArrowUp, ArrowDown, Pencil } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -29,9 +23,7 @@ type Position = {
 }
 
 export default function PositionsPage() {
-  const t = useTranslations('config')
   const tc = useTranslations('common')
-  const tToast = useTranslations('toast')
   const tPositions = useTranslations('positions')
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
@@ -49,30 +41,27 @@ export default function PositionsPage() {
   const [positionToDelete, setPositionToDelete] = useState<string | null>(null)
   const supabase = createClient()
 
-  const { data: positions = [], isLoading: loading, mutate } = useSWR<Position[]>(
+  const {
+    data: positions = [],
+    isLoading: loading,
+    mutate,
+  } = useSWR<Position[]>(
     'positions',
     async () => {
-      const { data, error } = await supabase
-        .from('positions')
-        .select('*')
-        .order('sort_order')
+      const { data, error } = await supabase.from('positions').select('*').order('sort_order')
       if (error) throw error
       return (data || []) as Position[]
     },
-    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
   )
 
   async function handleCreate() {
     if (!newPositionName.trim()) return
 
     setSaving(true)
-    const maxOrder = positions.length > 0
-      ? Math.max(...positions.map(p => p.sort_order)) + 1
-      : 1
+    const maxOrder = positions.length > 0 ? Math.max(...positions.map((p) => p.sort_order)) + 1 : 1
 
-    const { error } = await supabase
-      .from('positions')
-      .insert([{ name: newPositionName.trim(), sort_order: maxOrder }])
+    const { error } = await supabase.from('positions').insert([{ name: newPositionName.trim(), sort_order: maxOrder }])
 
     if (error) {
       console.error('Error creating position:', error)
@@ -92,10 +81,7 @@ export default function PositionsPage() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase
-      .from('positions')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('positions').delete().eq('id', id)
 
     if (error) {
       console.error('Error deleting position:', error)
@@ -114,10 +100,7 @@ export default function PositionsPage() {
     if (!editingPosition || !editName.trim()) return
 
     setSaving(true)
-    const { error } = await supabase
-      .from('positions')
-      .update({ name: editName.trim() })
-      .eq('id', editingPosition.id)
+    const { error } = await supabase.from('positions').update({ name: editName.trim() }).eq('id', editingPosition.id)
 
     if (error) {
       console.error('Error updating position:', error)
@@ -146,10 +129,7 @@ export default function PositionsPage() {
     }))
 
     for (const update of updates) {
-      await supabase
-        .from('positions')
-        .update({ sort_order: update.sort_order })
-        .eq('id', update.id)
+      await supabase.from('positions').update({ sort_order: update.sort_order }).eq('id', update.id)
     }
 
     mutate()
@@ -166,13 +146,9 @@ export default function PositionsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {tc('loading')}
-            </div>
+            <div className="text-center py-8 text-muted-foreground">{tc('loading')}</div>
           ) : positions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {tPositions('noPositions')}
-            </div>
+            <div className="text-center py-8 text-muted-foreground">{tPositions('noPositions')}</div>
           ) : (
             <Table>
               <TableHeader>
@@ -188,9 +164,7 @@ export default function PositionsPage() {
                     <TableCell>
                       <Badge variant="outline">{position.sort_order}</Badge>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {position.name}
-                    </TableCell>
+                    <TableCell className="font-medium">{position.name}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -209,18 +183,10 @@ export default function PositionsPage() {
                         >
                           <ArrowDown className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(position)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(position)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => confirmDelete(position.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => confirmDelete(position.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>

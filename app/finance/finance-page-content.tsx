@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { Suspense } from 'react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
@@ -16,8 +16,8 @@ const InvoicesTab = dynamic(() => import('@/components/finance/invoices-tab'), {
   loading: () => <TabSkeleton />,
 })
 const AnalyticsContent = dynamic(
-  () => import('@/components/analytics/analytics-content').then(mod => ({ default: mod.AnalyticsContent })),
-  { loading: () => <TabSkeleton /> }
+  () => import('@/components/analytics/analytics-content').then((mod) => ({ default: mod.AnalyticsContent })),
+  { loading: () => <TabSkeleton /> },
 )
 const GigTypesTab = dynamic(() => import('@/components/settings/gig-types-tab'), {
   loading: () => <TabSkeleton />,
@@ -44,7 +44,6 @@ export function FinancePageContent() {
   const tGigTypes = useTranslations('gigTypes')
   const tPositions = useTranslations('positions')
   const tClient = useTranslations('client')
-  const tNav = useTranslations('nav')
   const tAnalytics = useTranslations('analytics')
   const searchParams = useSearchParams()
   const router = useRouter()

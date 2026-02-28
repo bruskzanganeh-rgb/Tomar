@@ -12,7 +12,21 @@ export type CountryConfig = {
 }
 
 export const EU_COUNTRIES = [
-  'SE', 'NO', 'DK', 'FI', 'DE', 'AT', 'FR', 'NL', 'BE', 'ES', 'IT', 'PL', 'CZ', 'IE', 'PT',
+  'SE',
+  'NO',
+  'DK',
+  'FI',
+  'DE',
+  'AT',
+  'FR',
+  'NL',
+  'BE',
+  'ES',
+  'IT',
+  'PL',
+  'CZ',
+  'IE',
+  'PT',
 ] as const
 
 // Norway is EEA, not EU, but reverse charge applies similarly
@@ -242,7 +256,7 @@ export function getCountryConfig(countryCode: string): CountryConfig {
 }
 
 export function isEuCountry(countryCode: string): boolean {
-  return EU_COUNTRIES.includes(countryCode as any)
+  return (EU_COUNTRIES as readonly string[]).includes(countryCode)
 }
 
 export function shouldReverseCharge(userCountry: string, clientCountry: string): boolean {

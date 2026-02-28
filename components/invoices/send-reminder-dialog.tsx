@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
@@ -41,13 +41,7 @@ type SendReminderDialogProps = {
   reminderCount: number
 }
 
-export function SendReminderDialog({
-  invoice,
-  open,
-  onOpenChange,
-  onSuccess,
-  reminderCount,
-}: SendReminderDialogProps) {
+export function SendReminderDialog({ invoice, open, onOpenChange, onSuccess, reminderCount }: SendReminderDialogProps) {
   const t = useTranslations('invoice')
   const tr = useTranslations('invoice.reminder')
   const tc = useTranslations('common')
@@ -60,24 +54,19 @@ export function SendReminderDialog({
   const [message, setMessage] = useState('')
   const supabase = createClient()
 
-  const daysOverdue = invoice
-    ? differenceInDays(new Date(), new Date(invoice.due_date))
-    : 0
+  const daysOverdue = invoice ? differenceInDays(new Date(), new Date(invoice.due_date)) : 0
 
   useEffect(() => {
     if (open && invoice) {
       loadCompanyAndPrefill()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadCompanyAndPrefill uses invoice (already in deps); only re-run when dialog opens
   }, [open, invoice])
 
   async function loadCompanyAndPrefill() {
     if (!invoice) return
 
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .limit(1)
-      .single()
+    const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
 
     let companyName = ''
     let bankAccount = ''
@@ -97,24 +86,28 @@ export function SendReminderDialog({
 
     if (isEnglish) {
       setSubject(tr('emailDefaultSubjectEn', { number: invoice.invoice_number }))
-      setMessage(tr('emailDefaultBodyEn', {
-        number: invoice.invoice_number,
-        total: invoice.total.toLocaleString(formatLocale),
-        dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
-        daysOverdue: String(daysOverdue),
-        bankAccount,
-        company: companyName,
-      }))
+      setMessage(
+        tr('emailDefaultBodyEn', {
+          number: invoice.invoice_number,
+          total: invoice.total.toLocaleString(formatLocale),
+          dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
+          daysOverdue: String(daysOverdue),
+          bankAccount,
+          company: companyName,
+        }),
+      )
     } else {
       setSubject(tr('emailDefaultSubject', { number: invoice.invoice_number }))
-      setMessage(tr('emailDefaultBodySv', {
-        number: invoice.invoice_number,
-        total: invoice.total.toLocaleString(formatLocale),
-        dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
-        daysOverdue: String(daysOverdue),
-        bankAccount,
-        company: companyName,
-      }))
+      setMessage(
+        tr('emailDefaultBodySv', {
+          number: invoice.invoice_number,
+          total: invoice.total.toLocaleString(formatLocale),
+          dueDate: format(new Date(invoice.due_date), 'PPP', { locale: dateLocale }),
+          daysOverdue: String(daysOverdue),
+          bankAccount,
+          company: companyName,
+        }),
+      )
     }
   }
 
@@ -182,29 +175,22 @@ export function SendReminderDialog({
           {/* Subject */}
           <div className="space-y-2">
             <Label htmlFor="reminder-subject">{t('subject')}</Label>
-            <Input
-              id="reminder-subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
+            <Input id="reminder-subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           {/* Message */}
           <div className="space-y-2">
             <Label htmlFor="reminder-message">{t('message')}</Label>
-            <Textarea
-              id="reminder-message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={8}
-            />
+            <Textarea id="reminder-message" value={message} onChange={(e) => setMessage(e.target.value)} rows={8} />
           </div>
 
           {/* Invoice PDF attachment indicator */}
           <div className="p-3 rounded-lg border bg-gray-50 dark:bg-gray-900">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">{t('invoice')} #{invoice?.invoice_number}.pdf</span>
+              <span className="text-sm font-medium">
+                {t('invoice')} #{invoice?.invoice_number}.pdf
+              </span>
               <span className="text-xs text-muted-foreground">{t('attachedAutomatically')}</span>
             </div>
           </div>

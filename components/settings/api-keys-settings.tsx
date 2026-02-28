@@ -54,14 +54,15 @@ export function ApiKeysSettings() {
 
   const supabase = createClient()
 
-  const { data: keys = [], mutate } = useSWR<ApiKey[]>('api-keys', async () => {
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return (data || []) as ApiKey[]
-  }, { revalidateOnFocus: false })
+  const { data: keys = [], mutate } = useSWR<ApiKey[]>(
+    'api-keys',
+    async () => {
+      const { data, error } = await supabase.from('api_keys').select('*').order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as ApiKey[]
+    },
+    { revalidateOnFocus: false },
+  )
 
   async function createKey() {
     if (!newKeyName.trim()) {
@@ -78,9 +79,11 @@ export function ApiKeysSettings() {
       // Generate random key
       const keyBytes = new Uint8Array(32)
       crypto.getRandomValues(keyBytes)
-      const apiKey = 'ak_' + Array.from(keyBytes)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
+      const apiKey =
+        'ak_' +
+        Array.from(keyBytes)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')
 
       const keyPrefix = apiKey.substring(0, 11) + '...'
 
@@ -88,17 +91,15 @@ export function ApiKeysSettings() {
       const encoder = new TextEncoder()
       const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(apiKey))
       const keyHash = Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
+        .map((b) => b.toString(16).padStart(2, '0'))
         .join('')
 
-      const { error } = await supabase
-        .from('api_keys')
-        .insert({
-          name: newKeyName.trim(),
-          key_hash: keyHash,
-          key_prefix: keyPrefix,
-          scopes: selectedScopes,
-        })
+      const { error } = await supabase.from('api_keys').insert({
+        name: newKeyName.trim(),
+        key_hash: keyHash,
+        key_prefix: keyPrefix,
+        scopes: selectedScopes,
+      })
 
       if (error) throw error
 
@@ -116,10 +117,7 @@ export function ApiKeysSettings() {
   }
 
   async function deleteKey(id: string) {
-    const { error } = await supabase
-      .from('api_keys')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('api_keys').delete().eq('id', id)
 
     if (error) {
       toast.error('Failed to delete API key')
@@ -139,11 +137,7 @@ export function ApiKeysSettings() {
   }
 
   function toggleScope(scope: string) {
-    setSelectedScopes(prev =>
-      prev.includes(scope)
-        ? prev.filter(s => s !== scope)
-        : [...prev, scope]
-    )
+    setSelectedScopes((prev) => (prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]))
   }
 
   return (
@@ -175,11 +169,8 @@ export function ApiKeysSettings() {
             </div>
           ) : (
             <div className="space-y-3">
-              {keys.map(key => (
-                <div
-                  key={key.id}
-                  className="flex items-start justify-between border rounded-lg p-4 gap-4"
-                >
+              {keys.map((key) => (
+                <div key={key.id} className="flex items-start justify-between border rounded-lg p-4 gap-4">
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{key.name}</span>
@@ -188,7 +179,7 @@ export function ApiKeysSettings() {
                       </code>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                      {key.scopes.map(scope => (
+                      {key.scopes.map((scope) => (
                         <Badge key={scope} variant="secondary" className="text-[10px]">
                           {scope}
                         </Badge>
@@ -196,9 +187,7 @@ export function ApiKeysSettings() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Created {new Date(key.created_at).toLocaleDateString()}
-                      {key.last_used_at && (
-                        <> · Last used {new Date(key.last_used_at).toLocaleDateString()}</>
-                      )}
+                      {key.last_used_at && <> · Last used {new Date(key.last_used_at).toLocaleDateString()}</>}
                     </p>
                   </div>
                   <Button
@@ -235,9 +224,7 @@ export function ApiKeysSettings() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create API Key</DialogTitle>
-            <DialogDescription>
-              Choose a name and permissions for this key.
-            </DialogDescription>
+            <DialogDescription>Choose a name and permissions for this key.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -255,17 +242,14 @@ export function ApiKeysSettings() {
             <div className="space-y-2">
               <Label>Permissions</Label>
               <div className="grid grid-cols-2 gap-3">
-                {AVAILABLE_SCOPES.map(scope => (
+                {AVAILABLE_SCOPES.map((scope) => (
                   <div key={scope.value} className="flex items-center space-x-2">
                     <Checkbox
                       id={scope.value}
                       checked={selectedScopes.includes(scope.value)}
                       onCheckedChange={() => toggleScope(scope.value)}
                     />
-                    <label
-                      htmlFor={scope.value}
-                      className="text-sm leading-none cursor-pointer"
-                    >
+                    <label htmlFor={scope.value} className="text-sm leading-none cursor-pointer">
                       {scope.label}
                     </label>
                   </div>
@@ -276,7 +260,7 @@ export function ApiKeysSettings() {
                   variant="outline"
                   size="sm"
                   className="text-xs h-7"
-                  onClick={() => setSelectedScopes(AVAILABLE_SCOPES.map(s => s.value))}
+                  onClick={() => setSelectedScopes(AVAILABLE_SCOPES.map((s) => s.value))}
                 >
                   Select All
                 </Button>
@@ -284,7 +268,9 @@ export function ApiKeysSettings() {
                   variant="outline"
                   size="sm"
                   className="text-xs h-7"
-                  onClick={() => setSelectedScopes(AVAILABLE_SCOPES.filter(s => s.value.startsWith('read:')).map(s => s.value))}
+                  onClick={() =>
+                    setSelectedScopes(AVAILABLE_SCOPES.filter((s) => s.value.startsWith('read:')).map((s) => s.value))
+                  }
                 >
                   Read Only
                 </Button>
@@ -308,28 +294,16 @@ export function ApiKeysSettings() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API Key Created</DialogTitle>
-            <DialogDescription>
-              Copy this key now — you won't be able to see it again!
-            </DialogDescription>
+            <DialogDescription>Copy this key now — you won&apos;t be able to see it again!</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-xs text-muted-foreground mb-2">Your API Key:</p>
               <div className="flex items-center gap-2">
-                <code className="text-sm font-mono break-all flex-1 select-all">
-                  {generatedKey}
-                </code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copyToClipboard(generatedKey!, 'new')}
-                >
-                  {copiedId === 'new' ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
+                <code className="text-sm font-mono break-all flex-1 select-all">{generatedKey}</code>
+                <Button size="sm" variant="outline" onClick={() => copyToClipboard(generatedKey!, 'new')}>
+                  {copiedId === 'new' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -343,15 +317,14 @@ export function ApiKeysSettings() {
             <div className="bg-muted/50 p-3 rounded-lg">
               <p className="text-xs text-muted-foreground mb-1">Usage example:</p>
               <code className="text-xs break-all">
-                curl -H &quot;Authorization: Bearer {generatedKey?.substring(0, 15)}...&quot; {typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/summary
+                curl -H &quot;Authorization: Bearer {generatedKey?.substring(0, 15)}...&quot;{' '}
+                {typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/summary
               </code>
             </div>
           </div>
 
           <DialogFooter>
-            <Button onClick={() => setGeneratedKey(null)}>
-              I've Saved It
-            </Button>
+            <Button onClick={() => setGeneratedKey(null)}>I&apos;ve Saved It</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

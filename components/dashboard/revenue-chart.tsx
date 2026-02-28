@@ -80,6 +80,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
     if (yearProp && yearProp !== selectedYear) {
       setSelectedYear(yearProp)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when yearProp changes, not when selectedYear changes (would cause loop)
   }, [yearProp])
 
   // Reset chartMode when switching away from 'all'
@@ -102,6 +103,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
         loadWorkdayData(selectedYear)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loader fns are stable; all data dependencies are listed
   }, [selectedYear, viewMode, clientId, positionId, shouldFilter, currentUserId])
 
   async function loadAvailableYears() {
@@ -111,11 +113,9 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
 
     const gdQuery = supabase.from('gig_dates').select('date, gig:gigs(user_id)').order('date', { ascending: true })
     const { data: rawGigDates } = await gdQuery
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const typedGigDates = (rawGigDates || []) as unknown as { date: string; gig: { user_id: string } | null }[]
     const gigDates =
-      shouldFilter && currentUserId
-        ? (rawGigDates || []).filter((gd: any) => gd.gig?.user_id === currentUserId)
-        : rawGigDates
+      shouldFilter && currentUserId ? typedGigDates.filter((gd) => gd.gig?.user_id === currentUserId) : typedGigDates
 
     const invoiceYears = invoices?.map((inv) => new Date(inv.invoice_date).getFullYear().toString()) || []
 

@@ -41,8 +41,7 @@ export function TeamSettings() {
           if (data) setShowOnlyMyData((data as any).show_only_my_data ?? false)
         })
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [supabase])
 
   async function handleToggleShowOnlyMyData() {
     const newValue = !showOnlyMyData
@@ -114,10 +113,9 @@ export function TeamSettings() {
   }
 
   async function handleRemoveMember(memberId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase
       .from('company_members')
-      .update({ removed_at: new Date().toISOString() } as any)
+      .update({ removed_at: new Date().toISOString() })
       .eq('id', memberId)
 
     if (error) {

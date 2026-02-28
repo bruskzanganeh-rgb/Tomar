@@ -149,7 +149,7 @@ export default function InvoicesTab() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setCurrentUserId(user.id)
     })
-  }, [])
+  }, [supabase.auth])
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')

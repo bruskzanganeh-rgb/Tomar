@@ -145,8 +145,8 @@ export default function AdminPage() {
       table_name: string
       record_id: string
       action: string
-      old_data: Record<string, any> | null
-      new_data: Record<string, any> | null
+      old_data: Record<string, unknown> | null
+      new_data: Record<string, unknown> | null
       changed_fields: string[] | null
       user_id: string | null
       created_at: string
@@ -168,7 +168,9 @@ export default function AdminPage() {
       return
     }
 
-    const { data } = await (supabase.rpc as Function)('is_admin', { uid: user.id })
+    const { data } = await (
+      supabase.rpc as unknown as (fn: string, params: Record<string, string>) => Promise<{ data: unknown }>
+    )('is_admin', { uid: user.id })
     if (!data) {
       router.push('/dashboard')
       return
@@ -254,9 +256,9 @@ export default function AdminPage() {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkAdmin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: checkAdmin loads initial data once
   }, [])
 
   async function handleSaveConfig() {

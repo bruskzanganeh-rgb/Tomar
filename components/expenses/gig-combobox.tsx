@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
@@ -6,19 +6,8 @@ import { Check, ChevronsUpDown, Calendar, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 type Gig = {
   id: string
@@ -39,15 +28,9 @@ type GigComboboxProps = {
 const INITIAL_LIMIT = 10
 const LOAD_MORE_COUNT = 10
 
-export function GigCombobox({
-  gigs,
-  value,
-  onValueChange,
-  disabled = false,
-}: GigComboboxProps) {
+export function GigCombobox({ gigs, value, onValueChange, disabled = false }: GigComboboxProps) {
   const t = useTranslations('expense')
   const tg = useTranslations('gig')
-  const tc = useTranslations('common')
   const [open, setOpen] = useState(false)
   const [kommandeLimitExtra, setKommandeLimitExtra] = useState(0)
   const [historiskaLimitExtra, setHistoriskaLimitExtra] = useState(0)
@@ -62,14 +45,14 @@ export function GigCombobox({
     const completedStatuses = ['completed', 'invoiced', 'paid']
 
     const kommandeGigs = gigs
-      .filter(g => {
+      .filter((g) => {
         const gigDate = new Date(g.date)
         return gigDate >= today || upcomingStatuses.includes(g.status)
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
     const historiskaGigs = gigs
-      .filter(g => {
+      .filter((g) => {
         const gigDate = new Date(g.date)
         return gigDate < today && completedStatuses.includes(g.status)
       })
@@ -91,11 +74,11 @@ export function GigCombobox({
   }
 
   // Hitta valt uppdrag
-  const selectedGig = gigs.find(g => g.id === value)
+  const selectedGig = gigs.find((g) => g.id === value)
   const displayValue = selectedGig ? formatGigLabel(selectedGig) : t('selectGig')
 
   // Kolla om listan har mer innehåll än vad som syns
-  const hasScrollableContent = (kommande.length + historiska.length + 1) > INITIAL_LIMIT
+  const hasScrollableContent = kommande.length + historiska.length + 1 > INITIAL_LIMIT
 
   // Reset limits when popover closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -117,9 +100,7 @@ export function GigCombobox({
           disabled={disabled}
           className="w-full justify-between font-normal"
         >
-          <span className="truncate">
-            {value === 'none' ? t('noGig') : displayValue}
-          </span>
+          <span className="truncate">{value === 'none' ? t('noGig') : displayValue}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -131,106 +112,93 @@ export function GigCombobox({
         <Command>
           <CommandInput placeholder={t('searchGig')} />
           <div className="relative">
-          <CommandList
-            style={{ maxHeight: 250, height: 'auto', overflowY: 'auto' }}
-            onTouchMove={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
-            onScroll={() => setShowScrollHint(false)}
-          >
-            <CommandEmpty>{t('noGigsFound')}</CommandEmpty>
+            <CommandList
+              style={{ maxHeight: 250, height: 'auto', overflowY: 'auto' }}
+              onTouchMove={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+              onScroll={() => setShowScrollHint(false)}
+            >
+              <CommandEmpty>{t('noGigsFound')}</CommandEmpty>
 
-            {/* Inget uppdrag */}
-            <CommandGroup>
-              <CommandItem
-                value="none"
-                onSelect={() => {
-                  onValueChange('none')
-                  setOpen(false)
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === 'none' ? "opacity-100" : "opacity-0"
+              {/* Inget uppdrag */}
+              <CommandGroup>
+                <CommandItem
+                  value="none"
+                  onSelect={() => {
+                    onValueChange('none')
+                    setOpen(false)
+                  }}
+                >
+                  <Check className={cn('mr-2 h-4 w-4', value === 'none' ? 'opacity-100' : 'opacity-0')} />
+                  {t('noGig')}
+                </CommandItem>
+              </CommandGroup>
+
+              {/* Kommande uppdrag */}
+              {kommande.length > 0 && (
+                <CommandGroup heading={`${tg('upcoming')} (${kommande.length})`}>
+                  {visibleKommande.map((gig) => (
+                    <CommandItem
+                      key={gig.id}
+                      value={`${formatGigLabel(gig)} ${gig.client?.name || ''}`}
+                      onSelect={() => {
+                        onValueChange(gig.id)
+                        setOpen(false)
+                      }}
+                    >
+                      <Check className={cn('mr-2 h-4 w-4 shrink-0', value === gig.id ? 'opacity-100' : 'opacity-0')} />
+                      <Calendar className="mr-2 h-4 w-4 shrink-0 text-blue-500" />
+                      <span className="truncate">{formatGigLabel(gig)}</span>
+                    </CommandItem>
+                  ))}
+                  {kommande.length > visibleKommande.length && (
+                    <CommandItem
+                      onSelect={() => setKommandeLimitExtra((prev) => prev + LOAD_MORE_COUNT)}
+                      className="justify-center text-blue-600"
+                    >
+                      <ChevronDown className="mr-1 h-4 w-4" />
+                      {t('showMore', { count: Math.min(LOAD_MORE_COUNT, kommande.length - visibleKommande.length) })}
+                    </CommandItem>
                   )}
-                />
-                {t('noGig')}
-              </CommandItem>
-            </CommandGroup>
+                </CommandGroup>
+              )}
 
-            {/* Kommande uppdrag */}
-            {kommande.length > 0 && (
-              <CommandGroup heading={`${tg('upcoming')} (${kommande.length})`}>
-                {visibleKommande.map((gig) => (
-                  <CommandItem
-                    key={gig.id}
-                    value={`${formatGigLabel(gig)} ${gig.client?.name || ''}`}
-                    onSelect={() => {
-                      onValueChange(gig.id)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4 shrink-0",
-                        value === gig.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <Calendar className="mr-2 h-4 w-4 shrink-0 text-blue-500" />
-                    <span className="truncate">{formatGigLabel(gig)}</span>
-                  </CommandItem>
-                ))}
-                {kommande.length > visibleKommande.length && (
-                  <CommandItem
-                    onSelect={() => setKommandeLimitExtra(prev => prev + LOAD_MORE_COUNT)}
-                    className="justify-center text-blue-600"
-                  >
-                    <ChevronDown className="mr-1 h-4 w-4" />
-                    {t('showMore', { count: Math.min(LOAD_MORE_COUNT, kommande.length - visibleKommande.length) })}
-                  </CommandItem>
-                )}
-              </CommandGroup>
+              {/* Historiska uppdrag */}
+              {historiska.length > 0 && (
+                <CommandGroup heading={`${tg('history')} (${historiska.length})`}>
+                  {visibleHistoriska.map((gig) => (
+                    <CommandItem
+                      key={gig.id}
+                      value={`${formatGigLabel(gig)} ${gig.client?.name || ''}`}
+                      onSelect={() => {
+                        onValueChange(gig.id)
+                        setOpen(false)
+                      }}
+                    >
+                      <Check className={cn('mr-2 h-4 w-4 shrink-0', value === gig.id ? 'opacity-100' : 'opacity-0')} />
+                      <Calendar className="mr-2 h-4 w-4 shrink-0 text-green-500" />
+                      <span className="truncate">{formatGigLabel(gig)}</span>
+                    </CommandItem>
+                  ))}
+                  {historiska.length > visibleHistoriska.length && (
+                    <CommandItem
+                      onSelect={() => setHistoriskaLimitExtra((prev) => prev + LOAD_MORE_COUNT)}
+                      className="justify-center text-blue-600"
+                    >
+                      <ChevronDown className="mr-1 h-4 w-4" />
+                      {t('showMore', {
+                        count: Math.min(LOAD_MORE_COUNT, historiska.length - visibleHistoriska.length),
+                      })}
+                    </CommandItem>
+                  )}
+                </CommandGroup>
+              )}
+            </CommandList>
+            {showScrollHint && hasScrollableContent && (
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none bg-gradient-to-t from-popover to-transparent h-8">
+                <ChevronDown className="h-4 w-4 text-muted-foreground animate-bounce" />
+              </div>
             )}
-
-            {/* Historiska uppdrag */}
-            {historiska.length > 0 && (
-              <CommandGroup heading={`${tg('history')} (${historiska.length})`}>
-                {visibleHistoriska.map((gig) => (
-                  <CommandItem
-                    key={gig.id}
-                    value={`${formatGigLabel(gig)} ${gig.client?.name || ''}`}
-                    onSelect={() => {
-                      onValueChange(gig.id)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4 shrink-0",
-                        value === gig.id ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <Calendar className="mr-2 h-4 w-4 shrink-0 text-green-500" />
-                    <span className="truncate">{formatGigLabel(gig)}</span>
-                  </CommandItem>
-                ))}
-                {historiska.length > visibleHistoriska.length && (
-                  <CommandItem
-                    onSelect={() => setHistoriskaLimitExtra(prev => prev + LOAD_MORE_COUNT)}
-                    className="justify-center text-blue-600"
-                  >
-                    <ChevronDown className="mr-1 h-4 w-4" />
-                    {t('showMore', { count: Math.min(LOAD_MORE_COUNT, historiska.length - visibleHistoriska.length) })}
-                  </CommandItem>
-                )}
-              </CommandGroup>
-            )}
-          </CommandList>
-          {showScrollHint && hasScrollableContent && (
-            <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-1 pointer-events-none bg-gradient-to-t from-popover to-transparent h-8">
-              <ChevronDown className="h-4 w-4 text-muted-foreground animate-bounce" />
-            </div>
-          )}
           </div>
         </Command>
       </PopoverContent>

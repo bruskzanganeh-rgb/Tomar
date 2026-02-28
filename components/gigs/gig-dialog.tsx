@@ -133,7 +133,7 @@ export function GigDialog({
       console.error('Failed to create draft:', err)
       toast.error(tToast('draftCreateError'))
     }
-  }, [])
+  }, [tToast])
 
   // Delete draft gig on cancel
   const deleteDraft = useCallback(async (id: string) => {
@@ -183,6 +183,7 @@ export function GigDialog({
         setDraftGigId(null)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs only when dialog opens/closes; loader fns and form values are intentionally excluded to avoid re-triggering
   }, [open])
 
   // Populate form when gig changes (edit mode)
@@ -206,6 +207,7 @@ export function GigDialog({
       // Load gig dates
       loadGigDates(gig.id)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadGigDates is stable; only re-run when gig or open changes
   }, [gig, open])
 
   async function loadClients() {

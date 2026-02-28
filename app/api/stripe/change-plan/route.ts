@@ -16,7 +16,9 @@ export async function POST(request: Request) {
   if (!rl) return rateLimitResponse()
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,11 +38,7 @@ export async function POST(request: Request) {
 
   // For team plan, verify the user is a company owner
   if (targetPlan === 'team') {
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
+    const { data: membership } = await supabase.from('company_members').select('role').eq('user_id', user.id).single()
 
     if (!membership || membership.role !== 'owner') {
       return NextResponse.json({ error: 'Only company owners can subscribe to team plan' }, { status: 403 })
@@ -59,11 +57,7 @@ export async function POST(request: Request) {
   }
 
   // Determine current plan
-  const { data: currentSub } = await supabase
-    .from('subscriptions')
-    .select('plan')
-    .eq('user_id', user.id)
-    .single()
+  const { data: currentSub } = await supabase.from('subscriptions').select('plan').eq('user_id', user.id).single()
 
   const currentPlan = currentSub?.plan || 'free'
   const isDowngrade = currentPlan === 'team' && targetPlan === 'pro'
@@ -99,10 +93,7 @@ export async function POST(request: Request) {
       })
 
       // Store pending downgrade in DB
-      await supabase
-        .from('subscriptions')
-        .update({ pending_plan: targetPlan })
-        .eq('user_id', user.id)
+      await supabase.from('subscriptions').update({ pending_plan: targetPlan }).eq('user_id', user.id)
 
       return NextResponse.json({ success: true, scheduled: true, plan: targetPlan })
     } else {
@@ -124,8 +115,9 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ success: true, plan: getPlanFromPriceId(newPriceId) })
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Change plan error:', err)
-    return NextResponse.json({ error: err.message || 'Failed to change plan' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Failed to change plan'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -12,7 +12,7 @@ type SignaturePadProps = {
   className?: string
 }
 
-export function SignatureCanvas({ onSignatureChange, width = 400, height = 200, className }: SignaturePadProps) {
+export function SignatureCanvas({ onSignatureChange, height = 200, className }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePad | null>(null)
   const [isEmpty, setIsEmpty] = useState(true)
@@ -43,6 +43,7 @@ export function SignatureCanvas({ onSignatureChange, width = 400, height = 200, 
     return () => {
       pad.off()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: SignaturePad instance created once; onSignatureChange captured in closure
   }, [])
 
   function handleClear() {
@@ -75,10 +76,7 @@ export function SignatureCanvas({ onSignatureChange, width = 400, height = 200, 
   return (
     <div className={className}>
       <div className="relative border rounded-lg overflow-hidden bg-white">
-        <canvas
-          ref={canvasRef}
-          style={{ width: '100%', height: `${height}px`, touchAction: 'none' }}
-        />
+        <canvas ref={canvasRef} style={{ width: '100%', height: `${height}px`, touchAction: 'none' }} />
         {!isEmpty && (
           <Button
             type="button"
@@ -93,9 +91,7 @@ export function SignatureCanvas({ onSignatureChange, width = 400, height = 200, 
         )}
       </div>
       {isEmpty && (
-        <p className="text-xs text-muted-foreground mt-1">
-          Draw your signature above using mouse, finger, or pen
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">Draw your signature above using mouse, finger, or pen</p>
       )}
     </div>
   )

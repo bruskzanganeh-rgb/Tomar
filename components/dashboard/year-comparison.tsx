@@ -20,6 +20,54 @@ type YearData = {
   newClients: number
 }
 
+function getChangePercent(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0
+  return ((current - previous) / previous) * 100
+}
+
+function ChangeIndicator({
+  current,
+  previous,
+  showAbsolute = false,
+}: {
+  current: number
+  previous: number
+  showAbsolute?: boolean
+}) {
+  const change = getChangePercent(current, previous)
+  const diff = current - previous
+
+  if (Math.abs(change) < 1) {
+    return (
+      <span className="flex items-center text-muted-foreground text-[10px]">
+        <Minus className="w-3 h-3 mr-0.5" />
+        0%
+      </span>
+    )
+  }
+
+  if (change > 0) {
+    return (
+      <span className="flex items-center text-emerald-600 dark:text-emerald-400 text-[10px]">
+        <TrendingUp className="w-3 h-3 mr-0.5" />+{change.toFixed(0)}%
+        {showAbsolute && (
+          <span className="ml-1 text-emerald-500 dark:text-emerald-300">
+            ({diff > 0 ? '+' : ''}
+            {diff})
+          </span>
+        )}
+      </span>
+    )
+  }
+
+  return (
+    <span className="flex items-center text-red-600 dark:text-red-400 text-[10px]">
+      <TrendingDown className="w-3 h-3 mr-0.5" />
+      {change.toFixed(0)}%{showAbsolute && <span className="ml-1 text-red-500 dark:text-red-300">({diff})</span>}
+    </span>
+  )
+}
+
 export function YearComparison() {
   const t = useTranslations('dashboard')
   const tc = useTranslations('common')
@@ -114,54 +162,6 @@ export function YearComparison() {
     }
     loadYearComparison()
   }, [supabase])
-
-  function getChangePercent(current: number, previous: number): number {
-    if (previous === 0) return current > 0 ? 100 : 0
-    return ((current - previous) / previous) * 100
-  }
-
-  function ChangeIndicator({
-    current,
-    previous,
-    showAbsolute = false,
-  }: {
-    current: number
-    previous: number
-    showAbsolute?: boolean
-  }) {
-    const change = getChangePercent(current, previous)
-    const diff = current - previous
-
-    if (Math.abs(change) < 1) {
-      return (
-        <span className="flex items-center text-muted-foreground text-[10px]">
-          <Minus className="w-3 h-3 mr-0.5" />
-          0%
-        </span>
-      )
-    }
-
-    if (change > 0) {
-      return (
-        <span className="flex items-center text-emerald-600 dark:text-emerald-400 text-[10px]">
-          <TrendingUp className="w-3 h-3 mr-0.5" />+{change.toFixed(0)}%
-          {showAbsolute && (
-            <span className="ml-1 text-emerald-500 dark:text-emerald-300">
-              ({diff > 0 ? '+' : ''}
-              {diff})
-            </span>
-          )}
-        </span>
-      )
-    }
-
-    return (
-      <span className="flex items-center text-red-600 dark:text-red-400 text-[10px]">
-        <TrendingDown className="w-3 h-3 mr-0.5" />
-        {change.toFixed(0)}%{showAbsolute && <span className="ml-1 text-red-500 dark:text-red-300">({diff})</span>}
-      </span>
-    )
-  }
 
   if (loading) {
     return (

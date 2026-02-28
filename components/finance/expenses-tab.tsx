@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Receipt, BarChart3, Upload, Image, Download, Loader2, X, Search, FileText } from 'lucide-react'
+import { Receipt, BarChart3, Upload, Image as ImageIcon, Download, Loader2, X, Search } from 'lucide-react'
+import NextImage from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { UploadReceiptDialog } from '@/components/expenses/upload-receipt-dialog'
@@ -59,7 +60,6 @@ export default function ExpensesTab() {
   const t = useTranslations('expense')
   const tc = useTranslations('common')
   const tt = useTranslations('toast')
-  const tg = useTranslations('gig')
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
@@ -88,7 +88,7 @@ export default function ExpensesTab() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setCurrentUserId(user.id)
     })
-  }, [])
+  }, [supabase.auth])
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')
@@ -429,7 +429,7 @@ export default function ExpensesTab() {
                               className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
                               title={t('showReceiptImage')}
                             >
-                              <Image className="h-5 w-5 text-blue-500" />
+                              <ImageIcon className="h-5 w-5 text-blue-500" />
                             </button>
                           )}
                         </div>
@@ -515,7 +515,7 @@ export default function ExpensesTab() {
                                 className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors"
                                 title={t('showReceiptImage')}
                               >
-                                <Image className="h-5 w-5 text-blue-500" />
+                                <ImageIcon className="h-5 w-5 text-blue-500" />
                               </button>
                             )}
                           </TableCell>
@@ -574,7 +574,15 @@ export default function ExpensesTab() {
                 previewIsPdf ? (
                   <iframe src={previewUrl} className="w-full h-[80vh] rounded-lg" title={t('receiptPreview')} />
                 ) : (
-                  <img src={previewUrl} alt={t('receipt')} className="w-full max-h-[80vh] object-contain" />
+                  <NextImage
+                    src={previewUrl}
+                    alt=""
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    className="w-full max-h-[80vh] object-contain h-auto"
+                    unoptimized
+                  />
                 )
               ) : (
                 <div className="flex items-center justify-center h-96 text-gray-500">{t('couldNotLoadImage')}</div>

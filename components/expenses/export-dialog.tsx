@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
@@ -12,13 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Loader2, Download, FileArchive, FileText, Files, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
@@ -40,7 +34,6 @@ type MonthSummary = {
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
   const t = useTranslations('expense')
   const tc = useTranslations('common')
-  const tt = useTranslations('toast')
   const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
@@ -54,6 +47,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     if (open) {
       loadAvailableMonths()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadAvailableMonths is stable; only re-run when dialog opens
   }, [open])
 
   async function loadAvailableMonths() {
@@ -109,15 +103,15 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
   // Hämta vald månads summering
   const selectedSummary = availableMonths.find(
-    m => m.year.toString() === selectedYear && m.month.toString() === selectedMonth
+    (m) => m.year.toString() === selectedYear && m.month.toString() === selectedMonth,
   )
 
   // Unika år
-  const years = [...new Set(availableMonths.map(m => m.year))].sort((a, b) => b - a)
+  const years = [...new Set(availableMonths.map((m) => m.year))].sort((a, b) => b - a)
 
   // Månader för valt år
   const monthsForYear = availableMonths
-    .filter(m => m.year.toString() === selectedYear)
+    .filter((m) => m.year.toString() === selectedYear)
     .sort((a, b) => b.month - a.month)
 
   async function handleExport(format: 'zip' | 'pdf' | 'individual') {
@@ -132,7 +126,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       if (format === 'individual') {
         // Hämta lista med URLer
         const response = await fetch(
-          `/api/expenses/export?year=${selectedYear}&month=${selectedMonth}&format=individual`
+          `/api/expenses/export?year=${selectedYear}&month=${selectedMonth}&format=individual`,
         )
         const result = await response.json()
 
@@ -156,7 +150,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       } else {
         // Ladda ner ZIP eller PDF
         const response = await fetch(
-          `/api/expenses/export?year=${selectedYear}&month=${selectedMonth}&format=${format}`
+          `/api/expenses/export?year=${selectedYear}&month=${selectedMonth}&format=${format}`,
         )
 
         if (!response.ok) {
@@ -192,9 +186,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
             <Download className="h-5 w-5" />
             {t('exportReceipts')}
           </DialogTitle>
-          <DialogDescription>
-            {t('downloadReceiptsForMonth')}
-          </DialogDescription>
+          <DialogDescription>{t('downloadReceiptsForMonth')}</DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -217,7 +209,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                   onValueChange={(value) => {
                     setSelectedYear(value)
                     // Välj första månaden för det året
-                    const firstMonth = availableMonths.find(m => m.year.toString() === value)
+                    const firstMonth = availableMonths.find((m) => m.year.toString() === value)
                     if (firstMonth) {
                       setSelectedMonth(firstMonth.month.toString())
                     }
@@ -238,10 +230,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
               <div className="space-y-2">
                 <Label>{t('month')}</Label>
-                <Select
-                  value={selectedMonth}
-                  onValueChange={setSelectedMonth}
-                >
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger>
                     <SelectValue placeholder={t('selectMonth')} />
                   </SelectTrigger>
@@ -298,9 +287,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                   )}
                   <div className="text-left">
                     <div className="font-medium">{t('downloadAsZip')}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {t('zipDescription')}
-                    </div>
+                    <div className="text-xs text-muted-foreground">{t('zipDescription')}</div>
                   </div>
                 </Button>
 
@@ -317,9 +304,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                   )}
                   <div className="text-left">
                     <div className="font-medium">{t('downloadAsPdf')}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {t('pdfDescription')}
-                    </div>
+                    <div className="text-xs text-muted-foreground">{t('pdfDescription')}</div>
                   </div>
                 </Button>
 
@@ -336,17 +321,13 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                   )}
                   <div className="text-left">
                     <div className="font-medium">{t('openIndividualFiles')}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {t('individualDescription')}
-                    </div>
+                    <div className="text-xs text-muted-foreground">{t('individualDescription')}</div>
                   </div>
                 </Button>
               </div>
 
               {selectedSummary && selectedSummary.withReceipts === 0 && (
-                <p className="text-xs text-amber-600 mt-2">
-                  {t('noReceiptsForMonth')}
-                </p>
+                <p className="text-xs text-amber-600 mt-2">{t('noReceiptsForMonth')}</p>
               )}
             </div>
           </div>

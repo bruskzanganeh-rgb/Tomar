@@ -5,10 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 
 const supabase = createClient()
 
-type QueryBuilder<T> = {
-  build: () => PromiseLike<{ data: T | null; error: any }>
-}
-
 /**
  * Generic SWR hook for Supabase queries.
  *
@@ -21,8 +17,8 @@ type QueryBuilder<T> = {
  */
 export function useSupabaseQuery<T>(
   key: string | null,
-  fetcher: () => PromiseLike<{ data: T | null; error: any }>,
-  config?: SWRConfiguration<T>
+  fetcher: () => PromiseLike<{ data: T | null; error: unknown }>,
+  config?: SWRConfiguration<T>,
 ) {
   return useSWR<T>(
     key,
@@ -35,7 +31,7 @@ export function useSupabaseQuery<T>(
       revalidateOnFocus: false,
       dedupingInterval: 5000,
       ...config,
-    }
+    },
   )
 }
 

@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -76,29 +76,29 @@ export function MultiDayDatePicker({
   const prevScheduleTextsCount = useRef(0)
   useEffect(() => {
     if (scheduleTexts) {
-      const texts = Object.values(scheduleTexts).filter(t => t.trim())
+      const texts = Object.values(scheduleTexts).filter((t) => t.trim())
       const hasTexts = texts.length > 0
       if (hasTexts && (!showTimes || texts.length !== prevScheduleTextsCount.current)) {
         prevScheduleTextsCount.current = texts.length
         setShowTimes(true)
         // Check if all texts are the same
-        const allSame = texts.every(t => t === texts[0])
+        const allSame = texts.every((t) => t === texts[0])
         setAllSameText(allSame)
         if (allSame) {
           setSharedText(texts[0])
         }
       }
     }
-  }, [scheduleTexts])
+  }, [scheduleTexts, showTimes])
 
   function toggleDate(date: Date) {
     if (disabled) return
 
-    const isSelected = selectedDates.some(d => isSameDay(d, date))
+    const isSelected = selectedDates.some((d) => isSameDay(d, date))
     const key = format(date, 'yyyy-MM-dd')
 
     if (isSelected) {
-      const newDates = selectedDates.filter(d => !isSameDay(d, date))
+      const newDates = selectedDates.filter((d) => !isSameDay(d, date))
       onDatesChange(newDates)
       // Clean up schedule text for removed date
       if (onScheduleTextsChange && scheduleTexts && scheduleTexts[key]) {
@@ -188,9 +188,7 @@ export function MultiDayDatePicker({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-medium">
-            {format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}
-          </span>
+          <span className="font-medium">{format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}</span>
           <Button
             type="button"
             variant="ghost"
@@ -205,10 +203,7 @@ export function MultiDayDatePicker({
         {/* Week day headers */}
         <div className="grid grid-cols-7 gap-1.5 mb-2">
           {weekDays.map((day) => (
-            <div
-              key={day}
-              className="text-center text-xs font-medium text-muted-foreground py-1"
-            >
+            <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
               {day}
             </div>
           ))}
@@ -218,7 +213,7 @@ export function MultiDayDatePicker({
         <div className="grid grid-cols-7 gap-1.5">
           {calendarDays.map((day) => {
             const isCurrentMonth = isSameMonth(day, currentMonth)
-            const isSelected = selectedDates.some(d => isSameDay(d, day))
+            const isSelected = selectedDates.some((d) => isSameDay(d, day))
 
             return (
               <button
@@ -231,7 +226,7 @@ export function MultiDayDatePicker({
                   !isCurrentMonth && 'text-muted-foreground/30',
                   isCurrentMonth && !isSelected && 'hover:bg-muted/50',
                   isSelected && 'bg-primary text-primary-foreground hover:bg-primary/90',
-                  disabled && 'cursor-not-allowed opacity-50'
+                  disabled && 'cursor-not-allowed opacity-50',
                 )}
               >
                 {format(day, 'd')}
@@ -241,9 +236,7 @@ export function MultiDayDatePicker({
         </div>
 
         {/* Help text */}
-        <p className="text-xs text-muted-foreground mt-3 text-center">
-          {t('clickToToggle')}
-        </p>
+        <p className="text-xs text-muted-foreground mt-3 text-center">{t('clickToToggle')}</p>
       </div>
 
       {/* Summary */}
@@ -265,7 +258,7 @@ export function MultiDayDatePicker({
             <button
               type="button"
               className="text-xs text-primary hover:underline underline-offset-2 flex items-center gap-1"
-              onClick={() => setShowTimes(v => !v)}
+              onClick={() => setShowTimes((v) => !v)}
             >
               <Clock className="h-3 w-3" />
               {showTimes ? t('hideTimes') : t('addTimes')}
@@ -319,7 +312,7 @@ export function MultiDayDatePicker({
               <div className="relative">
                 <Input
                   value={sharedText}
-                  onChange={e => handleSharedTextChange(e.target.value)}
+                  onChange={(e) => handleSharedTextChange(e.target.value)}
                   onBlur={() => {
                     if (onParseScheduleText && sortedDates.length > 0) {
                       const firstKey = format(sortedDates[0], 'yyyy-MM-dd')
@@ -333,10 +326,11 @@ export function MultiDayDatePicker({
                 {sortedDates.length > 0 && parsingSessions?.[format(sortedDates[0], 'yyyy-MM-dd')] && (
                   <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
                 )}
-                {sortedDates.length > 0 && !parsingSessions?.[format(sortedDates[0], 'yyyy-MM-dd')] &&
+                {sortedDates.length > 0 &&
+                  !parsingSessions?.[format(sortedDates[0], 'yyyy-MM-dd')] &&
                   (parsedSessions?.[format(sortedDates[0], 'yyyy-MM-dd')]?.length ?? 0) > 0 && (
-                  <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
-                )}
+                    <Check className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-green-500" />
+                  )}
               </div>
               {(() => {
                 const firstKey = sortedDates.length > 0 ? format(sortedDates[0], 'yyyy-MM-dd') : ''
@@ -344,9 +338,13 @@ export function MultiDayDatePicker({
                 return sessions && sessions.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {sessions.map((s, i) => (
-                      <span key={i} className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">
+                      <span
+                        key={i}
+                        className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600"
+                      >
                         {s.label && <span className="font-medium">{s.label} </span>}
-                        {s.start}{s.end ? `–${s.end}` : ''}
+                        {s.start}
+                        {s.end ? `–${s.end}` : ''}
                       </span>
                     ))}
                   </div>
@@ -356,7 +354,7 @@ export function MultiDayDatePicker({
           ) : (
             /* Per-day inputs */
             <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {sortedDates.map(date => {
+              {sortedDates.map((date) => {
                 const key = format(date, 'yyyy-MM-dd')
                 const sessions = parsedSessions?.[key]
                 const isParsing = parsingSessions?.[key]
@@ -369,7 +367,7 @@ export function MultiDayDatePicker({
                       <div className="relative flex-1">
                         <Input
                           value={scheduleTexts?.[key] ?? ''}
-                          onChange={e => handlePerDayTextChange(key, e.target.value)}
+                          onChange={(e) => handlePerDayTextChange(key, e.target.value)}
                           onBlur={() => onParseScheduleText?.(key, scheduleTexts?.[key] ?? '')}
                           placeholder={t('schedulePlaceholder')}
                           className="text-sm h-8 pr-7"
@@ -386,9 +384,13 @@ export function MultiDayDatePicker({
                     {sessions && sessions.length > 0 && (
                       <div className="ml-[83px] flex flex-wrap gap-1">
                         {sessions.map((s, i) => (
-                          <span key={i} className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600">
+                          <span
+                            key={i}
+                            className="text-[10px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-600"
+                          >
                             {s.label && <span className="font-medium">{s.label} </span>}
-                            {s.start}{s.end ? `–${s.end}` : ''}
+                            {s.start}
+                            {s.end ? `–${s.end}` : ''}
                           </span>
                         ))}
                       </div>

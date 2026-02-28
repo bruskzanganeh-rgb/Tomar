@@ -13,8 +13,16 @@ type ClientRevenue = {
 }
 
 const COLORS = [
-  '#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
-  '#ef4444', '#ec4899', '#6366f1', '#14b8a6', '#f97316'
+  '#3b82f6',
+  '#8b5cf6',
+  '#06b6d4',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#ec4899',
+  '#6366f1',
+  '#14b8a6',
+  '#f97316',
 ]
 
 export function TopClients() {
@@ -26,40 +34,41 @@ export function TopClients() {
   const supabase = createClient()
 
   useEffect(() => {
-    loadTopClients()
-  }, [])
+    async function loadTopClients() {
+      setLoading(true)
 
-  async function loadTopClients() {
-    setLoading(true)
+      const { data: invoices } = (await supabase
+        .from('invoices')
+        .select('total, total_base, client:clients(id, name)')
+        .in('status', ['sent', 'paid'])) as unknown as {
+        data: { total: number; total_base: number | null; client: { id: string; name: string } | null }[] | null
+      }
 
-    const { data: invoices } = await supabase
-      .from('invoices')
-      .select('total, total_base, client:clients(id, name)')
-      .in('status', ['sent', 'paid'])
+      if (invoices) {
+        const clientTotals: { [key: string]: { name: string; revenue: number } } = {}
 
-    if (invoices) {
-      const clientTotals: { [key: string]: { name: string; revenue: number } } = {}
-
-      invoices.forEach((inv: any) => {
-        if (inv.client) {
-          const clientId = inv.client.id
-          const clientName = inv.client.name
-          if (!clientTotals[clientId]) {
-            clientTotals[clientId] = { name: clientName, revenue: 0 }
+        invoices.forEach((inv) => {
+          if (inv.client) {
+            const clientId = inv.client.id
+            const clientName = inv.client.name
+            if (!clientTotals[clientId]) {
+              clientTotals[clientId] = { name: clientName, revenue: 0 }
+            }
+            clientTotals[clientId].revenue += inv.total_base || inv.total
           }
-          clientTotals[clientId].revenue += (inv.total_base || inv.total)
-        }
-      })
+        })
 
-      const sorted = Object.values(clientTotals)
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 10)
+        const sorted = Object.values(clientTotals)
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 10)
 
-      setData(sorted)
+        setData(sorted)
+      }
+
+      setLoading(false)
     }
-
-    setLoading(false)
-  }
+    loadTopClients()
+  }, [supabase])
 
   const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0)
 
@@ -68,7 +77,9 @@ export function TopClients() {
       <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{t('topClients')}</CardTitle>
-          <span className="text-sm font-semibold">{totalRevenue.toLocaleString(formatLocale)} {tc('kr')}</span>
+          <span className="text-sm font-semibold">
+            {totalRevenue.toLocaleString(formatLocale)} {tc('kr')}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="pb-4">
@@ -78,11 +89,7 @@ export function TopClients() {
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart
-              data={data.slice(0, 6)}
-              layout="vertical"
-              margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
-            >
+            <BarChart data={data.slice(0, 6)} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
               <XAxis
                 type="number"
                 tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
@@ -97,7 +104,7 @@ export function TopClients() {
                 tickLine={false}
                 axisLine={false}
                 width={100}
-                tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                tickFormatter={(value) => (value.length > 15 ? value.substring(0, 15) + '...' : value)}
               />
               <Tooltip
                 formatter={(value: number) => [`${value.toLocaleString(formatLocale)} ${tc('kr')}`, t('revenue')]}

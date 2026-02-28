@@ -23,11 +23,13 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const { data, error } = await supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name, email, org_number, address),
         invoice_lines(*)
-      `)
+      `,
+      )
       .eq('id', id)
       .eq('user_id', auth.userId)
       .single()
@@ -60,7 +62,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const body = await request.json()
 
     // Allow updating status and paid_date
-    const allowedFields: Record<string, any> = {}
+    const allowedFields: Record<string, string | undefined> = {}
     if (body.status) allowedFields.status = body.status
     if (body.paid_date) allowedFields.paid_date = body.paid_date
     if (body.notes !== undefined) allowedFields.notes = body.notes
@@ -75,10 +77,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       .update(allowedFields)
       .eq('id', id)
       .eq('user_id', auth.userId)
-      .select(`
+      .select(
+        `
         *,
         client:clients(id, name, email)
-      `)
+      `,
+      )
       .single()
 
     if (error) {
@@ -109,29 +113,19 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const supabase = createAdminClient()
 
     // Get linked gigs before deleting
-    const { data: linkedGigs } = await supabase
-      .from('invoice_gigs')
-      .select('gig_id')
-      .eq('invoice_id', id)
-    const gigIds = (linkedGigs || []).map((g: any) => g.gig_id)
+    const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id').eq('invoice_id', id)
+    const gigIds = (linkedGigs || []).map((g: { gig_id: string }) => g.gig_id)
 
     // Delete invoice lines first
     await supabase.from('invoice_lines').delete().eq('invoice_id', id)
 
-    const { error } = await supabase
-      .from('invoices')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', auth.userId)
+    const { error } = await supabase.from('invoices').delete().eq('id', id).eq('user_id', auth.userId)
 
     if (error) throw error
 
     // Revert linked gigs to completed
     if (gigIds.length > 0) {
-      await supabase
-        .from('gigs')
-        .update({ status: 'completed' })
-        .in('id', gigIds)
+      await supabase.from('gigs').update({ status: 'completed' }).in('id', gigIds)
     }
 
     return apiSuccess({ deleted: true })

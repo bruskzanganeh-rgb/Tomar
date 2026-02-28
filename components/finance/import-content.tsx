@@ -3,18 +3,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Loader2,
   CheckCircle2,
@@ -113,8 +106,16 @@ type ImportResult = {
 }
 
 const categories = [
-  'Resa', 'Mat', 'Hotell', 'Instrument', 'Noter',
-  'Utrustning', 'Kontorsmaterial', 'Telefon', 'Prenumeration', 'Övrigt'
+  'Resa',
+  'Mat',
+  'Hotell',
+  'Instrument',
+  'Noter',
+  'Utrustning',
+  'Kontorsmaterial',
+  'Telefon',
+  'Prenumeration',
+  'Övrigt',
 ]
 
 const currencies = ['SEK', 'EUR', 'USD', 'GBP', 'DKK', 'NOK']
@@ -130,10 +131,7 @@ function normalizeSupplier(supplier: string): string {
 }
 
 // Hitta bästa match i historisk data
-function findHistoricalMatch(
-  supplierName: string,
-  mapping: SupplierMapping
-): SupplierData | null {
+function findHistoricalMatch(supplierName: string, mapping: SupplierMapping): SupplierData | null {
   const normalized = normalizeSupplier(supplierName)
 
   // Exakt match
@@ -154,7 +152,6 @@ function findHistoricalMatch(
 export default function ImportPage() {
   const t = useTranslations('expense')
   const tc = useTranslations('common')
-  const tt = useTranslations('toast')
   const ti = useTranslations('invoice')
   const [currentStep, setCurrentStep] = useState<Step>('select')
   const [files, setFiles] = useState<AnalyzedFile[]>([])
@@ -186,7 +183,7 @@ export default function ImportPage() {
   const [duplicatesChecked, setDuplicatesChecked] = useState(false)
   useEffect(() => {
     if (currentStep === 'review' && !duplicatesChecked) {
-      const analyzedExpenses = files.filter(f => f.status === 'done' && f.type === 'expense')
+      const analyzedExpenses = files.filter((f) => f.status === 'done' && f.type === 'expense')
       if (analyzedExpenses.length > 0) {
         checkDuplicates()
         setDuplicatesChecked(true)
@@ -196,67 +193,72 @@ export default function ImportPage() {
     if (currentStep === 'select') {
       setDuplicatesChecked(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkDuplicates reads from files which is already in deps
   }, [currentStep, files, duplicatesChecked])
 
   // Beräkna statistik
-  const analyzedFiles = files.filter(f => f.status === 'done')
-  const selectedFiles = files.filter(f => f.selected && f.status === 'done')
-  const expenses = selectedFiles.filter(f => f.type === 'expense')
-  const invoices = selectedFiles.filter(f => f.type === 'invoice')
-  const duplicates = selectedFiles.filter(f => f.isDuplicate)
-  const analyzeProgress = files.length > 0
-    ? Math.round((analyzedFiles.length / files.length) * 100)
-    : 0
+  const analyzedFiles = files.filter((f) => f.status === 'done')
+  const selectedFiles = files.filter((f) => f.selected && f.status === 'done')
+  const expenses = selectedFiles.filter((f) => f.type === 'expense')
+  const invoices = selectedFiles.filter((f) => f.type === 'invoice')
+  const duplicates = selectedFiles.filter((f) => f.isDuplicate)
+  const analyzeProgress = files.length > 0 ? Math.round((analyzedFiles.length / files.length) * 100) : 0
 
   // Hantera filval
-  const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
-    if (!selectedFiles) return
+  const handleFileSelect = useCallback(
+    (selectedFiles: FileList | null) => {
+      if (!selectedFiles) return
 
-    const validFiles = Array.from(selectedFiles).filter(file => {
-      if (!ALLOWED_RECEIPT_TYPES.includes(file.type as typeof ALLOWED_RECEIPT_TYPES[number])) {
-        return false
+      const validFiles = Array.from(selectedFiles).filter((file) => {
+        if (!ALLOWED_RECEIPT_TYPES.includes(file.type as (typeof ALLOWED_RECEIPT_TYPES)[number])) {
+          return false
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          return false
+        }
+        return true
+      })
+
+      if (validFiles.length === 0) {
+        setError(t('noValidFilesFound'))
+        return
       }
-      if (file.size > MAX_FILE_SIZE) {
-        return false
-      }
-      return true
-    })
 
-    if (validFiles.length === 0) {
-      setError(t('noValidFilesFound'))
-      return
-    }
+      const newFiles: AnalyzedFile[] = validFiles.map((file) => ({
+        id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        type: 'expense',
+        confidence: 0,
+        selected: true,
+        data: {
+          date: null,
+          supplier: '',
+          subtotal: 0,
+          vatRate: 25,
+          vatAmount: 0,
+          total: 0,
+          currency: 'SEK',
+          category: 'Övrigt',
+        },
+        suggestedFilename: file.name,
+        status: 'pending',
+      }))
 
-    const newFiles: AnalyzedFile[] = validFiles.map(file => ({
-      id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      file,
-      type: 'expense',
-      confidence: 0,
-      selected: true,
-      data: {
-        date: null,
-        supplier: '',
-        subtotal: 0,
-        vatRate: 25,
-        vatAmount: 0,
-        total: 0,
-        currency: 'SEK',
-        category: 'Övrigt',
-      },
-      suggestedFilename: file.name,
-      status: 'pending',
-    }))
-
-    setFiles(newFiles)
-    setError(null)
-  }, [t])
+      setFiles(newFiles)
+      setError(null)
+    },
+    [t],
+  )
 
   // Drag & drop handlers
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    handleFileSelect(e.dataTransfer.files)
-  }, [handleFileSelect])
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragging(false)
+      handleFileSelect(e.dataTransfer.files)
+    },
+    [handleFileSelect],
+  )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -278,79 +280,86 @@ export default function ImportPage() {
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
       const batch = files.slice(i, i + BATCH_SIZE)
 
-      await Promise.all(batch.map(async (file) => {
-        setFiles(prev => prev.map(f =>
-          f.id === file.id ? { ...f, status: 'analyzing' as const } : f
-        ))
+      await Promise.all(
+        batch.map(async (file) => {
+          setFiles((prev) => prev.map((f) => (f.id === file.id ? { ...f, status: 'analyzing' as const } : f)))
 
-        try {
-          const formData = new FormData()
-          formData.append('file', file.file)
+          try {
+            const formData = new FormData()
+            formData.append('file', file.file)
 
-          const response = await fetch('/api/import/analyze', {
-            method: 'POST',
-            body: formData,
-          })
+            const response = await fetch('/api/import/analyze', {
+              method: 'POST',
+              body: formData,
+            })
 
-          const result = await response.json()
+            const result = await response.json()
 
-          if (!response.ok) {
-            throw new Error(result.error || t('analysisFailed'))
-          }
+            if (!response.ok) {
+              throw new Error(result.error || t('analysisFailed'))
+            }
 
-          setFiles(prev => prev.map(f => {
-            if (f.id !== file.id) return f
+            setFiles((prev) =>
+              prev.map((f) => {
+                if (f.id !== file.id) return f
 
-            let finalData = result.data
-            let usedHistoricalData = false
-            let historicalMatchCount = 0
+                let finalData = result.data
+                let usedHistoricalData = false
+                let historicalMatchCount = 0
 
-            // Om det är en utgift, försök matcha kategori mot historisk data
-            if (result.type === 'expense' && result.data.supplier) {
-              const historicalMatch = findHistoricalMatch(result.data.supplier, supplierMapping)
-              if (historicalMatch) {
-                // Använd historisk kategori (valuta läses från dokumentet)
-                finalData = {
-                  ...result.data,
-                  category: historicalMatch.category,
+                // Om det är en utgift, försök matcha kategori mot historisk data
+                if (result.type === 'expense' && result.data.supplier) {
+                  const historicalMatch = findHistoricalMatch(result.data.supplier, supplierMapping)
+                  if (historicalMatch) {
+                    // Använd historisk kategori (valuta läses från dokumentet)
+                    finalData = {
+                      ...result.data,
+                      category: historicalMatch.category,
+                    }
+                    usedHistoricalData = true
+                    historicalMatchCount = historicalMatch.count
+                  }
                 }
-                usedHistoricalData = true
-                historicalMatchCount = historicalMatch.count
-              }
-            }
 
-            // Hantera faktura med klientmatchning
-            if (result.type === 'invoice' && result.clientMatch) {
-              finalData = {
-                ...finalData,
-                clientMatch: result.clientMatch,
-                selectedClientId: result.clientMatch.clientId && result.clientMatch.confidence >= 0.85
-                  ? result.clientMatch.clientId
-                  : undefined,
-              }
-            }
+                // Hantera faktura med klientmatchning
+                if (result.type === 'invoice' && result.clientMatch) {
+                  finalData = {
+                    ...finalData,
+                    clientMatch: result.clientMatch,
+                    selectedClientId:
+                      result.clientMatch.clientId && result.clientMatch.confidence >= 0.85
+                        ? result.clientMatch.clientId
+                        : undefined,
+                  }
+                }
 
-            return {
-              ...f,
-              type: result.type,
-              confidence: result.confidence,
-              data: finalData,
-              suggestedFilename: result.suggestedFilename,
-              status: 'done' as const,
-              usedHistoricalData,
-              historicalMatchCount,
-            }
-          }))
-        } catch (err) {
-          setFiles(prev => prev.map(f =>
-            f.id === file.id ? {
-              ...f,
-              status: 'error' as const,
-              error: err instanceof Error ? err.message : t('unknownError'),
-            } : f
-          ))
-        }
-      }))
+                return {
+                  ...f,
+                  type: result.type,
+                  confidence: result.confidence,
+                  data: finalData,
+                  suggestedFilename: result.suggestedFilename,
+                  status: 'done' as const,
+                  usedHistoricalData,
+                  historicalMatchCount,
+                }
+              }),
+            )
+          } catch (err) {
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === file.id
+                  ? {
+                      ...f,
+                      status: 'error' as const,
+                      error: err instanceof Error ? err.message : t('unknownError'),
+                    }
+                  : f,
+              ),
+            )
+          }
+        }),
+      )
     }
 
     setAnalyzing(false)
@@ -359,9 +368,9 @@ export default function ImportPage() {
 
   // Kontrollera dubletter mot befintliga utgifter
   const checkDuplicates = async () => {
-    const currentFiles = files.filter(f => f.status === 'done' && f.type === 'expense')
+    const currentFiles = files.filter((f) => f.status === 'done' && f.type === 'expense')
     const expensesToCheck = currentFiles
-      .map(f => {
+      .map((f) => {
         const data = f.data as ExpenseData
         return {
           id: f.id,
@@ -370,7 +379,7 @@ export default function ImportPage() {
           amount: data.total,
         }
       })
-      .filter(e => e.date && e.supplier && e.amount > 0)
+      .filter((e) => e.date && e.supplier && e.amount > 0)
 
     if (expensesToCheck.length === 0) return
 
@@ -379,7 +388,7 @@ export default function ImportPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          expenses: expensesToCheck.map(e => ({
+          expenses: expensesToCheck.map((e) => ({
             date: e.date,
             supplier: e.supplier,
             amount: e.amount,
@@ -389,27 +398,27 @@ export default function ImportPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setFiles(prev => prev.map(f => {
-          if (f.type !== 'expense' || f.status !== 'done') return f
+        setFiles((prev) =>
+          prev.map((f) => {
+            if (f.type !== 'expense' || f.status !== 'done') return f
 
-          const fileData = f.data as ExpenseData
-          const matchIndex = expensesToCheck.findIndex(
-            e => e.date === fileData.date &&
-                 e.supplier === fileData.supplier &&
-                 e.amount === fileData.total
-          )
+            const fileData = f.data as ExpenseData
+            const matchIndex = expensesToCheck.findIndex(
+              (e) => e.date === fileData.date && e.supplier === fileData.supplier && e.amount === fileData.total,
+            )
 
-          if (matchIndex >= 0 && data.results[matchIndex]) {
-            const dupResult = data.results[matchIndex]
-            return {
-              ...f,
-              isDuplicate: dupResult.isDuplicate,
-              existingExpense: dupResult.existingExpense,
-              selected: dupResult.isDuplicate ? false : f.selected,
+            if (matchIndex >= 0 && data.results[matchIndex]) {
+              const dupResult = data.results[matchIndex]
+              return {
+                ...f,
+                isDuplicate: dupResult.isDuplicate,
+                existingExpense: dupResult.existingExpense,
+                selected: dupResult.isDuplicate ? false : f.selected,
+              }
             }
-          }
-          return f
-        }))
+            return f
+          }),
+        )
       }
     } catch (err) {
       console.error('Duplicate check failed:', err)
@@ -418,59 +427,57 @@ export default function ImportPage() {
 
   // Uppdatera fil
   const updateFile = (id: string, updates: Partial<AnalyzedFile>) => {
-    setFiles(prev => prev.map(f =>
-      f.id === id ? { ...f, ...updates } : f
-    ))
+    setFiles((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)))
   }
 
   // Uppdatera fildata
   const updateFileData = (id: string, dataUpdates: Partial<ExpenseData | InvoiceData>) => {
-    setFiles(prev => prev.map(f =>
-      f.id === id ? { ...f, data: { ...f.data, ...dataUpdates } } : f
-    ))
+    setFiles((prev) => prev.map((f) => (f.id === id ? { ...f, data: { ...f.data, ...dataUpdates } } : f)))
   }
 
   // Ändra dokumenttyp
   const changeFileType = (id: string, newType: 'expense' | 'invoice') => {
-    setFiles(prev => prev.map(f => {
-      if (f.id !== id || f.type === newType) return f
+    setFiles((prev) =>
+      prev.map((f) => {
+        if (f.id !== id || f.type === newType) return f
 
-      let newData: ExpenseData | InvoiceData
+        let newData: ExpenseData | InvoiceData
 
-      if (newType === 'expense') {
-        const invoiceData = f.data as InvoiceData
-        newData = {
-          date: invoiceData.invoiceDate || null,
-          supplier: invoiceData.clientName || t('unknownSupplier'),
-          subtotal: invoiceData.subtotal || 0,
-          vatRate: invoiceData.vatRate || 25,
-          vatAmount: invoiceData.vatAmount || 0,
-          total: invoiceData.total || 0,
-          currency: 'SEK',
-          category: 'Övrigt',
-          notes: t('convertedFromInvoice', { number: invoiceData.invoiceNumber }),
+        if (newType === 'expense') {
+          const invoiceData = f.data as InvoiceData
+          newData = {
+            date: invoiceData.invoiceDate || null,
+            supplier: invoiceData.clientName || t('unknownSupplier'),
+            subtotal: invoiceData.subtotal || 0,
+            vatRate: invoiceData.vatRate || 25,
+            vatAmount: invoiceData.vatAmount || 0,
+            total: invoiceData.total || 0,
+            currency: 'SEK',
+            category: 'Övrigt',
+            notes: t('convertedFromInvoice', { number: invoiceData.invoiceNumber }),
+          }
+        } else {
+          const expenseData = f.data as ExpenseData
+          newData = {
+            invoiceNumber: 0,
+            clientName: expenseData.supplier || t('unknownClient'),
+            invoiceDate: expenseData.date || new Date().toISOString().split('T')[0],
+            dueDate: expenseData.date || new Date().toISOString().split('T')[0],
+            subtotal: expenseData.subtotal || 0,
+            vatRate: expenseData.vatRate || 25,
+            vatAmount: expenseData.vatAmount || 0,
+            total: expenseData.total || 0,
+          }
         }
-      } else {
-        const expenseData = f.data as ExpenseData
-        newData = {
-          invoiceNumber: 0,
-          clientName: expenseData.supplier || t('unknownClient'),
-          invoiceDate: expenseData.date || new Date().toISOString().split('T')[0],
-          dueDate: expenseData.date || new Date().toISOString().split('T')[0],
-          subtotal: expenseData.subtotal || 0,
-          vatRate: expenseData.vatRate || 25,
-          vatAmount: expenseData.vatAmount || 0,
-          total: expenseData.total || 0,
-        }
-      }
 
-      return {
-        ...f,
-        type: newType,
-        data: newData,
-        usedHistoricalData: false,
-      }
-    }))
+        return {
+          ...f,
+          type: newType,
+          data: newData,
+          usedHistoricalData: false,
+        }
+      }),
+    )
   }
 
   // Importera valda filer
@@ -487,7 +494,7 @@ export default function ImportPage() {
     try {
       const formData = new FormData()
 
-      const metadata = selectedFiles.map(f => ({
+      const metadata = selectedFiles.map((f) => ({
         id: f.id,
         type: f.type,
         data: f.data,
@@ -496,7 +503,7 @@ export default function ImportPage() {
       formData.append('metadata', JSON.stringify(metadata))
       formData.append('skipDuplicates', 'false')
 
-      selectedFiles.forEach(f => {
+      selectedFiles.forEach((f) => {
         formData.append(`file_${f.id}`, f.file)
       })
 
@@ -519,7 +526,9 @@ export default function ImportPage() {
       const skipped = result.summary.skipped
 
       if (succeeded > 0 && failed === 0) {
-        toast.success(t('importedFiles', { count: succeeded }) + (skipped > 0 ? `, ${t('skippedFiles', { count: skipped })}` : ''))
+        toast.success(
+          t('importedFiles', { count: succeeded }) + (skipped > 0 ? `, ${t('skippedFiles', { count: skipped })}` : ''),
+        )
       } else if (failed > 0) {
         toast.warning(t('importPartialSuccess', { succeeded, failed }))
       }
@@ -558,18 +567,20 @@ export default function ImportPage() {
           return (
             <div key={item.step} className="flex items-center">
               {index > 0 && (
-                <div className={`w-16 h-0.5 mr-4 transition-colors ${
-                  isComplete || isActive ? 'bg-primary' : 'bg-muted'
-                }`} />
+                <div
+                  className={`w-16 h-0.5 mr-4 transition-colors ${isComplete || isActive ? 'bg-primary' : 'bg-muted'}`}
+                />
               )}
               <div className="flex items-center gap-3">
-                <div className={`
+                <div
+                  className={`
                   w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold
                   transition-all duration-300
                   ${isComplete ? 'bg-green-500 text-white' : ''}
                   ${isActive ? 'bg-primary text-primary-foreground ring-4 ring-primary/20' : ''}
                   ${!isActive && !isComplete ? 'bg-muted text-muted-foreground' : ''}
-                `}>
+                `}
+                >
                   {isComplete ? <CheckCircle2 className="h-5 w-5" /> : item.num}
                 </div>
                 <span className={`text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -595,10 +606,7 @@ export default function ImportPage() {
             <div
               className={`
                 relative p-16 text-center cursor-pointer transition-all duration-300
-                ${isDragging
-                  ? 'bg-primary/5 border-primary'
-                  : 'hover:bg-muted/50'
-                }
+                ${isDragging ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'}
               `}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
@@ -606,34 +614,35 @@ export default function ImportPage() {
               onClick={() => fileInputRef.current?.click()}
             >
               {/* Gradient border effect */}
-              <div className={`
+              <div
+                className={`
                 absolute inset-0 rounded-lg transition-opacity duration-300
                 ${isDragging ? 'opacity-100' : 'opacity-0'}
-              `} style={{
-                background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.5) 100%)',
-                padding: '2px',
-                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                WebkitMaskComposite: 'xor',
-                maskComposite: 'exclude',
-              }} />
+              `}
+                style={{
+                  background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.5) 100%)',
+                  padding: '2px',
+                  WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                  WebkitMaskComposite: 'xor',
+                  maskComposite: 'exclude',
+                }}
+              />
 
-              <div className={`
+              <div
+                className={`
                 mx-auto w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6
                 transition-transform duration-300
                 ${isDragging ? 'scale-110' : ''}
-              `}>
-                <Upload className={`h-10 w-10 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+              `}
+              >
+                <Upload
+                  className={`h-10 w-10 transition-colors ${isDragging ? 'text-primary' : 'text-muted-foreground'}`}
+                />
               </div>
 
-              <p className="text-xl font-semibold mb-2">
-                {t('dragAndDropFiles')}
-              </p>
-              <p className="text-muted-foreground mb-4">
-                {t('orClickToSelect')}
-              </p>
-              <p className="text-sm text-muted-foreground/70">
-                {t('fileFormatsWithSize')}
-              </p>
+              <p className="text-xl font-semibold mb-2">{t('dragAndDropFiles')}</p>
+              <p className="text-muted-foreground mb-4">{t('orClickToSelect')}</p>
+              <p className="text-sm text-muted-foreground/70">{t('fileFormatsWithSize')}</p>
 
               <input
                 ref={fileInputRef}
@@ -684,21 +693,11 @@ export default function ImportPage() {
                     >
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                       <span className="flex-1 truncate text-sm">{file.file.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {(file.file.size / 1024).toFixed(0)} KB
-                      </span>
-                      {file.status === 'pending' && (
-                        <div className="w-4 h-4 rounded-full bg-muted" />
-                      )}
-                      {file.status === 'analyzing' && (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      )}
-                      {file.status === 'done' && (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      )}
-                      {file.status === 'error' && (
-                        <XCircle className="h-4 w-4 text-red-500" />
-                      )}
+                      <span className="text-xs text-muted-foreground">{(file.file.size / 1024).toFixed(0)} KB</span>
+                      {file.status === 'pending' && <div className="w-4 h-4 rounded-full bg-muted" />}
+                      {file.status === 'analyzing' && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                      {file.status === 'done' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                      {file.status === 'error' && <XCircle className="h-4 w-4 text-red-500" />}
                     </div>
                   ))}
                 </div>
@@ -745,334 +744,370 @@ export default function ImportPage() {
             </Card>
           </div>
 
-
           {/* Inline editable file cards */}
           <div className="space-y-3">
-            {files.filter(f => f.status === 'done').map((file) => (
-              <Card
-                key={file.id}
-                className={`
+            {files
+              .filter((f) => f.status === 'done')
+              .map((file) => (
+                <Card
+                  key={file.id}
+                  className={`
                   transition-all duration-200 overflow-hidden
                   ${!file.selected ? 'opacity-50' : ''}
                   ${file.isDuplicate ? 'ring-1 ring-amber-300' : ''}
                 `}
-              >
-                <div className="p-4">
-                  {/* Top row: checkbox, type, filename, badges, delete */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <Checkbox
-                      checked={file.selected}
-                      onCheckedChange={(checked) => updateFile(file.id, { selected: !!checked })}
-                    />
+                >
+                  <div className="p-4">
+                    {/* Top row: checkbox, type, filename, badges, delete */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <Checkbox
+                        checked={file.selected}
+                        onCheckedChange={(checked) => updateFile(file.id, { selected: !!checked })}
+                      />
 
-                    <Select
-                      value={file.type}
-                      onValueChange={(value: 'expense' | 'invoice') => changeFileType(file.id, value)}
-                    >
-                      <SelectTrigger className={`
-                        h-7 w-24 text-xs font-semibold border-0
-                        ${file.type === 'expense'
-                          ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400'
-                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
-                        }
-                      `}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="expense">{t('expenseType')}</SelectItem>
-                        <SelectItem value="invoice">{t('invoiceType')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <span className="text-sm font-medium truncate flex-1">
-                      {file.file.name}
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      {/* Confidence badge */}
-                      <span className={`
-                        text-xs px-2 py-0.5 rounded-full
-                        ${file.confidence >= 0.9
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : file.confidence >= 0.7
-                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }
-                      `}>
-                        {Math.round(file.confidence * 100)}% {t('confident')}
-                      </span>
-
-                      {/* Historical data badge */}
-                      {file.usedHistoricalData && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                          <History className="h-3 w-3" />
-                          {t('basedOnPrevious', { count: file.historicalMatchCount ?? 0 })}
-                        </span>
-                      )}
-
-                      {/* Duplicate badge */}
-                      {file.isDuplicate && (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                          <AlertTriangle className="h-3 w-3" />
-                          {t('duplicate')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Duplicate warning with action buttons */}
-                  {file.isDuplicate && file.existingExpense && (
-                    <div className="ml-8 mb-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                              {t('expenseAlreadyExists')}
-                            </p>
-                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                              {file.existingExpense.supplier} - {file.existingExpense.amount.toLocaleString('sv-SE')} {tc('kr')} ({file.existingExpense.date})
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`h-7 text-xs ${file.selected ? 'bg-amber-100 border-amber-300' : ''}`}
-                            onClick={() => updateFile(file.id, { selected: true })}
-                          >
-                            {t('importAnyway')}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`h-7 text-xs ${!file.selected ? 'bg-muted' : ''}`}
-                            onClick={() => updateFile(file.id, { selected: false })}
-                          >
-                            {t('skip')}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Inline editable fields */}
-                  {file.type === 'expense' ? (
-                    <div className="ml-8 space-y-3">
-                      {/* Main row: 4 columns */}
-                      <div className="grid grid-cols-[120px_1fr_180px_160px] gap-3 items-end">
-                        <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('date')}</label>
-                          <Input
-                            type="date"
-                            value={(file.data as ExpenseData).date || ''}
-                            onChange={(e) => updateFileData(file.id, { date: e.target.value })}
-                            className="h-9 mt-1"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('supplier')}</label>
-                          <Input
-                            value={(file.data as ExpenseData).supplier}
-                            onChange={(e) => updateFileData(file.id, { supplier: e.target.value })}
-                            placeholder={t('supplier')}
-                            className="h-9 mt-1"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('amount')}</label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={(file.data as ExpenseData).total}
-                              onChange={(e) => {
-                                const total = parseFloat(e.target.value) || 0
-                                const vatRate = (file.data as ExpenseData).vatRate
-                                const subtotal = Math.round((total / (1 + vatRate / 100)) * 100) / 100
-                                const vatAmount = Math.round((total - subtotal) * 100) / 100
-                                updateFileData(file.id, { total, subtotal, vatAmount })
-                              }}
-                              className="h-9 font-mono text-sm"
-                            />
-                            <span className="text-sm text-muted-foreground font-medium w-10">
-                              {(file.data as ExpenseData).currency}
-                            </span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('category')}</label>
-                          <Select
-                            value={(file.data as ExpenseData).category}
-                            onValueChange={(value) => updateFileData(file.id, { category: value })}
-                          >
-                            <SelectTrigger className="h-9 mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map(c => (
-                                <SelectItem key={c} value={c}>{t('categories.' + c)}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Toggle button for VAT details */}
-                      <button
-                        type="button"
-                        onClick={() => updateFile(file.id, { showVatDetails: !file.showVatDetails })}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      <Select
+                        value={file.type}
+                        onValueChange={(value: 'expense' | 'invoice') => changeFileType(file.id, value)}
                       >
-                        {file.showVatDetails ? (
-                          <>
-                            <ChevronUp className="h-3.5 w-3.5" />
-                            {t('hideVatDetails')}
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-3.5 w-3.5" />
-                            {t('showVatDetails')}
-                          </>
-                        )}
-                      </button>
+                        <SelectTrigger
+                          className={`
+                        h-7 w-24 text-xs font-semibold border-0
+                        ${
+                          file.type === 'expense'
+                            ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400'
+                        }
+                      `}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="expense">{t('expenseType')}</SelectItem>
+                          <SelectItem value="invoice">{t('invoiceType')}</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                      {/* Expandable VAT details section */}
-                      {file.showVatDetails && (
-                        <div className="grid grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 border">
-                          <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('currency')}</label>
-                            <Select
-                              value={(file.data as ExpenseData).currency}
-                              onValueChange={(value) => updateFileData(file.id, { currency: value })}
+                      <span className="text-sm font-medium truncate flex-1">{file.file.name}</span>
+
+                      <div className="flex items-center gap-2">
+                        {/* Confidence badge */}
+                        <span
+                          className={`
+                        text-xs px-2 py-0.5 rounded-full
+                        ${
+                          file.confidence >= 0.9
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : file.confidence >= 0.7
+                              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }
+                      `}
+                        >
+                          {Math.round(file.confidence * 100)}% {t('confident')}
+                        </span>
+
+                        {/* Historical data badge */}
+                        {file.usedHistoricalData && (
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <History className="h-3 w-3" />
+                            {t('basedOnPrevious', { count: file.historicalMatchCount ?? 0 })}
+                          </span>
+                        )}
+
+                        {/* Duplicate badge */}
+                        {file.isDuplicate && (
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            <AlertTriangle className="h-3 w-3" />
+                            {t('duplicate')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Duplicate warning with action buttons */}
+                    {file.isDuplicate && file.existingExpense && (
+                      <div className="ml-8 mb-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                {t('expenseAlreadyExists')}
+                              </p>
+                              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                {file.existingExpense.supplier} - {file.existingExpense.amount.toLocaleString('sv-SE')}{' '}
+                                {tc('kr')} ({file.existingExpense.date})
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`h-7 text-xs ${file.selected ? 'bg-amber-100 border-amber-300' : ''}`}
+                              onClick={() => updateFile(file.id, { selected: true })}
                             >
-                              <SelectTrigger className="h-9 mt-1 bg-background">
+                              {t('importAnyway')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`h-7 text-xs ${!file.selected ? 'bg-muted' : ''}`}
+                              onClick={() => updateFile(file.id, { selected: false })}
+                            >
+                              {t('skip')}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Inline editable fields */}
+                    {file.type === 'expense' ? (
+                      <div className="ml-8 space-y-3">
+                        {/* Main row: 4 columns */}
+                        <div className="grid grid-cols-[120px_1fr_180px_160px] gap-3 items-end">
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                              {t('date')}
+                            </label>
+                            <Input
+                              type="date"
+                              value={(file.data as ExpenseData).date || ''}
+                              onChange={(e) => updateFileData(file.id, { date: e.target.value })}
+                              className="h-9 mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                              {t('supplier')}
+                            </label>
+                            <Input
+                              value={(file.data as ExpenseData).supplier}
+                              onChange={(e) => updateFileData(file.id, { supplier: e.target.value })}
+                              placeholder={t('supplier')}
+                              className="h-9 mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                              {t('amount')}
+                            </label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={(file.data as ExpenseData).total}
+                                onChange={(e) => {
+                                  const total = parseFloat(e.target.value) || 0
+                                  const vatRate = (file.data as ExpenseData).vatRate
+                                  const subtotal = Math.round((total / (1 + vatRate / 100)) * 100) / 100
+                                  const vatAmount = Math.round((total - subtotal) * 100) / 100
+                                  updateFileData(file.id, { total, subtotal, vatAmount })
+                                }}
+                                className="h-9 font-mono text-sm"
+                              />
+                              <span className="text-sm text-muted-foreground font-medium w-10">
+                                {(file.data as ExpenseData).currency}
+                              </span>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                              {t('category')}
+                            </label>
+                            <Select
+                              value={(file.data as ExpenseData).category}
+                              onValueChange={(value) => updateFileData(file.id, { category: value })}
+                            >
+                              <SelectTrigger className="h-9 mt-1">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {currencies.map(c => (
-                                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                                {categories.map((c) => (
+                                  <SelectItem key={c} value={c}>
+                                    {t('categories.' + c)}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('net')}</label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={(file.data as ExpenseData).subtotal}
-                              onChange={(e) => {
-                                const subtotal = parseFloat(e.target.value) || 0
-                                const vatRate = (file.data as ExpenseData).vatRate
-                                const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100
-                                updateFileData(file.id, { subtotal, vatAmount, total: subtotal + vatAmount })
-                              }}
-                              className="h-9 mt-1 font-mono text-sm bg-background"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('vatRate')}</label>
-                            <Select
-                              value={(file.data as ExpenseData).vatRate.toString()}
-                              onValueChange={(value) => {
-                                const vatRate = parseInt(value)
-                                const subtotal = (file.data as ExpenseData).subtotal
-                                const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100
-                                updateFileData(file.id, { vatRate, vatAmount, total: subtotal + vatAmount })
-                              }}
-                            >
-                              <SelectTrigger className="h-9 mt-1 bg-background">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="0">0%</SelectItem>
-                                <SelectItem value="6">6%</SelectItem>
-                                <SelectItem value="12">12%</SelectItem>
-                                <SelectItem value="25">25%</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('vatAmount')}</label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={(file.data as ExpenseData).vatAmount}
-                              disabled
-                              className="h-9 mt-1 font-mono text-sm bg-muted cursor-not-allowed"
-                            />
-                          </div>
                         </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-6 gap-3 ml-8">
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{ti('invoiceNumberShort')}</label>
-                        <Input
-                          type="number"
-                          value={(file.data as InvoiceData).invoiceNumber}
-                          onChange={(e) => updateFileData(file.id, { invoiceNumber: parseInt(e.target.value) || 0 })}
-                          className="h-9 mt-1 font-mono"
-                        />
+
+                        {/* Toggle button for VAT details */}
+                        <button
+                          type="button"
+                          onClick={() => updateFile(file.id, { showVatDetails: !file.showVatDetails })}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {file.showVatDetails ? (
+                            <>
+                              <ChevronUp className="h-3.5 w-3.5" />
+                              {t('hideVatDetails')}
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-3.5 w-3.5" />
+                              {t('showVatDetails')}
+                            </>
+                          )}
+                        </button>
+
+                        {/* Expandable VAT details section */}
+                        {file.showVatDetails && (
+                          <div className="grid grid-cols-4 gap-3 p-3 rounded-lg bg-muted/50 border">
+                            <div>
+                              <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                                {t('currency')}
+                              </label>
+                              <Select
+                                value={(file.data as ExpenseData).currency}
+                                onValueChange={(value) => updateFileData(file.id, { currency: value })}
+                              >
+                                <SelectTrigger className="h-9 mt-1 bg-background">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {currencies.map((c) => (
+                                    <SelectItem key={c} value={c}>
+                                      {c}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                                {t('net')}
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={(file.data as ExpenseData).subtotal}
+                                onChange={(e) => {
+                                  const subtotal = parseFloat(e.target.value) || 0
+                                  const vatRate = (file.data as ExpenseData).vatRate
+                                  const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100
+                                  updateFileData(file.id, { subtotal, vatAmount, total: subtotal + vatAmount })
+                                }}
+                                className="h-9 mt-1 font-mono text-sm bg-background"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                                {t('vatRate')}
+                              </label>
+                              <Select
+                                value={(file.data as ExpenseData).vatRate.toString()}
+                                onValueChange={(value) => {
+                                  const vatRate = parseInt(value)
+                                  const subtotal = (file.data as ExpenseData).subtotal
+                                  const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100
+                                  updateFileData(file.id, { vatRate, vatAmount, total: subtotal + vatAmount })
+                                }}
+                              >
+                                <SelectTrigger className="h-9 mt-1 bg-background">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="0">0%</SelectItem>
+                                  <SelectItem value="6">6%</SelectItem>
+                                  <SelectItem value="12">12%</SelectItem>
+                                  <SelectItem value="25">25%</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                                {t('vatAmount')}
+                              </label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={(file.data as ExpenseData).vatAmount}
+                                disabled
+                                className="h-9 mt-1 font-mono text-sm bg-muted cursor-not-allowed"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="col-span-2">
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{ti('customer')}</label>
-                        <Input
-                          value={(file.data as InvoiceData).clientName}
-                          onChange={(e) => updateFileData(file.id, { clientName: e.target.value })}
-                          placeholder={ti('customer')}
-                          className="h-9 mt-1"
-                        />
+                    ) : (
+                      <div className="grid grid-cols-6 gap-3 ml-8">
+                        <div>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                            {ti('invoiceNumberShort')}
+                          </label>
+                          <Input
+                            type="number"
+                            value={(file.data as InvoiceData).invoiceNumber}
+                            onChange={(e) => updateFileData(file.id, { invoiceNumber: parseInt(e.target.value) || 0 })}
+                            className="h-9 mt-1 font-mono"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                            {ti('customer')}
+                          </label>
+                          <Input
+                            value={(file.data as InvoiceData).clientName}
+                            onChange={(e) => updateFileData(file.id, { clientName: e.target.value })}
+                            placeholder={ti('customer')}
+                            className="h-9 mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                            {t('date')}
+                          </label>
+                          <Input
+                            type="date"
+                            value={(file.data as InvoiceData).invoiceDate || ''}
+                            onChange={(e) => updateFileData(file.id, { invoiceDate: e.target.value })}
+                            className="h-9 mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                            {ti('dueDate')}
+                          </label>
+                          <Input
+                            type="date"
+                            value={(file.data as InvoiceData).dueDate || ''}
+                            onChange={(e) => updateFileData(file.id, { dueDate: e.target.value })}
+                            className="h-9 mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                            {tc('total')}
+                          </label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={(file.data as InvoiceData).total}
+                            onChange={(e) => updateFileData(file.id, { total: parseFloat(e.target.value) || 0 })}
+                            className="h-9 mt-1 font-mono"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{t('date')}</label>
-                        <Input
-                          type="date"
-                          value={(file.data as InvoiceData).invoiceDate || ''}
-                          onChange={(e) => updateFileData(file.id, { invoiceDate: e.target.value })}
-                          className="h-9 mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{ti('dueDate')}</label>
-                        <Input
-                          type="date"
-                          value={(file.data as InvoiceData).dueDate || ''}
-                          onChange={(e) => updateFileData(file.id, { dueDate: e.target.value })}
-                          className="h-9 mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{tc('total')}</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={(file.data as InvoiceData).total}
-                          onChange={(e) => updateFileData(file.id, { total: parseFloat(e.target.value) || 0 })}
-                          className="h-9 mt-1 font-mono"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
+                    )}
+                  </div>
+                </Card>
+              ))}
 
             {/* Error files */}
-            {files.filter(f => f.status === 'error').length > 0 && (
+            {files.filter((f) => f.status === 'error').length > 0 && (
               <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
                 <CardContent className="p-4">
-                  <h4 className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
-                    {t('couldNotAnalyze')}:
-                  </h4>
-                  {files.filter(f => f.status === 'error').map((file) => (
-                    <p key={file.id} className="text-sm text-red-600 dark:text-red-400">
-                      {file.file.name}: {file.error}
-                    </p>
-                  ))}
+                  <h4 className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">{t('couldNotAnalyze')}:</h4>
+                  {files
+                    .filter((f) => f.status === 'error')
+                    .map((file) => (
+                      <p key={file.id} className="text-sm text-red-600 dark:text-red-400">
+                        {file.file.name}: {file.error}
+                      </p>
+                    ))}
                 </CardContent>
               </Card>
             )}
@@ -1084,11 +1119,7 @@ export default function ImportPage() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               {t('startOver')}
             </Button>
-            <Button
-              onClick={handleImport}
-              disabled={importing || selectedFiles.length === 0}
-              size="lg"
-            >
+            <Button onClick={handleImport} disabled={importing || selectedFiles.length === 0} size="lg">
               {importing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1122,8 +1153,8 @@ export default function ImportPage() {
             <h2 className="text-2xl font-bold mb-2">{t('importComplete')}</h2>
             <p className="text-muted-foreground mb-8">
               {t('importCompleteDescription', {
-                succeeded: importResults.filter(r => r.success).length,
-                total: importResults.length
+                succeeded: importResults.filter((r) => r.success).length,
+                total: importResults.length,
               })}
             </p>
 
@@ -1148,9 +1179,7 @@ export default function ImportPage() {
                   {result.skippedAsDuplicate && (
                     <span className="text-xs text-amber-600 dark:text-amber-400">{t('duplicate')}</span>
                   )}
-                  {result.error && (
-                    <span className="text-xs text-red-600 dark:text-red-400">{result.error}</span>
-                  )}
+                  {result.error && <span className="text-xs text-red-600 dark:text-red-400">{result.error}</span>}
                 </div>
               ))}
             </div>

@@ -213,6 +213,9 @@ const statusConfig = {
   paid: { icon: DollarSign, color: 'bg-green-200 text-green-900' },
 }
 
+const activeStatuses = new Set(['tentative', 'pending', 'accepted'])
+const historyStatuses = new Set(['completed', 'invoiced', 'paid'])
+
 export default function GigsPage() {
   const t = useTranslations('gig')
   const tStatus = useTranslations('status')
@@ -316,7 +319,7 @@ export default function GigsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setCurrentUserId(user.id)
     })
-  }, [])
+  }, [supabase.auth])
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')
@@ -346,6 +349,24 @@ export default function GigsPage() {
     setShowScrollHint(!nearBottom && !noScroll)
   }
 
+  const loadGigExpenses = useCallback(
+    async (gigId: string) => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('id, date, supplier, amount, currency, category, attachment_url')
+        .eq('gig_id', gigId)
+        .order('date', { ascending: false })
+
+      if (error) {
+        console.error('Error loading gig expenses:', error)
+        toast.error(tToast('expenseLoadError'))
+      } else {
+        setGigExpenses(data || [])
+      }
+    },
+    [supabase, tToast],
+  )
+
   useEffect(() => {
     if (selectedGig) {
       loadGigExpenses(selectedGig.id)
@@ -355,22 +376,7 @@ export default function GigsPage() {
       setPanelCanScrollUp(false)
       setPanelCanScrollDown(false)
     }
-  }, [selectedGig?.id])
-
-  async function loadGigExpenses(gigId: string) {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('id, date, supplier, amount, currency, category, attachment_url')
-      .eq('gig_id', gigId)
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error loading gig expenses:', error)
-      toast.error(tToast('expenseLoadError'))
-    } else {
-      setGigExpenses(data || [])
-    }
-  }
+  }, [selectedGig, loadGigExpenses, updatePanelScroll])
 
   async function updateStatus(id: string, status: string) {
     const { error } = await supabase
@@ -496,9 +502,6 @@ export default function GigsPage() {
   }
 
   // Computed groups
-  const activeStatuses = new Set(['tentative', 'pending', 'accepted'])
-  const historyStatuses = new Set(['completed', 'invoiced', 'paid'])
-
   const pastNeedingAction = useMemo(
     () =>
       gigs.filter((g) => activeStatuses.has(g.status) && gigHasPassed(g)).sort((a, b) => a.date.localeCompare(b.date)),
@@ -508,17 +511,20 @@ export default function GigsPage() {
   const pastAccepted = pastNeedingAction.filter((g) => g.status === 'accepted')
   const pastUnanswered = pastNeedingAction.filter((g) => g.status === 'pending' || g.status === 'tentative')
 
-  const matchesSearch = (g: Gig) => {
-    if (memberFilter !== 'all' && g.user_id !== memberFilter) return false
-    if (!searchQuery.trim()) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      (g.project_name || '').toLowerCase().includes(q) ||
-      (g.client?.name || '').toLowerCase().includes(q) ||
-      (g.venue || '').toLowerCase().includes(q) ||
-      (g.gig_type?.name || '').toLowerCase().includes(q)
-    )
-  }
+  const matchesSearch = useCallback(
+    (g: Gig) => {
+      if (memberFilter !== 'all' && g.user_id !== memberFilter) return false
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      return (
+        (g.project_name || '').toLowerCase().includes(q) ||
+        (g.client?.name || '').toLowerCase().includes(q) ||
+        (g.venue || '').toLowerCase().includes(q) ||
+        (g.gig_type?.name || '').toLowerCase().includes(q)
+      )
+    },
+    [memberFilter, searchQuery],
+  )
 
   const sortedUpcoming = useMemo(
     () =>
@@ -526,7 +532,7 @@ export default function GigsPage() {
         gigs.filter((g) => activeStatuses.has(g.status) && !gigHasPassed(g) && matchesSearch(g)),
         upcomingSort,
       ),
-    [gigs, upcomingSort, searchQuery, memberFilter],
+    [gigs, upcomingSort, matchesSearch],
   )
 
   const sortedHistory = useMemo(
@@ -535,7 +541,7 @@ export default function GigsPage() {
         gigs.filter((g) => historyStatuses.has(g.status) && matchesSearch(g)),
         historySort,
       ),
-    [gigs, historySort, searchQuery, memberFilter],
+    [gigs, historySort, matchesSearch],
   )
 
   const sortedDeclined = useMemo(
@@ -544,7 +550,7 @@ export default function GigsPage() {
         gigs.filter((g) => g.status === 'declined' && matchesSearch(g)),
         declinedSort,
       ),
-    [gigs, declinedSort, searchQuery, memberFilter],
+    [gigs, declinedSort, matchesSearch],
   )
 
   const pipelineCounts = useMemo(

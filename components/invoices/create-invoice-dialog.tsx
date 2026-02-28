@@ -12,13 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Plus, Trash2, Receipt, Crown } from 'lucide-react'
+import { Loader2, Plus, Trash2, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
 import { InvoicePreview } from './invoice-preview'
 import { useSubscription } from '@/lib/hooks/use-subscription'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
 import { shouldReverseCharge } from '@/lib/country-config'
-import Link from 'next/link'
 
 type GigExpense = {
   id: string
@@ -119,11 +118,11 @@ export function CreateInvoiceDialog({
   const tg = useTranslations('gig')
   const te = useTranslations('expense')
   const tToast = useTranslations('toast')
-  const { canCreateInvoice, isPro, usage, limits } = useSubscription()
+  const { canCreateInvoice, limits } = useSubscription()
   const formatLocale = useFormatLocale()
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
-  const [completedGigs, setCompletedGigs] = useState<Gig[]>([])
+  const [, setCompletedGigs] = useState<Gig[]>([])
   const [gigTypes, setGigTypes] = useState<GigType[]>([])
   const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null)
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState<number>(46)

@@ -7,21 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Plus, Copy, Trash2, RefreshCw, Ticket } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -45,19 +32,20 @@ export function InvitationsTab() {
   const [newExpiresAt, setNewExpiresAt] = useState('')
   const [creating, setCreating] = useState(false)
 
-  useEffect(() => {
-    loadCodes()
-  }, [])
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  async function loadCodes() {
-    setLoading(true)
-    const res = await fetch('/api/admin/invitation-codes')
-    if (res.ok) {
-      const { codes: data } = await res.json()
-      setCodes(data || [])
+  useEffect(() => {
+    async function loadCodes() {
+      setLoading(true)
+      const res = await fetch('/api/admin/invitation-codes')
+      if (res.ok) {
+        const { codes: data } = await res.json()
+        setCodes(data || [])
+      }
+      setLoading(false)
     }
-    setLoading(false)
-  }
+    loadCodes()
+  }, [refreshKey])
 
   function generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -88,7 +76,7 @@ export function InvitationsTab() {
       setNewCode('')
       setNewMaxUses(10)
       setNewExpiresAt('')
-      loadCodes()
+      setRefreshKey((k) => k + 1)
     } else {
       const data = await res.json()
       if (res.status === 409) {
@@ -107,7 +95,7 @@ export function InvitationsTab() {
       body: JSON.stringify({ id }),
     })
     if (res.ok) {
-      setCodes(codes.filter(c => c.id !== id))
+      setCodes(codes.filter((c) => c.id !== id))
     }
   }
 
@@ -130,7 +118,12 @@ export function InvitationsTab() {
             <Ticket className="h-5 w-5" />
             {t('invitations')}
           </CardTitle>
-          <Button onClick={() => { generateCode(); setShowCreateDialog(true) }}>
+          <Button
+            onClick={() => {
+              generateCode()
+              setShowCreateDialog(true)
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             {t('createCode')}
           </Button>
@@ -167,7 +160,9 @@ export function InvitationsTab() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="text-sm">{code.use_count} / {code.max_uses}</span>
+                      <span className="text-sm">
+                        {code.use_count} / {code.max_uses}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
@@ -180,7 +175,11 @@ export function InvitationsTab() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      {status === 'active' && <Badge variant="default" className="bg-emerald-500">{t('active')}</Badge>}
+                      {status === 'active' && (
+                        <Badge variant="default" className="bg-emerald-500">
+                          {t('active')}
+                        </Badge>
+                      )}
                       {status === 'expired' && <Badge variant="destructive">{t('expired')}</Badge>}
                       {status === 'used' && <Badge variant="secondary">{t('usedUp')}</Badge>}
                     </TableCell>
@@ -228,11 +227,7 @@ export function InvitationsTab() {
             </div>
             <div className="space-y-2">
               <Label>{t('expiresAt')}</Label>
-              <Input
-                type="date"
-                value={newExpiresAt}
-                onChange={(e) => setNewExpiresAt(e.target.value)}
-              />
+              <Input type="date" value={newExpiresAt} onChange={(e) => setNewExpiresAt(e.target.value)} />
             </div>
           </div>
           <DialogFooter>

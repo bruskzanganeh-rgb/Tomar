@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +12,6 @@ import { toast } from 'sonner'
 
 export default function SetupMemberPage() {
   const t = useTranslations('auth')
-  const router = useRouter()
   const supabase = createClient()
 
   const [step, setStep] = useState(0) // 0 = password, 1 = info
@@ -82,11 +80,15 @@ export default function SetupMemberPage() {
           <div className="flex items-center justify-center gap-2 mt-4">
             {steps.map((label, i) => (
               <div key={i} className="flex items-center gap-1">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                  i < step ? 'bg-primary text-primary-foreground' :
-                  i === step ? 'bg-primary text-primary-foreground' :
-                  'bg-muted text-muted-foreground'
-                }`}>
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                    i < step
+                      ? 'bg-primary text-primary-foreground'
+                      : i === step
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                  }`}
+                >
                   {i < step ? <Check className="h-3 w-3" /> : i + 1}
                 </div>
                 <span className={`text-xs ${i === step ? 'font-medium' : 'text-muted-foreground'}`}>{label}</span>
@@ -97,11 +99,7 @@ export default function SetupMemberPage() {
         </CardHeader>
 
         <CardContent>
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg mb-4">
-              {error}
-            </div>
-          )}
+          {error && <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg mb-4">{error}</div>}
 
           {step === 0 && (
             <form onSubmit={handlePasswordStep} className="space-y-4">
@@ -141,21 +139,11 @@ export default function SetupMemberPage() {
             <form onSubmit={handleComplete} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">{t('fullName')}</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  autoFocus
-                />
+                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} autoFocus />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">{t('phone')}</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </div>
               <Button type="submit" className="w-full" disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

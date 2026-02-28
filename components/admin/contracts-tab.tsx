@@ -6,38 +6,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Plus, Send, Download, Loader2, Eye, X, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Plus, Send, Download, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Contract, ContractAudit, ContractWithAudit } from '@/lib/contracts/types'
-
-type Company = {
-  id: string
-  company_name: string | null
-  org_number: string | null
-  address: string | null
-}
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -57,7 +31,6 @@ export function ContractsTab() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [expandedContract, setExpandedContract] = useState<ContractWithAudit | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [companies, setCompanies] = useState<Company[]>([])
 
   // Create form state
   const [creating, setCreating] = useState(false)
@@ -100,7 +73,7 @@ export function ContractsTab() {
 
   async function loadCompanies() {
     try {
-      const res = await fetch('/api/contracts?_companies=1')
+      await fetch('/api/contracts?_companies=1')
       // We'll use admin API — for now just load from the contracts we have
     } catch {
       // ignore
@@ -144,9 +117,7 @@ export function ContractsTab() {
           signer_title: form.signer_title || null,
           reviewer_name: form.reviewer_name || null,
           reviewer_email: form.reviewer_email || null,
-          custom_terms: form.custom_terms
-            ? { additional: form.custom_terms }
-            : {},
+          custom_terms: form.custom_terms ? { additional: form.custom_terms } : {},
         }),
       })
 
@@ -237,9 +208,7 @@ export function ContractsTab() {
     }
   }
 
-  const filtered = statusFilter === 'all'
-    ? contracts
-    : contracts.filter(c => c.status === statusFilter)
+  const filtered = statusFilter === 'all' ? contracts : contracts.filter((c) => c.status === statusFilter)
 
   return (
     <div className="space-y-4">
@@ -317,9 +286,7 @@ export function ContractsTab() {
                       {Number(contract.annual_price).toLocaleString()} {contract.currency}
                     </TableCell>
                     <TableCell>
-                      <Badge className={statusColors[contract.status] || ''}>
-                        {contract.status}
-                      </Badge>
+                      <Badge className={statusColors[contract.status] || ''}>{contract.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
@@ -329,12 +296,22 @@ export function ContractsTab() {
                           </Button>
                         )}
                         {contract.status !== 'signed' && contract.status !== 'cancelled' && (
-                          <Button variant="ghost" size="sm" onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=unsigned`, '_blank')} title="Download PDF">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=unsigned`, '_blank')}
+                            title="Download PDF"
+                          >
                             <Download className="h-4 w-4" />
                           </Button>
                         )}
                         {contract.status === 'signed' && (
-                          <Button variant="ghost" size="sm" onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=signed`, '_blank')} title="Download signed PDF">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=signed`, '_blank')}
+                            title="Download signed PDF"
+                          >
                             <Download className="h-4 w-4 text-green-600" />
                           </Button>
                         )}
@@ -374,30 +351,50 @@ export function ContractsTab() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Signer Name *</Label>
-                <Input value={form.signer_name} onChange={(e) => setForm(f => ({ ...f, signer_name: e.target.value }))} />
+                <Input
+                  value={form.signer_name}
+                  onChange={(e) => setForm((f) => ({ ...f, signer_name: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Signer Email *</Label>
-                <Input type="email" value={form.signer_email} onChange={(e) => setForm(f => ({ ...f, signer_email: e.target.value }))} />
+                <Input
+                  type="email"
+                  value={form.signer_email}
+                  onChange={(e) => setForm((f) => ({ ...f, signer_email: e.target.value }))}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Signer Title</Label>
-              <Input value={form.signer_title} onChange={(e) => setForm(f => ({ ...f, signer_title: e.target.value }))} placeholder="e.g. Managing Director" />
+              <Input
+                value={form.signer_title}
+                onChange={(e) => setForm((f) => ({ ...f, signer_title: e.target.value }))}
+                placeholder="e.g. Managing Director"
+              />
             </div>
 
             <div className="border-t pt-3 mt-3">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Reviewer (optional)</Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">If set, the agreement is first sent to the reviewer for approval, then forwarded to the signer.</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                If set, the agreement is first sent to the reviewer for approval, then forwarded to the signer.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Reviewer Name</Label>
-                <Input value={form.reviewer_name} onChange={(e) => setForm(f => ({ ...f, reviewer_name: e.target.value }))} />
+                <Input
+                  value={form.reviewer_name}
+                  onChange={(e) => setForm((f) => ({ ...f, reviewer_name: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Reviewer Email</Label>
-                <Input type="email" value={form.reviewer_email} onChange={(e) => setForm(f => ({ ...f, reviewer_email: e.target.value }))} />
+                <Input
+                  type="email"
+                  value={form.reviewer_email}
+                  onChange={(e) => setForm((f) => ({ ...f, reviewer_email: e.target.value }))}
+                />
               </div>
             </div>
 
@@ -408,8 +405,10 @@ export function ContractsTab() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Tier *</Label>
-                <Select value={form.tier} onValueChange={(v) => setForm(f => ({ ...f, tier: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={form.tier} onValueChange={(v) => setForm((f) => ({ ...f, tier: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Free">Free</SelectItem>
                     <SelectItem value="Pro">Pro</SelectItem>
@@ -420,14 +419,21 @@ export function ContractsTab() {
               </div>
               <div className="space-y-1.5">
                 <Label>Annual Price *</Label>
-                <Input type="number" value={form.annual_price} onChange={(e) => setForm(f => ({ ...f, annual_price: e.target.value }))} placeholder="e.g. 4990" />
+                <Input
+                  type="number"
+                  value={form.annual_price}
+                  onChange={(e) => setForm((f) => ({ ...f, annual_price: e.target.value }))}
+                  placeholder="e.g. 4990"
+                />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label>Currency</Label>
-                <Select value={form.currency} onValueChange={(v) => setForm(f => ({ ...f, currency: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={form.currency} onValueChange={(v) => setForm((f) => ({ ...f, currency: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="SEK">SEK</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>
@@ -439,8 +445,13 @@ export function ContractsTab() {
               </div>
               <div className="space-y-1.5">
                 <Label>Billing</Label>
-                <Select value={form.billing_interval} onValueChange={(v) => setForm(f => ({ ...f, billing_interval: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={form.billing_interval}
+                  onValueChange={(v) => setForm((f) => ({ ...f, billing_interval: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="monthly">Monthly</SelectItem>
                     <SelectItem value="quarterly">Quarterly</SelectItem>
@@ -450,24 +461,36 @@ export function ContractsTab() {
               </div>
               <div className="space-y-1.5">
                 <Label>VAT %</Label>
-                <Input type="number" value={form.vat_rate_pct} onChange={(e) => setForm(f => ({ ...f, vat_rate_pct: e.target.value }))} />
+                <Input
+                  type="number"
+                  value={form.vat_rate_pct}
+                  onChange={(e) => setForm((f) => ({ ...f, vat_rate_pct: e.target.value }))}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Start Date</Label>
-                <Input type="date" value={form.contract_start_date} onChange={(e) => setForm(f => ({ ...f, contract_start_date: e.target.value }))} />
+                <Input
+                  type="date"
+                  value={form.contract_start_date}
+                  onChange={(e) => setForm((f) => ({ ...f, contract_start_date: e.target.value }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Duration (months)</Label>
-                <Input type="number" value={form.contract_duration_months} onChange={(e) => setForm(f => ({ ...f, contract_duration_months: e.target.value }))} />
+                <Input
+                  type="number"
+                  value={form.contract_duration_months}
+                  onChange={(e) => setForm((f) => ({ ...f, contract_duration_months: e.target.value }))}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Custom Terms</Label>
               <Textarea
                 value={form.custom_terms}
-                onChange={(e) => setForm(f => ({ ...f, custom_terms: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, custom_terms: e.target.value }))}
                 placeholder="Additional terms or conditions..."
                 rows={3}
               />
@@ -492,7 +515,11 @@ export function ContractsTab() {
   )
 }
 
-function ContractDetail({ contract, onSend, onCancel }: {
+function ContractDetail({
+  contract,
+  onSend,
+  onCancel,
+}: {
   contract: ContractWithAudit
   onSend: () => void
   onCancel: () => void
@@ -509,15 +536,24 @@ function ContractDetail({ contract, onSend, onCancel }: {
       <div className="flex items-center gap-2">
         {statusSteps.map((step, i) => (
           <div key={step} className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${
-              contract.status === 'cancelled' || contract.status === 'expired'
-                ? 'bg-gray-300'
-                : i <= currentStep ? 'bg-green-500' : 'bg-gray-200'
-            }`} />
-            <span className={`text-xs ${
-              i <= currentStep && contract.status !== 'cancelled'
-                ? 'text-foreground font-medium' : 'text-muted-foreground'
-            }`}>{step}</span>
+            <div
+              className={`w-2.5 h-2.5 rounded-full ${
+                contract.status === 'cancelled' || contract.status === 'expired'
+                  ? 'bg-gray-300'
+                  : i <= currentStep
+                    ? 'bg-green-500'
+                    : 'bg-gray-200'
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                i <= currentStep && contract.status !== 'cancelled'
+                  ? 'text-foreground font-medium'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              {step}
+            </span>
             {i < statusSteps.length - 1 && <div className="w-8 h-px bg-gray-200" />}
           </div>
         ))}
@@ -530,11 +566,15 @@ function ContractDetail({ contract, onSend, onCancel }: {
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div>
           <span className="text-muted-foreground">Price</span>
-          <p className="font-medium">{Number(contract.annual_price).toLocaleString()} {contract.currency}/year</p>
+          <p className="font-medium">
+            {Number(contract.annual_price).toLocaleString()} {contract.currency}/year
+          </p>
         </div>
         <div>
           <span className="text-muted-foreground">Duration</span>
-          <p className="font-medium">{contract.contract_duration_months} months from {contract.contract_start_date}</p>
+          <p className="font-medium">
+            {contract.contract_duration_months} months from {contract.contract_start_date}
+          </p>
         </div>
         <div>
           <span className="text-muted-foreground">VAT</span>
@@ -548,7 +588,11 @@ function ContractDetail({ contract, onSend, onCancel }: {
           <span className="text-muted-foreground">Reviewer:</span>{' '}
           <span className="font-medium">{contract.reviewer_name || contract.reviewer_email}</span>
           {contract.reviewer_name && <span className="text-muted-foreground"> ({contract.reviewer_email})</span>}
-          {contract.reviewed_at && <span className="text-green-600 ml-2">Reviewed {new Date(contract.reviewed_at).toLocaleDateString('sv-SE')}</span>}
+          {contract.reviewed_at && (
+            <span className="text-green-600 ml-2">
+              Reviewed {new Date(contract.reviewed_at).toLocaleDateString('sv-SE')}
+            </span>
+          )}
         </div>
       )}
 
@@ -562,7 +606,9 @@ function ContractDetail({ contract, onSend, onCancel }: {
                 <span className="text-muted-foreground w-32 shrink-0">
                   {new Date(event.created_at).toLocaleString('sv-SE')}
                 </span>
-                <Badge variant="outline" className="text-xs">{event.event_type}</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {event.event_type}
+                </Badge>
                 {event.actor_email && <span className="text-muted-foreground">{event.actor_email}</span>}
                 {event.ip_address && <span className="text-muted-foreground">IP: {event.ip_address}</span>}
               </div>
@@ -579,12 +625,20 @@ function ContractDetail({ contract, onSend, onCancel }: {
             {contract.status === 'draft' ? (contract.reviewer_email ? 'Send to Reviewer' : 'Send to Signer') : 'Resend'}
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=unsigned`, '_blank')}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=unsigned`, '_blank')}
+        >
           <Download className="h-3.5 w-3.5 mr-1" />
           Unsigned PDF
         </Button>
         {contract.status === 'signed' && (
-          <Button size="sm" variant="outline" onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=signed`, '_blank')}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(`/api/contracts/${contract.id}/pdf?type=signed`, '_blank')}
+          >
             <Download className="h-3.5 w-3.5 mr-1 text-green-600" />
             Signed PDF
           </Button>

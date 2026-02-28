@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
@@ -15,19 +15,24 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Loader2, Upload, Image, X, Sparkles, AlertCircle, PenLine, AlertTriangle, FileText } from 'lucide-react'
+  Loader2,
+  Upload,
+  Image as ImageIcon,
+  X,
+  Sparkles,
+  AlertCircle,
+  PenLine,
+  AlertTriangle,
+  FileText,
+} from 'lucide-react'
+import NextImage from 'next/image'
 import { toast } from 'sonner'
 import { useSubscription } from '@/lib/hooks/use-subscription'
 import { GigCombobox } from '@/components/expenses/gig-combobox'
 import { GigListBox } from '@/components/expenses/gig-listbox'
-import { isValidReceiptFile, ALLOWED_RECEIPT_EXTENSIONS, ALLOWED_RECEIPT_TYPES } from '@/lib/upload/file-validation'
+import { isValidReceiptFile, ALLOWED_RECEIPT_EXTENSIONS } from '@/lib/upload/file-validation'
 
 type UploadReceiptDialogProps = {
   open: boolean
@@ -81,13 +86,7 @@ const categories = [
 
 const currencies = ['SEK', 'EUR', 'USD', 'GBP', 'DKK', 'NOK']
 
-export function UploadReceiptDialog({
-  open,
-  onOpenChange,
-  onSuccess,
-  gigId,
-  gigTitle,
-}: UploadReceiptDialogProps) {
+export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigTitle }: UploadReceiptDialogProps) {
   const t = useTranslations('expense')
   const tc = useTranslations('common')
   const tt = useTranslations('toast')
@@ -118,6 +117,7 @@ export function UploadReceiptDialog({
     if (open && !gigId) {
       loadGigs()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadGigs is stable; only re-run when dialog opens
   }, [open, gigId])
 
   async function loadGigs() {
@@ -242,7 +242,7 @@ export function UploadReceiptDialog({
       }).catch(() => {})
 
       setStep('review')
-    } catch (err) {
+    } catch {
       // Vid AI-fel, erbjud manuell inmatning istället
       setError(t('aiCouldNotReadReceipt'))
       handleSkipAI()
@@ -263,7 +263,12 @@ export function UploadReceiptDialog({
       let amountBase = formData.amount
       if (formData.currency !== 'SEK' && formData.date) {
         try {
-          const { converted } = await convert(formData.amount, formData.currency as SupportedCurrency, 'SEK', formData.date)
+          const { converted } = await convert(
+            formData.amount,
+            formData.currency as SupportedCurrency,
+            'SEK',
+            formData.date,
+          )
           amountBase = converted
         } catch {
           // Fallback: use original amount if conversion fails
@@ -346,16 +351,16 @@ export function UploadReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={`max-h-[90vh] ${step === 'review' ? 'flex flex-col w-[95vw] md:max-w-5xl' : 'sm:max-w-[600px] overflow-y-auto'}`}>
+      <DialogContent
+        className={`max-h-[90vh] ${step === 'review' ? 'flex flex-col w-[95vw] md:max-w-5xl' : 'sm:max-w-[600px] overflow-y-auto'}`}
+      >
         <DialogHeader>
           <DialogTitle>
             {step === 'upload' ? t('uploadReceipt') : t('reviewAndSave')}
             {gigTitle && <span className="text-muted-foreground font-normal text-base ml-2">– {gigTitle}</span>}
           </DialogTitle>
           <DialogDescription>
-            {step === 'upload'
-              ? t('uploadReceiptDescription')
-              : t('reviewDescription')}
+            {step === 'upload' ? t('uploadReceiptDescription') : t('reviewDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -372,38 +377,28 @@ export function UploadReceiptDialog({
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800">
-                  {duplicateWarning.matchType === 'exact'
-                    ? t('duplicateFound')
-                    : t('possibleDuplicateFound')}
+                  {duplicateWarning.matchType === 'exact' ? t('duplicateFound') : t('possibleDuplicateFound')}
                 </p>
                 <p className="text-sm text-amber-700 mt-1">
-                  {t('similarExpenseExists')}: <strong>{duplicateWarning.supplier}</strong> - {duplicateWarning.amount.toLocaleString('sv-SE')} {tc('kr')} ({duplicateWarning.date})
+                  {t('similarExpenseExists')}: <strong>{duplicateWarning.supplier}</strong> -{' '}
+                  {duplicateWarning.amount.toLocaleString('sv-SE')} {tc('kr')} ({duplicateWarning.date})
                   {duplicateWarning.category && ` [${duplicateWarning.category}]`}
                 </p>
-                {duplicateWarning.matchType && duplicateWarning.matchType !== 'exact' &&
-                 duplicateWarning.inputSupplier &&
-                 duplicateWarning.inputSupplier.toLowerCase() !== duplicateWarning.supplier.toLowerCase() && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    {t('youEntered')}: &quot;{duplicateWarning.inputSupplier}&quot; → {t('matchedWith')}: &quot;{duplicateWarning.supplier}&quot;
-                  </p>
-                )}
+                {duplicateWarning.matchType &&
+                  duplicateWarning.matchType !== 'exact' &&
+                  duplicateWarning.inputSupplier &&
+                  duplicateWarning.inputSupplier.toLowerCase() !== duplicateWarning.supplier.toLowerCase() && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      {t('youEntered')}: &quot;{duplicateWarning.inputSupplier}&quot; → {t('matchedWith')}: &quot;
+                      {duplicateWarning.supplier}&quot;
+                    </p>
+                  )}
                 <div className="flex gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDuplicateWarning(null)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setDuplicateWarning(null)}>
                     {tc('cancel')}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => handleSave(true)}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : null}
+                  <Button size="sm" variant="default" onClick={() => handleSave(true)} disabled={saving}>
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                     {t('saveAnyway')}
                   </Button>
                 </div>
@@ -428,10 +423,14 @@ export function UploadReceiptDialog({
               {file ? (
                 <div className="space-y-4">
                   {preview ? (
-                    <img
+                    <NextImage
                       src={preview}
-                      alt={t('receipt')}
-                      className="max-h-48 mx-auto rounded-lg shadow-sm"
+                      alt=""
+                      width={0}
+                      height={0}
+                      sizes="100vw"
+                      className="max-h-48 w-auto mx-auto rounded-lg shadow-sm"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex flex-col items-center">
@@ -457,14 +456,10 @@ export function UploadReceiptDialog({
               ) : (
                 <div className="space-y-2">
                   <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Image className="h-6 w-6 text-gray-400" />
+                    <ImageIcon className="h-6 w-6 text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-600">
-                    {t('dragAndDropOrClick')}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {t('fileFormats')}
-                  </p>
+                  <p className="text-sm text-gray-600">{t('dragAndDropOrClick')}</p>
+                  <p className="text-xs text-gray-400">{t('fileFormats')}</p>
                 </div>
               )}
             </div>
@@ -484,23 +479,24 @@ export function UploadReceiptDialog({
             {/* Vänster kolumn: Kvittobild */}
             <div className="w-full md:w-44 md:shrink-0 space-y-3">
               <Label className="text-sm font-medium">{t('receipt')}</Label>
-              {file && (
-                preview ? (
-                  <img
+              {file &&
+                (preview ? (
+                  <NextImage
                     src={preview}
-                    alt={t('receipt')}
+                    alt=""
+                    width={0}
+                    height={0}
+                    sizes="100vw"
                     className="w-full h-40 md:h-56 object-cover rounded-lg border shadow-sm"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-full h-40 md:h-56 rounded-lg border flex flex-col items-center justify-center bg-gray-50">
                     <FileText className="h-12 w-12 text-red-500" />
                     <p className="text-xs text-gray-500 mt-2">{t('pdfFile')}</p>
                   </div>
-                )
-              )}
-              {file && (
-                <p className="text-xs text-gray-500 truncate">{file.name}</p>
-              )}
+                ))}
+              {file && <p className="text-xs text-gray-500 truncate">{file.name}</p>}
               {formData.confidence > 0 && (
                 <p className="text-xs text-gray-400">
                   {t('aiConfidence')}: {Math.round(formData.confidence * 100)}%
@@ -552,7 +548,9 @@ export function UploadReceiptDialog({
                     </SelectTrigger>
                     <SelectContent>
                       {currencies.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -570,7 +568,9 @@ export function UploadReceiptDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -592,22 +592,12 @@ export function UploadReceiptDialog({
               <div className="flex-1 min-w-0 space-y-2">
                 <Label>{t('linkToGig')}</Label>
                 <div className="md:hidden">
-                  <GigCombobox
-                    gigs={gigs}
-                    value={selectedGigId}
-                    onValueChange={setSelectedGigId}
-                  />
+                  <GigCombobox gigs={gigs} value={selectedGigId} onValueChange={setSelectedGigId} />
                 </div>
                 <div className="hidden md:block">
-                  <GigListBox
-                    gigs={gigs}
-                    value={selectedGigId}
-                    onValueChange={setSelectedGigId}
-                  />
+                  <GigListBox gigs={gigs} value={selectedGigId} onValueChange={setSelectedGigId} />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('optionalLinkReceiptToGig')}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('optionalLinkReceiptToGig')}</p>
               </div>
             )}
           </div>

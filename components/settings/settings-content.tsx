@@ -13,7 +13,7 @@ import {
   Settings,
   Building2,
   CreditCard,
-  Image,
+  Image as ImageIcon,
   Loader2,
   Upload,
   Trash2,
@@ -30,6 +30,7 @@ import {
 import { SubscriptionSettings } from '@/components/settings/subscription-settings'
 import { ApiKeysSettings } from '@/components/settings/api-keys-settings'
 import { TeamSettings } from '@/components/settings/team-settings'
+import NextImage from 'next/image'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
@@ -98,7 +99,7 @@ export default function SettingsPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setUserId(user.id)
     })
-  }, [])
+  }, [supabase.auth])
 
   // Generate calendar URLs with user parameter and auth token
   const calendarToken = settings?.calendar_token || ''
@@ -134,73 +135,72 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    loadSettings()
-  }, [])
+    async function loadSettings() {
+      setLoading(true)
 
-  async function loadSettings() {
-    setLoading(true)
-
-    // Load personal prefs from company_settings
-    const { data: personalSettings, error: psError } = await supabase
-      .from('company_settings')
-      .select('id, locale, calendar_token')
-      .limit(1)
-      .single()
-
-    if (psError) {
-      console.error('Error loading personal settings:', psError)
-      setLoading(false)
-      return
-    }
-
-    // Load company info from companies table
-    const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
-
-    if (membership) {
-      const { data: company, error: compError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('id', membership.company_id)
+      // Load personal prefs from company_settings
+      const { data: personalSettings, error: psError } = await supabase
+        .from('company_settings')
+        .select('id, locale, calendar_token')
+        .limit(1)
         .single()
 
-      if (!compError && company) {
-        // Merge company info + personal prefs into settings state
-        setSettings({
-          id: personalSettings.id,
-          company_name: company.company_name,
-          org_number: company.org_number,
-          address: company.address,
-          email: company.email,
-          phone: company.phone,
-          bank_account: company.bank_account,
-          bankgiro: company.bankgiro || '',
-          iban: company.iban || '',
-          bic: company.bic || '',
-          logo_url: company.logo_url,
-          vat_registration_number: company.vat_registration_number,
-          late_payment_interest_text: company.late_payment_interest_text,
-          show_logo_on_invoice: company.show_logo_on_invoice,
-          our_reference: company.our_reference,
-          smtp_host: company.smtp_host,
-          smtp_port: company.smtp_port,
-          smtp_user: company.smtp_user,
-          smtp_password: company.smtp_password,
-          smtp_from_email: company.smtp_from_email,
-          smtp_from_name: company.smtp_from_name,
-          base_currency: company.base_currency,
-          locale: personalSettings.locale || 'sv',
-          email_provider: company.email_provider,
-          country_code: company.country_code,
-          calendar_token: personalSettings.calendar_token,
-        })
-        setLogoPreview(company.logo_url || null)
-        setEmailProvider(company.email_provider || 'platform')
-        setCompanyId(membership.company_id)
+      if (psError) {
+        console.error('Error loading personal settings:', psError)
+        setLoading(false)
+        return
       }
-    }
 
-    setLoading(false)
-  }
+      // Load company info from companies table
+      const { data: membership } = await supabase.from('company_members').select('company_id').limit(1).single()
+
+      if (membership) {
+        const { data: company, error: compError } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', membership.company_id)
+          .single()
+
+        if (!compError && company) {
+          // Merge company info + personal prefs into settings state
+          setSettings({
+            id: personalSettings.id,
+            company_name: company.company_name,
+            org_number: company.org_number,
+            address: company.address,
+            email: company.email,
+            phone: company.phone,
+            bank_account: company.bank_account,
+            bankgiro: company.bankgiro || '',
+            iban: company.iban || '',
+            bic: company.bic || '',
+            logo_url: company.logo_url,
+            vat_registration_number: company.vat_registration_number,
+            late_payment_interest_text: company.late_payment_interest_text,
+            show_logo_on_invoice: company.show_logo_on_invoice,
+            our_reference: company.our_reference,
+            smtp_host: company.smtp_host,
+            smtp_port: company.smtp_port,
+            smtp_user: company.smtp_user,
+            smtp_password: company.smtp_password,
+            smtp_from_email: company.smtp_from_email,
+            smtp_from_name: company.smtp_from_name,
+            base_currency: company.base_currency,
+            locale: personalSettings.locale || 'sv',
+            email_provider: company.email_provider,
+            country_code: company.country_code,
+            calendar_token: personalSettings.calendar_token,
+          })
+          setLogoPreview(company.logo_url || null)
+          setEmailProvider(company.email_provider || 'platform')
+          setCompanyId(membership.company_id)
+        }
+      }
+
+      setLoading(false)
+    }
+    loadSettings()
+  }, [supabase])
 
   async function handleSave() {
     if (!settings) return
@@ -307,7 +307,7 @@ export default function SettingsPage() {
       } else {
         toast.error(tToast('testEmailError', { error: result.error || 'Unknown error' }))
       }
-    } catch (error) {
+    } catch {
       toast.error(tToast('testEmailGenericError'))
     }
     setTestingEmail(false)
@@ -637,7 +637,7 @@ export default function SettingsPage() {
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Image className="h-5 w-5" />
+                  <ImageIcon className="h-5 w-5" />
                   {t('logo')}
                 </CardTitle>
                 <CardDescription>{t('logoDesc')}</CardDescription>
@@ -647,10 +647,18 @@ export default function SettingsPage() {
                   {/* Preview */}
                   <div className="w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50">
                     {logoPreview ? (
-                      <img src={logoPreview} alt={t('logo')} className="max-w-full max-h-full object-contain p-2" />
+                      <NextImage
+                        src={logoPreview}
+                        alt="Company logo"
+                        width={0}
+                        height={0}
+                        sizes="192px"
+                        className="max-w-full max-h-full object-contain p-2"
+                        unoptimized
+                      />
                     ) : (
                       <div className="text-center text-muted-foreground">
-                        <Image className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
                         <p className="text-xs">{t('noLogo')}</p>
                       </div>
                     )}

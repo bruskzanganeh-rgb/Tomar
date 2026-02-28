@@ -17,27 +17,29 @@ export async function GET() {
   }
 
   // Enrich members with user info
-  const allUserIds = (orgs || []).flatMap(o =>
-    (o.organization_members || []).map((m: any) => m.user_id)
+  const allUserIds = (orgs || []).flatMap((o) =>
+    (o.organization_members || []).map((m: { user_id: string }) => m.user_id),
   )
   const uniqueUserIds = [...new Set(allUserIds)]
 
-  let settingsMap = new Map<string, any>()
+  let settingsMap = new Map<string, { user_id: string; company_name: string | null; email: string | null }>()
   if (uniqueUserIds.length > 0) {
     const { data: settings } = await supabase
       .from('company_settings')
       .select('user_id, company_name, email')
       .in('user_id', uniqueUserIds)
-    settingsMap = new Map((settings || []).map(s => [s.user_id, s]))
+    settingsMap = new Map((settings || []).map((s) => [s.user_id, s]))
   }
 
-  const organizations = (orgs || []).map(org => ({
+  const organizations = (orgs || []).map((org) => ({
     ...org,
-    organization_members: (org.organization_members || []).map((m: any) => ({
-      ...m,
-      company_name: settingsMap.get(m.user_id)?.company_name || null,
-      email: settingsMap.get(m.user_id)?.email || null,
-    })),
+    organization_members: (org.organization_members || []).map(
+      (m: { id: string; user_id: string; role: string | null; joined_at: string | null }) => ({
+        ...m,
+        company_name: settingsMap.get(m.user_id)?.company_name || null,
+        email: settingsMap.get(m.user_id)?.email || null,
+      }),
+    ),
     member_count: (org.organization_members || []).length,
   }))
 

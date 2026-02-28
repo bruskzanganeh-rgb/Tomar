@@ -1,13 +1,5 @@
 import React from 'react'
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-  renderToBuffer,
-} from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, renderToBuffer } from '@react-pdf/renderer'
 
 const colors = {
   primary: '#111827',
@@ -245,12 +237,8 @@ function ContractDocument(params: ContractPdfParams) {
           <View style={styles.partyColumn}>
             <Text style={styles.partyLabel}>Subscriber</Text>
             <Text style={styles.partyName}>{params.companyName || 'N/A'}</Text>
-            {params.companyOrgNumber && (
-              <Text style={styles.partyDetail}>Org. no.: {params.companyOrgNumber}</Text>
-            )}
-            {params.companyAddress && (
-              <Text style={styles.partyDetail}>{params.companyAddress}</Text>
-            )}
+            {params.companyOrgNumber && <Text style={styles.partyDetail}>Org. no.: {params.companyOrgNumber}</Text>}
+            {params.companyAddress && <Text style={styles.partyDetail}>{params.companyAddress}</Text>}
             <Text style={styles.partyDetail}>Contact: {params.signerName}</Text>
             <Text style={styles.partyDetail}>{params.signerEmail}</Text>
           </View>
@@ -259,9 +247,9 @@ function ContractDocument(params: ContractPdfParams) {
         {/* Service Description */}
         <Text style={styles.sectionTitle}>2. Service Description</Text>
         <Text style={styles.paragraph}>
-          The Service Provider grants the Subscriber access to the Amida platform
-          under the <Text style={styles.bold}>{params.tier}</Text> tier, including all features
-          and services associated with this subscription level.
+          The Service Provider grants the Subscriber access to the Amida platform under the{' '}
+          <Text style={styles.bold}>{params.tier}</Text> tier, including all features and services associated with this
+          subscription level.
         </Text>
 
         {/* Pricing */}
@@ -298,24 +286,23 @@ function ContractDocument(params: ContractPdfParams) {
           <Text style={styles.tableValue}>{params.contractDurationMonths} months</Text>
         </View>
         <Text style={styles.paragraph}>
-          This agreement automatically renews for successive periods of equal duration unless
-          either party provides written notice of termination at least 30 days before the end
-          of the current period.
+          This agreement automatically renews for successive periods of equal duration unless either party provides
+          written notice of termination at least 30 days before the end of the current period.
         </Text>
 
         {/* Standard Clauses */}
         <Text style={styles.sectionTitle}>5. General Terms</Text>
         <Text style={styles.paragraph}>
-          5.1 Data Processing: The Service Provider processes personal data in accordance with
-          GDPR and applicable Swedish data protection legislation.
+          5.1 Data Processing: The Service Provider processes personal data in accordance with GDPR and applicable
+          Swedish data protection legislation.
         </Text>
         <Text style={styles.paragraph}>
-          5.2 Termination: Either party may terminate this agreement with 30 days written notice.
-          In case of material breach, termination is effective immediately upon written notice.
+          5.2 Termination: Either party may terminate this agreement with 30 days written notice. In case of material
+          breach, termination is effective immediately upon written notice.
         </Text>
         <Text style={styles.paragraph}>
-          5.3 Governing Law: This agreement is governed by Swedish law. Disputes shall be resolved
-          by the Swedish courts.
+          5.3 Governing Law: This agreement is governed by Swedish law. Disputes shall be resolved by the Swedish
+          courts.
         </Text>
 
         {/* Custom Terms */}
@@ -345,17 +332,17 @@ function ContractDocument(params: ContractPdfParams) {
             <Text style={styles.signatureLabel}>Subscriber</Text>
             {params.signed && params.signatureImageBase64 ? (
               <>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image does not support alt */}
                 <Image
                   style={styles.signatureImage}
-                  src={params.signatureImageBase64.startsWith('data:')
-                    ? params.signatureImageBase64
-                    : `data:image/png;base64,${params.signatureImageBase64}`
+                  src={
+                    params.signatureImageBase64.startsWith('data:')
+                      ? params.signatureImageBase64
+                      : `data:image/png;base64,${params.signatureImageBase64}`
                   }
                 />
                 <Text style={styles.signatureName}>{params.signerName}</Text>
-                {params.signerTitle && (
-                  <Text style={styles.signatureDetail}>{params.signerTitle}</Text>
-                )}
+                {params.signerTitle && <Text style={styles.signatureDetail}>{params.signerTitle}</Text>}
                 <Text style={styles.signatureDetail}>Date: {params.signedAt ? formatDate(params.signedAt) : ''}</Text>
                 <Text style={styles.signatureDetail}>IP: {params.signerIp || ''}</Text>
               </>

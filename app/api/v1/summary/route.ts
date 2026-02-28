@@ -80,9 +80,9 @@ export async function GET(request: NextRequest) {
       total_gigs: yearGigs.length,
       total_invoiced: yearInvoices.reduce((sum, i) => sum + (i.total_base || i.total), 0),
       total_paid: yearInvoices
-        .filter(i => i.status === 'paid')
+        .filter((i) => i.status === 'paid')
         .reduce((sum, i) => sum + (i.total_base || i.total), 0),
-      total_fees: yearGigs.reduce((sum, g: any) => sum + (g.fee || 0), 0),
+      total_fees: yearGigs.reduce((sum, g) => sum + (g.fee || 0), 0),
     }
 
     return apiSuccess({

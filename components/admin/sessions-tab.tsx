@@ -5,13 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Activity, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useFormatLocale } from '@/lib/hooks/use-format-locale'
@@ -74,45 +68,49 @@ export function SessionsTab({ users }: Props) {
   const [filterFrom, setFilterFrom] = useState<string>('')
   const [filterTo, setFilterTo] = useState<string>('')
 
+  // Timestamp captured when sessions are loaded, used for "active" check in JSX
+  const [renderTimestamp, setRenderTimestamp] = useState(() => Date.now())
+  const [refreshKey, setRefreshKey] = useState(0)
+
   useEffect(() => {
+    async function loadActiveSessions() {
+      const params = new URLSearchParams({ active_only: 'true' })
+      const res = await fetch(`/api/admin/sessions?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setActiveSessions(data.sessions)
+      }
+    }
+
+    async function loadSessions() {
+      setLoading(true)
+      const params = new URLSearchParams({ page: String(page), limit: '50' })
+      if (filterUser) params.set('user_id', filterUser)
+      if (filterFrom) params.set('from', filterFrom)
+      if (filterTo) params.set('to', filterTo)
+
+      const res = await fetch(`/api/admin/sessions?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSessions(data.sessions)
+        setTotal(data.total)
+        setTotalPages(data.totalPages)
+        setRenderTimestamp(Date.now())
+      }
+      setLoading(false)
+    }
+
     loadSessions()
     loadActiveSessions()
-  }, [page])
-
-  async function loadActiveSessions() {
-    const params = new URLSearchParams({ active_only: 'true' })
-    const res = await fetch(`/api/admin/sessions?${params}`)
-    if (res.ok) {
-      const data = await res.json()
-      setActiveSessions(data.sessions)
-    }
-  }
-
-  async function loadSessions() {
-    setLoading(true)
-    const params = new URLSearchParams({ page: String(page), limit: '50' })
-    if (filterUser) params.set('user_id', filterUser)
-    if (filterFrom) params.set('from', filterFrom)
-    if (filterTo) params.set('to', filterTo)
-
-    const res = await fetch(`/api/admin/sessions?${params}`)
-    if (res.ok) {
-      const data = await res.json()
-      setSessions(data.sessions)
-      setTotal(data.total)
-      setTotalPages(data.totalPages)
-    }
-    setLoading(false)
-  }
+  }, [page, filterUser, filterFrom, filterTo, refreshKey])
 
   function handleFilter() {
     setPage(1)
-    loadSessions()
+    setRefreshKey((k) => k + 1)
   }
 
   function handleRefresh() {
-    loadSessions()
-    loadActiveSessions()
+    setRefreshKey((k) => k + 1)
   }
 
   return (
@@ -134,10 +132,12 @@ export function SessionsTab({ users }: Props) {
               {t('activeSessions')} ({activeSessions.length})
             </p>
             <div className="space-y-1">
-              {activeSessions.map(s => (
+              {activeSessions.map((s) => (
                 <div key={s.id} className="flex items-center justify-between bg-secondary/50 rounded-md px-3 py-1.5">
                   <div className="flex items-center gap-2">
-                    <Badge variant="default" className="text-[10px]">{t('activeNow')}</Badge>
+                    <Badge variant="default" className="text-[10px]">
+                      {t('activeNow')}
+                    </Badge>
                     <span className="text-sm">{s.company_name || s.email}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -153,13 +153,13 @@ export function SessionsTab({ users }: Props) {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        <Select value={filterUser || '__all__'} onValueChange={v => setFilterUser(v === '__all__' ? '' : v)}>
+        <Select value={filterUser || '__all__'} onValueChange={(v) => setFilterUser(v === '__all__' ? '' : v)}>
           <SelectTrigger className="w-40 h-8 text-xs">
             <SelectValue placeholder={t('filterByUser')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">{t('allUsers', { count: users.length })}</SelectItem>
-            {users.map(u => (
+            {users.map((u) => (
               <SelectItem key={u.user_id} value={u.user_id}>
                 {u.company_name || u.email}
               </SelectItem>
@@ -167,8 +167,18 @@ export function SessionsTab({ users }: Props) {
           </SelectContent>
         </Select>
 
-        <Input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="w-36 h-8 text-xs" />
-        <Input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="w-36 h-8 text-xs" />
+        <Input
+          type="date"
+          value={filterFrom}
+          onChange={(e) => setFilterFrom(e.target.value)}
+          className="w-36 h-8 text-xs"
+        />
+        <Input
+          type="date"
+          value={filterTo}
+          onChange={(e) => setFilterTo(e.target.value)}
+          className="w-36 h-8 text-xs"
+        />
 
         <Button size="sm" variant="secondary" onClick={handleFilter} className="h-8">
           {t('applyFilter')}
@@ -185,8 +195,8 @@ export function SessionsTab({ users }: Props) {
         </Card>
       ) : (
         <div className="space-y-1">
-          {sessions.map(s => {
-            const isActive = !s.ended_at && (Date.now() - new Date(s.last_active_at).getTime()) < 5 * 60 * 1000
+          {sessions.map((s) => {
+            const isActive = !s.ended_at && renderTimestamp - new Date(s.last_active_at).getTime() < 5 * 60 * 1000
             return (
               <div key={s.id} className="flex items-center justify-between bg-secondary/50 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-2">
@@ -199,7 +209,9 @@ export function SessionsTab({ users }: Props) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>{t('sessionDuration')}: {formatDuration(s.started_at, s.last_active_at)}</span>
+                  <span>
+                    {t('sessionDuration')}: {formatDuration(s.started_at, s.last_active_at)}
+                  </span>
                   {s.ip_address && <span>{s.ip_address}</span>}
                   <span>{parseBrowser(s.user_agent)}</span>
                 </div>
@@ -212,13 +224,17 @@ export function SessionsTab({ users }: Props) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{total} {t('totalEntries')}</span>
+          <span className="text-xs text-muted-foreground">
+            {total} {t('totalEntries')}
+          </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page <= 1}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-xs">{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
+            <span className="text-xs">
+              {page} / {totalPages}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

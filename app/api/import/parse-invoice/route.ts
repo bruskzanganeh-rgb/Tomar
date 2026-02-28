@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
           error: 'PDF text extraction failed or document too short. May need OCR.',
           rawText: extractedText,
         },
-        { status: 422 }
+        { status: 422 },
       )
     }
 
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
         rawText: extractedText.substring(0, 500), // First 500 chars for debugging
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error parsing invoice:', error)
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to parse invoice',
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

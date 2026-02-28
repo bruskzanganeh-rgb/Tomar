@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Tag, Edit, Trash2 } from 'lucide-react'
+import { Tag, Edit, Trash2 } from 'lucide-react'
 import { CreateGigTypeDialog } from '@/components/gig-types/create-gig-type-dialog'
 import { EditGigTypeDialog } from '@/components/gig-types/edit-gig-type-dialog'
 import { toast } from 'sonner'
@@ -24,7 +24,6 @@ type GigType = {
 }
 
 export default function GigTypesPage() {
-  const t = useTranslations('config')
   const tc = useTranslations('common')
   const tGigTypes = useTranslations('gigTypes')
 
@@ -43,21 +42,22 @@ export default function GigTypesPage() {
   const [gigTypeToDelete, setGigTypeToDelete] = useState<string | null>(null)
   const supabase = createClient()
 
+  const [refreshKey, setRefreshKey] = useState(0)
+
   useEffect(() => {
-    loadGigTypes()
-  }, [])
+    async function loadGigTypes() {
+      setLoading(true)
+      const { data, error } = await supabase.from('gig_types').select('*').order('name')
 
-  async function loadGigTypes() {
-    setLoading(true)
-    const { data, error } = await supabase.from('gig_types').select('*').order('name')
-
-    if (error) {
-      console.error('Error loading gig types:', error)
-    } else {
-      setGigTypes(data || [])
+      if (error) {
+        console.error('Error loading gig types:', error)
+      } else {
+        setGigTypes(data || [])
+      }
+      setLoading(false)
     }
-    setLoading(false)
-  }
+    loadGigTypes()
+  }, [supabase, refreshKey])
 
   function confirmDelete(id: string) {
     setGigTypeToDelete(id)
@@ -71,7 +71,7 @@ export default function GigTypesPage() {
       console.error('Error deleting gig type:', error)
       toast.error(tGigTypes('deleteError'))
     } else {
-      loadGigTypes()
+      setRefreshKey((k) => k + 1)
     }
   }
 
@@ -136,7 +136,11 @@ export default function GigTypesPage() {
         </CardContent>
       </Card>
 
-      <CreateGigTypeDialog open={showCreateDialog} onOpenChange={setShowCreateDialog} onSuccess={loadGigTypes} />
+      <CreateGigTypeDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
+      />
 
       <EditGigTypeDialog
         gigType={selectedGigType}
@@ -145,7 +149,7 @@ export default function GigTypesPage() {
           setShowEditDialog(open)
           if (!open) setSelectedGigType(null)
         }}
-        onSuccess={loadGigTypes}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
       />
 
       <ConfirmDialog

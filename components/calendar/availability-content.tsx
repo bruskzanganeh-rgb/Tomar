@@ -1,14 +1,38 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, Calendar, CheckCircle, Clock, AlertCircle, Grid3X3, CalendarDays } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Grid3X3,
+  CalendarDays,
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
-import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, isSameDay, getWeek, startOfMonth, endOfMonth, addMonths, subMonths, startOfYear, endOfYear, getMonth } from 'date-fns'
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  eachDayOfInterval,
+  isSameDay,
+  getWeek,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+  startOfYear,
+  endOfYear,
+  getMonth,
+} from 'date-fns'
 
 type GigDate = {
   date: string
@@ -51,42 +75,43 @@ export default function AvailabilityPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    async function loadGigDates() {
+      setLoading(true)
+
+      let start: Date
+      let end: Date
+
+      if (viewMode === 'year') {
+        start = startOfYear(new Date(currentYear, 0, 1))
+        end = endOfYear(new Date(currentYear, 0, 1))
+      } else {
+        start = startOfMonth(subMonths(currentMonth, 1))
+        end = endOfMonth(addMonths(currentMonth, 1))
+      }
+
+      const { data: dates } = await supabase
+        .from('gig_dates')
+        .select(
+          `
+          date,
+          gig:gigs(id, status, project_name, fee, client:clients(name))
+        `,
+        )
+        .gte('date', format(start, 'yyyy-MM-dd'))
+        .lte('date', format(end, 'yyyy-MM-dd'))
+        .order('date')
+
+      if (dates) {
+        const filtered = (dates as unknown as GigDate[]).filter(
+          (d) => d.gig && !['cancelled', 'declined'].includes(d.gig.status),
+        )
+        setGigDates(filtered)
+      }
+
+      setLoading(false)
+    }
     loadGigDates()
-  }, [viewMode, currentMonth, currentYear])
-
-  async function loadGigDates() {
-    setLoading(true)
-
-    let start: Date
-    let end: Date
-
-    if (viewMode === 'year') {
-      start = startOfYear(new Date(currentYear, 0, 1))
-      end = endOfYear(new Date(currentYear, 0, 1))
-    } else {
-      start = startOfMonth(subMonths(currentMonth, 1))
-      end = endOfMonth(addMonths(currentMonth, 1))
-    }
-
-    const { data: dates } = await supabase
-      .from('gig_dates')
-      .select(`
-        date,
-        gig:gigs(id, status, project_name, fee, client:clients(name))
-      `)
-      .gte('date', format(start, 'yyyy-MM-dd'))
-      .lte('date', format(end, 'yyyy-MM-dd'))
-      .order('date')
-
-    if (dates) {
-      const filtered = dates.filter((d: any) =>
-        d.gig && !['cancelled', 'declined'].includes(d.gig.status)
-      ) as unknown as GigDate[]
-      setGigDates(filtered)
-    }
-
-    setLoading(false)
-  }
+  }, [viewMode, currentMonth, currentYear, supabase])
 
   // Beräkna alla veckor för ett helt år
   function getWeeksInYear(year: number): WeekInfo[] {
@@ -105,12 +130,12 @@ export default function AvailabilityPage() {
       const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
       const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd })
 
-      const weekGigs = gigDates.filter(gd => {
+      const weekGigs = gigDates.filter((gd) => {
         const gigDate = new Date(gd.date)
-        return weekDays.some(d => isSameDay(d, gigDate))
+        return weekDays.some((d) => isSameDay(d, gigDate))
       })
 
-      const gigDaysCount = new Set(weekGigs.map(g => g.date)).size
+      const gigDaysCount = new Set(weekGigs.map((g) => g.date)).size
 
       let status: WeekStatus = 'free'
       if (gigDaysCount >= 4) {
@@ -147,12 +172,12 @@ export default function AvailabilityPage() {
       const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
       const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd })
 
-      const weekGigs = gigDates.filter(gd => {
+      const weekGigs = gigDates.filter((gd) => {
         const gigDate = new Date(gd.date)
-        return weekDays.some(d => isSameDay(d, gigDate))
+        return weekDays.some((d) => isSameDay(d, gigDate))
       })
 
-      const gigDaysCount = new Set(weekGigs.map(g => g.date)).size
+      const gigDaysCount = new Set(weekGigs.map((g) => g.date)).size
 
       let status: WeekStatus = 'free'
       if (gigDaysCount >= 4) {
@@ -180,9 +205,9 @@ export default function AvailabilityPage() {
   const weeks = viewMode === 'year' ? getWeeksInYear(currentYear) : getWeeksInMonth(currentMonth)
 
   // Statistik
-  const freeWeeks = weeks.filter(w => w.status === 'free').length
-  const partialWeeks = weeks.filter(w => w.status === 'partial').length
-  const busyWeeks = weeks.filter(w => w.status === 'busy').length
+  const freeWeeks = weeks.filter((w) => w.status === 'free').length
+  const partialWeeks = weeks.filter((w) => w.status === 'partial').length
+  const busyWeeks = weeks.filter((w) => w.status === 'busy').length
 
   function getStatusColor(status: WeekStatus): string {
     switch (status) {
@@ -222,9 +247,7 @@ export default function AvailabilityPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('availableWeeks')}</h1>
-          <p className="text-muted-foreground">
-            {t('availabilityOverview')}
-          </p>
+          <p className="text-muted-foreground">{t('availabilityOverview')}</p>
         </div>
         {/* View Mode Toggle */}
         <div className="flex gap-1 bg-muted p-1 rounded-lg">
@@ -265,10 +288,7 @@ export default function AvailabilityPage() {
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <h2 className="text-xl font-semibold min-w-[200px] text-center">
-          {viewMode === 'year'
-            ? currentYear
-            : format(currentMonth, 'MMMM yyyy', { locale: dateLocale })
-          }
+          {viewMode === 'year' ? currentYear : format(currentMonth, 'MMMM yyyy', { locale: dateLocale })}
         </h2>
         <Button
           variant="outline"
@@ -340,9 +360,13 @@ export default function AvailabilityPage() {
                       selectedWeek?.weekNumber === week.weekNumber ? 'ring-2 ring-offset-1 ring-blue-500' : ''
                     }`}
                   >
-                    <div className="text-xs font-semibold">{t('weekShort')}{week.weekNumber}</div>
+                    <div className="text-xs font-semibold">
+                      {t('weekShort')}
+                      {week.weekNumber}
+                    </div>
                     <div className="text-[10px] opacity-70">
-                      {format(week.startDate, 'd', { locale: dateLocale })}-{format(week.endDate, 'd MMM', { locale: dateLocale })}
+                      {format(week.startDate, 'd', { locale: dateLocale })}-
+                      {format(week.endDate, 'd MMM', { locale: dateLocale })}
                     </div>
                   </button>
                 ))}
@@ -375,19 +399,20 @@ export default function AvailabilityPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold">{t('week')} {week.weekNumber}</span>
+                      <span className="font-semibold">
+                        {t('week')} {week.weekNumber}
+                      </span>
                       {getStatusIcon(week.status)}
                     </div>
                     <p className="text-sm opacity-80">
-                      {format(week.startDate, 'd MMM', { locale: dateLocale })} - {format(week.endDate, 'd MMM', { locale: dateLocale })}
+                      {format(week.startDate, 'd MMM', { locale: dateLocale })} -{' '}
+                      {format(week.endDate, 'd MMM', { locale: dateLocale })}
                     </p>
                     <div className="flex items-center justify-between mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {getStatusLabel(week.status)}
                       </Badge>
-                      <span className="text-xs opacity-70">
-                        {t('daysBooked', { count: week.gigDays })}
-                      </span>
+                      <span className="text-xs opacity-70">{t('daysBooked', { count: week.gigDays })}</span>
                     </div>
                   </button>
                 ))}
@@ -402,16 +427,17 @@ export default function AvailabilityPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>{t('week')} {selectedWeek.weekNumber} {t('details')}</span>
-              <Badge className={getStatusColor(selectedWeek.status)}>
-                {getStatusLabel(selectedWeek.status)}
-              </Badge>
+              <span>
+                {t('week')} {selectedWeek.weekNumber} {t('details')}
+              </span>
+              <Badge className={getStatusColor(selectedWeek.status)}>{getStatusLabel(selectedWeek.status)}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground mb-4">
-                {format(selectedWeek.startDate, 'EEEE d MMMM', { locale: dateLocale })} — {format(selectedWeek.endDate, 'EEEE d MMMM yyyy', { locale: dateLocale })}
+                {format(selectedWeek.startDate, 'EEEE d MMMM', { locale: dateLocale })} —{' '}
+                {format(selectedWeek.endDate, 'EEEE d MMMM yyyy', { locale: dateLocale })}
               </p>
 
               {selectedWeek.gigs.length === 0 ? (
@@ -421,33 +447,33 @@ export default function AvailabilityPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {Array.from(new Set(selectedWeek.gigs.map(g => g.date))).sort().map(date => {
-                    const dayGigs = selectedWeek.gigs.filter(g => g.date === date)
-                    return (
-                      <div key={date} className="p-3 bg-muted/50 rounded-lg">
-                        <p className="font-medium text-sm mb-1">
-                          {format(new Date(date), 'EEEE d MMMM', { locale: dateLocale })}
-                        </p>
-                        {dayGigs.map((gig, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm">
-                            <span>
-                              {gig.gig.client?.name || gig.gig.project_name || t('unknownGig')}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {tStatus(gig.gig.status)}
-                              </Badge>
-                              {gig.gig.fee && (
-                                <span className="text-muted-foreground">
-                                  {gig.gig.fee.toLocaleString('sv-SE')} {tc('kr')}
-                                </span>
-                              )}
+                  {Array.from(new Set(selectedWeek.gigs.map((g) => g.date)))
+                    .sort()
+                    .map((date) => {
+                      const dayGigs = selectedWeek.gigs.filter((g) => g.date === date)
+                      return (
+                        <div key={date} className="p-3 bg-muted/50 rounded-lg">
+                          <p className="font-medium text-sm mb-1">
+                            {format(new Date(date), 'EEEE d MMMM', { locale: dateLocale })}
+                          </p>
+                          {dayGigs.map((gig, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-sm">
+                              <span>{gig.gig.client?.name || gig.gig.project_name || t('unknownGig')}</span>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {tStatus(gig.gig.status)}
+                                </Badge>
+                                {gig.gig.fee && (
+                                  <span className="text-muted-foreground">
+                                    {gig.gig.fee.toLocaleString('sv-SE')} {tc('kr')}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })}
+                          ))}
+                        </div>
+                      )
+                    })}
                 </div>
               )}
             </div>

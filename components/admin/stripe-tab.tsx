@@ -16,8 +16,8 @@ type AuditEvent = {
   table_name: string
   record_id: string
   action: string
-  old_data: Record<string, any> | null
-  new_data: Record<string, any> | null
+  old_data: Record<string, unknown> | null
+  new_data: Record<string, unknown> | null
   changed_fields: string[] | null
   user_id: string | null
   created_at: string
@@ -44,6 +44,9 @@ export function StripeTab({ data }: { data: StripeData | null }) {
   const formatLocale = useFormatLocale()
   const [expandedEvent, setExpandedEvent] = useState<number | null>(null)
 
+  // Timestamp for computing time-ago labels, captured once at initial render
+  const [renderTimestamp] = useState(() => Date.now())
+
   if (!data) return null
 
   const { metrics, events, webhookUrl, webhookConfigured } = data
@@ -61,7 +64,7 @@ export function StripeTab({ data }: { data: StripeData | null }) {
       return t('eventCancelRequested')
     }
     if (fields.includes('status')) {
-      return t('eventStatusChange', { status: newData.status || '?' })
+      return t('eventStatusChange', { status: String(newData.status || '?') })
     }
     if (fields.includes('stripe_subscription_id') && !oldData.stripe_subscription_id) {
       return t('eventNewSubscription')
@@ -79,7 +82,7 @@ export function StripeTab({ data }: { data: StripeData | null }) {
   }
 
   function timeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime()
+    const diff = renderTimestamp - new Date(dateStr).getTime()
     const minutes = Math.floor(diff / 60000)
     if (minutes < 1) return t('timeAgo', { time: '<1 min' })
     if (minutes < 60) return t('timeAgo', { time: `${minutes} min` })
@@ -206,7 +209,7 @@ export function StripeTab({ data }: { data: StripeData | null }) {
             <p className="text-sm text-muted-foreground py-4 text-center">{t('noEvents')}</p>
           ) : (
             <div className="space-y-1">
-              {events.map(event => (
+              {events.map((event) => (
                 <div key={event.id} className="rounded-lg bg-secondary/50 overflow-hidden">
                   <div
                     className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-secondary/80 transition-colors"

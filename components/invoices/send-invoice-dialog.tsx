@@ -89,7 +89,8 @@ export function SendInvoiceDialog({ invoice, open, onOpenChange, onSuccess }: Se
       setSelectedReceipts([]) // Reset selection
       setSelectedDocs([])
     }
-  }, [open, invoice])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadAttachments uses invoice (already in deps); t/dateLocale/formatLocale are stable
+  }, [open, invoice, t, dateLocale, formatLocale])
 
   async function loadAttachments() {
     if (!invoice) {
@@ -102,7 +103,7 @@ export function SendInvoiceDialog({ invoice, open, onOpenChange, onSuccess }: Se
 
     // Get all linked gig IDs from junction table
     const { data: linkedGigs } = await supabase.from('invoice_gigs').select('gig_id').eq('invoice_id', invoice.id)
-    const gigIds = (linkedGigs || []).map((g: any) => g.gig_id)
+    const gigIds = (linkedGigs || []).map((g: { gig_id: string }) => g.gig_id)
 
     // Also check legacy gig_id
     if (invoice.gig_id && !gigIds.includes(invoice.gig_id)) {

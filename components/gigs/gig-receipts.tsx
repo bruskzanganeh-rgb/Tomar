@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -42,25 +42,26 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null)
   const supabase = createClient()
 
+  const [refreshKey, setRefreshKey] = useState(0)
+
   useEffect(() => {
-    loadExpenses()
-  }, [gigId])
+    async function loadExpenses() {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('id, date, supplier, amount, currency, amount_base, category, attachment_url')
+        .eq('gig_id', gigId)
+        .order('date', { ascending: false })
 
-  async function loadExpenses() {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('id, date, supplier, amount, currency, amount_base, category, attachment_url')
-      .eq('gig_id', gigId)
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.error('Error loading gig receipts:', error)
-    } else {
-      setExpenses(data || [])
+      if (error) {
+        console.error('Error loading gig receipts:', error)
+      } else {
+        setExpenses(data || [])
+      }
+      setLoading(false)
     }
-    setLoading(false)
-  }
+    loadExpenses()
+  }, [gigId, supabase, refreshKey])
 
   function confirmDelete(expenseId: string) {
     setExpenseToDelete(expenseId)
@@ -69,16 +70,13 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
 
   async function handleDelete(expenseId: string) {
     setDeleting(expenseId)
-    const { error } = await supabase
-      .from('expenses')
-      .delete()
-      .eq('id', expenseId)
+    const { error } = await supabase.from('expenses').delete().eq('id', expenseId)
 
     if (error) {
       console.error('Error deleting expense:', error)
       toast.error(tToast('deleteReceiptError'))
     } else {
-      loadExpenses()
+      setRefreshKey((k) => k + 1)
     }
     setDeleting(null)
   }
@@ -114,21 +112,14 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         </div>
       ) : expenses.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          {t('noReceiptsLinked')}
-        </p>
+        <p className="text-sm text-muted-foreground text-center py-4">{t('noReceiptsLinked')}</p>
       ) : (
         <div className="space-y-2">
           {expenses.map((expense) => (
-            <div
-              key={expense.id}
-              className="flex items-center justify-between p-2 rounded-lg border bg-white"
-            >
+            <div key={expense.id} className="flex items-center justify-between p-2 rounded-lg border bg-white">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm truncate">
-                    {expense.supplier}
-                  </span>
+                  <span className="font-medium text-sm truncate">{expense.supplier}</span>
                   {expense.category && (
                     <Badge variant="outline" className="text-xs">
                       {expense.category}
@@ -139,11 +130,13 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
                   {format(new Date(expense.date), 'PPP', { locale: dateLocale })} •{' '}
                   {expense.currency && expense.currency !== 'SEK' ? (
                     <>
-                      {expense.amount.toLocaleString('sv-SE')} {expense.currency === 'EUR' ? '€' : expense.currency}{' '}
-                      ({expense.amount_base?.toLocaleString('sv-SE')} {tc('kr')})
+                      {expense.amount.toLocaleString('sv-SE')} {expense.currency === 'EUR' ? '€' : expense.currency} (
+                      {expense.amount_base?.toLocaleString('sv-SE')} {tc('kr')})
                     </>
                   ) : (
-                    <>{expense.amount.toLocaleString('sv-SE')} {tc('kr')}</>
+                    <>
+                      {expense.amount.toLocaleString('sv-SE')} {tc('kr')}
+                    </>
                   )}
                 </p>
               </div>
@@ -184,7 +177,7 @@ export function GigReceipts({ gigId, gigTitle, disabled }: GigReceiptsProps) {
         onOpenChange={setShowUploadDialog}
         onSuccess={() => {
           setShowUploadDialog(false)
-          loadExpenses()
+          setRefreshKey((k) => k + 1)
         }}
         gigId={gigId}
         gigTitle={gigTitle}

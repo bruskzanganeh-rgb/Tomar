@@ -213,7 +213,7 @@ export default function CalendarPage() {
       setPanelCanScrollUp(false)
       setPanelCanScrollDown(false)
     }
-  }, [selectedGig?.id, loadGigExpenses, updatePanelScroll])
+  }, [selectedGig, loadGigExpenses, updatePanelScroll])
 
   async function saveNotes(id: string, notes: string) {
     const { error } = await supabase

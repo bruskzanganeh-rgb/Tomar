@@ -10,7 +10,21 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Music, Building2, Guitar, Users, ChevronRight, ChevronLeft, Check, Plus, X, Loader2, Sparkles, Globe, MapPin } from 'lucide-react'
+import {
+  Music,
+  Building2,
+  Guitar,
+  Users,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Plus,
+  X,
+  Loader2,
+  Sparkles,
+  Globe,
+  MapPin,
+} from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { toast } from 'sonner'
 import { COUNTRY_CONFIGS, getCountryConfig } from '@/lib/country-config'
@@ -29,7 +43,10 @@ type PositionLocal = {
   sort_order: number
 }
 
-function getGigTypePresets(locale: string, countryCode: string): { name: string; name_en: string; vat_rate: number; color: string }[] {
+function getGigTypePresets(
+  locale: string,
+  countryCode: string,
+): { name: string; name_en: string; vat_rate: number; color: string }[] {
   const config = getCountryConfig(countryCode)
   const vat = config.defaultVatRates
   if (locale === 'sv') {
@@ -107,6 +124,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: loads initial onboarding data
   }, [])
 
   async function loadData() {
@@ -130,57 +148,71 @@ export default function OnboardingPage() {
 
   function addGigType() {
     if (!newGigTypeName.trim()) return
-    setGigTypes(prev => [...prev, {
-      tempId: nextTempId(),
-      name: newGigTypeName.trim(),
-      name_en: '',
-      vat_rate: parseFloat(newGigTypeVat) || 0,
-      color: '#6b7280',
-    }])
+    setGigTypes((prev) => [
+      ...prev,
+      {
+        tempId: nextTempId(),
+        name: newGigTypeName.trim(),
+        name_en: '',
+        vat_rate: parseFloat(newGigTypeVat) || 0,
+        color: '#6b7280',
+      },
+    ])
     setNewGigTypeName('')
     setNewGigTypeVat('')
   }
 
   function removeGigType(tempId: string) {
-    setGigTypes(prev => prev.filter(t => t.tempId !== tempId))
+    setGigTypes((prev) => prev.filter((t) => t.tempId !== tempId))
   }
 
   function addPosition() {
     if (!newPositionName.trim()) return
     const sortOrder = positions.length + 1
-    setPositions(prev => [...prev, {
-      tempId: nextTempId(),
-      name: newPositionName.trim(),
-      sort_order: sortOrder,
-    }])
+    setPositions((prev) => [
+      ...prev,
+      {
+        tempId: nextTempId(),
+        name: newPositionName.trim(),
+        sort_order: sortOrder,
+      },
+    ])
     setNewPositionName('')
   }
 
   function removePosition(tempId: string) {
-    setPositions(prev => prev.filter(p => p.tempId !== tempId))
+    setPositions((prev) => prev.filter((p) => p.tempId !== tempId))
   }
 
   function quickAddGigType(preset: { name: string; name_en: string; vat_rate: number; color: string }) {
-    setGigTypes(prev => [...prev, {
-      tempId: nextTempId(),
-      ...preset,
-    }])
+    setGigTypes((prev) => [
+      ...prev,
+      {
+        tempId: nextTempId(),
+        ...preset,
+      },
+    ])
   }
 
   function quickAddPosition(name: string) {
     const sortOrder = positions.length + 1
-    setPositions(prev => [...prev, {
-      tempId: nextTempId(),
-      name,
-      sort_order: sortOrder,
-    }])
+    setPositions((prev) => [
+      ...prev,
+      {
+        tempId: nextTempId(),
+        name,
+        sort_order: sortOrder,
+      },
+    ])
   }
 
-  const gigTypePresets = getGigTypePresets(locale, countryCode)
-    .filter(p => !gigTypes.some(gt => gt.name.toLowerCase() === p.name.toLowerCase()))
+  const gigTypePresets = getGigTypePresets(locale, countryCode).filter(
+    (p) => !gigTypes.some((gt) => gt.name.toLowerCase() === p.name.toLowerCase()),
+  )
 
-  const positionPresets = (POSITION_PRESETS[locale] || POSITION_PRESETS.en)
-    .filter(p => !positions.some(pos => pos.name.toLowerCase() === p.toLowerCase()))
+  const positionPresets = (POSITION_PRESETS[locale] || POSITION_PRESETS.en).filter(
+    (p) => !positions.some((pos) => pos.name.toLowerCase() === p.toLowerCase()),
+  )
 
   async function handleComplete() {
     setSaving(true)
@@ -202,13 +234,13 @@ export default function OnboardingPage() {
             base_currency: countryConfig.currency,
           },
           instruments_text: instrumentsText,
-          gig_types: gigTypes.map(gt => ({
+          gig_types: gigTypes.map((gt) => ({
             name: gt.name,
             name_en: gt.name_en,
             vat_rate: gt.vat_rate,
             color: gt.color,
           })),
-          positions: positions.map(p => ({
+          positions: positions.map((p) => ({
             name: p.name,
             sort_order: p.sort_order,
           })),
@@ -223,8 +255,8 @@ export default function OnboardingPage() {
       toast.success(tToast('onboardingComplete'))
       router.push('/dashboard')
       router.refresh()
-    } catch (err: any) {
-      toast.error(err.message || tToast('onboardingCompleteError'))
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : tToast('onboardingCompleteError'))
     } finally {
       setSaving(false)
     }
@@ -258,17 +290,11 @@ export default function OnboardingPage() {
                         : 'bg-secondary text-muted-foreground'
                   }`}
                 >
-                  {i < step ? (
-                    <Check className="h-3 w-3" />
-                  ) : (
-                    <Icon className="h-3 w-3" />
-                  )}
+                  {i < step ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
                   <span className="hidden sm:inline">{s.label}</span>
                   <span className="sm:hidden">{i + 1}</span>
                 </button>
-                {i < STEPS.length - 1 && (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                )}
+                {i < STEPS.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
               </div>
             )
           })}
@@ -282,16 +308,14 @@ export default function OnboardingPage() {
                 <Globe className="h-5 w-5" />
                 {t('language')}
               </CardTitle>
-              <CardDescription>
-                {t('languageDesc')}
-              </CardDescription>
+              <CardDescription>{t('languageDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { value: 'sv', label: 'Svenska', flag: '🇸🇪' },
                   { value: 'en', label: 'English', flag: '🇬🇧' },
-                ].map(lang => (
+                ].map((lang) => (
                   <button
                     key={lang.value}
                     onClick={() => {
@@ -323,9 +347,7 @@ export default function OnboardingPage() {
                 <MapPin className="h-5 w-5" />
                 {t('country')}
               </CardTitle>
-              <CardDescription>
-                {t('countryDesc')}
-              </CardDescription>
+              <CardDescription>{t('countryDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -356,26 +378,22 @@ export default function OnboardingPage() {
                 <Building2 className="h-5 w-5" />
                 {t('companyInfo')}
               </CardTitle>
-              <CardDescription>
-                {t('companyInfoDesc')}
-              </CardDescription>
+              <CardDescription>{t('companyInfoDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">{tSettings('companyName')}</Label>
-                  <Input
-                    id="companyName"
-                    value={companyName}
-                    onChange={e => setCompanyName(e.target.value)}
-                  />
+                  <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="orgNumber">{locale === 'sv' ? countryConfig.orgLabel.sv : countryConfig.orgLabel.en}</Label>
+                  <Label htmlFor="orgNumber">
+                    {locale === 'sv' ? countryConfig.orgLabel.sv : countryConfig.orgLabel.en}
+                  </Label>
                   <Input
                     id="orgNumber"
                     value={orgNumber}
-                    onChange={e => setOrgNumber(e.target.value)}
+                    onChange={(e) => setOrgNumber(e.target.value)}
                     placeholder={countryConfig.orgPlaceholder}
                   />
                 </div>
@@ -387,26 +405,17 @@ export default function OnboardingPage() {
                   rows={3}
                   className="resize-none"
                   value={address}
-                  onChange={e => setAddress(e.target.value)}
+                  onChange={(e) => setAddress(e.target.value)}
                 />
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">{tSettings('email')}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                  />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">{tSettings('phone')}</Label>
-                  <Input
-                    id="phone"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                  />
+                  <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
@@ -415,7 +424,7 @@ export default function OnboardingPage() {
                   <Input
                     id="bankgiro"
                     value={bankgiro}
-                    onChange={e => setBankgiro(e.target.value)}
+                    onChange={(e) => setBankgiro(e.target.value)}
                     placeholder="XXXX-XXXX"
                   />
                 </div>
@@ -424,18 +433,13 @@ export default function OnboardingPage() {
                   <Input
                     id="iban"
                     value={iban}
-                    onChange={e => setIban(e.target.value)}
+                    onChange={(e) => setIban(e.target.value)}
                     placeholder="SE00 0000 0000 0000 0000 0000"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bic">BIC / SWIFT</Label>
-                  <Input
-                    id="bic"
-                    value={bic}
-                    onChange={e => setBic(e.target.value)}
-                    placeholder="XXXXSESS"
-                  />
+                  <Input id="bic" value={bic} onChange={(e) => setBic(e.target.value)} placeholder="XXXXSESS" />
                 </div>
               </div>
             </CardContent>
@@ -450,15 +454,13 @@ export default function OnboardingPage() {
                 <Guitar className="h-5 w-5" />
                 {t('yourInstruments')}
               </CardTitle>
-              <CardDescription>
-                {t('selectInstruments')}
-              </CardDescription>
+              <CardDescription>{t('selectInstruments')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
                 rows={4}
                 value={instrumentsText}
-                onChange={e => setInstrumentsText(e.target.value)}
+                onChange={(e) => setInstrumentsText(e.target.value)}
                 placeholder={locale === 'sv' ? 'T.ex. Violin, Viola, Piano' : 'E.g. Violin, Viola, Piano'}
               />
             </CardContent>
@@ -473,22 +475,17 @@ export default function OnboardingPage() {
                 <Music className="h-5 w-5" />
                 {t('gigTypes')}
               </CardTitle>
-              <CardDescription>
-                {t('gigTypesDesc')}
-              </CardDescription>
+              <CardDescription>{t('gigTypesDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 mb-4">
-                {gigTypes.map(type => (
+                {gigTypes.map((type) => (
                   <div
                     key={type.tempId}
                     className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/50"
                   >
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: type.color }}
-                      />
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.color }} />
                       <span className="text-sm font-medium">{type.name}</span>
                       <Badge variant="secondary" className="text-[10px]">
                         {type.vat_rate}% {t('vat')}
@@ -528,18 +525,18 @@ export default function OnboardingPage() {
               <div className="flex gap-2">
                 <Input
                   value={newGigTypeName}
-                  onChange={e => setNewGigTypeName(e.target.value)}
+                  onChange={(e) => setNewGigTypeName(e.target.value)}
                   placeholder={t('newGigTypePlaceholder')}
-                  onKeyDown={e => e.key === 'Enter' && addGigType()}
+                  onKeyDown={(e) => e.key === 'Enter' && addGigType()}
                   className="flex-1"
                 />
                 <div className="relative w-20">
                   <Input
                     type="number"
                     value={newGigTypeVat}
-                    onChange={e => setNewGigTypeVat(e.target.value)}
+                    onChange={(e) => setNewGigTypeVat(e.target.value)}
                     placeholder={t('vat')}
-                    onKeyDown={e => e.key === 'Enter' && addGigType()}
+                    onKeyDown={(e) => e.key === 'Enter' && addGigType()}
                     className="pr-6"
                   />
                   <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
@@ -561,13 +558,11 @@ export default function OnboardingPage() {
                 <Users className="h-5 w-5" />
                 {t('rolesPositions')}
               </CardTitle>
-              <CardDescription>
-                {t('rolesDesc')}
-              </CardDescription>
+              <CardDescription>{t('rolesDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 mb-4">
-                {positions.map(pos => (
+                {positions.map((pos) => (
                   <div
                     key={pos.tempId}
                     className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary/50"
@@ -607,9 +602,9 @@ export default function OnboardingPage() {
               <div className="flex gap-2">
                 <Input
                   value={newPositionName}
-                  onChange={e => setNewPositionName(e.target.value)}
+                  onChange={(e) => setNewPositionName(e.target.value)}
                   placeholder={t('newRolePlaceholder')}
-                  onKeyDown={e => e.key === 'Enter' && addPosition()}
+                  onKeyDown={(e) => e.key === 'Enter' && addPosition()}
                 />
                 <Button onClick={addPosition} size="sm" variant="outline">
                   <Plus className="h-4 w-4 mr-1" />
@@ -622,17 +617,13 @@ export default function OnboardingPage() {
 
         {/* Navigation */}
         <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setStep(s => s - 1)}
-            disabled={step === 0}
-          >
+          <Button variant="outline" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
             <ChevronLeft className="h-4 w-4 mr-1" />
             {tc('back')}
           </Button>
 
           {step < STEPS.length - 1 ? (
-            <Button onClick={() => setStep(s => s + 1)}>
+            <Button onClick={() => setStep((s) => s + 1)}>
               {tc('next')}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>

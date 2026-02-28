@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowLeft, Building2, FileText, TrendingUp, Clock, Calendar, DollarSign } from 'lucide-react'
+import { ArrowLeft, Building2, FileText, TrendingUp, Clock, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { useDateLocale } from '@/lib/hooks/use-date-locale'
 import dynamic from 'next/dynamic'
@@ -57,27 +57,26 @@ export default function ClientDetailPage() {
 
   useEffect(() => {
     if (clientId) {
+      async function loadClientData() {
+        setLoading(true)
+
+        // Load client
+        const { data: clientData } = await supabase.from('clients').select('*').eq('id', clientId).single()
+
+        // Load invoices for this client
+        const { data: invoicesData } = await supabase
+          .from('invoices')
+          .select('id, invoice_number, invoice_date, due_date, paid_date, total, status')
+          .eq('client_id', clientId)
+          .order('invoice_date', { ascending: false })
+
+        setClient(clientData)
+        setInvoices(invoicesData || [])
+        setLoading(false)
+      }
       loadClientData()
     }
-  }, [clientId])
-
-  async function loadClientData() {
-    setLoading(true)
-
-    // Load client
-    const { data: clientData } = await supabase.from('clients').select('*').eq('id', clientId).single()
-
-    // Load invoices for this client
-    const { data: invoicesData } = await supabase
-      .from('invoices')
-      .select('id, invoice_number, invoice_date, due_date, paid_date, total, status')
-      .eq('client_id', clientId)
-      .order('invoice_date', { ascending: false })
-
-    setClient(clientData)
-    setInvoices(invoicesData || [])
-    setLoading(false)
-  }
+  }, [clientId, supabase])
 
   // Calculate statistics
   const totalRevenue = invoices

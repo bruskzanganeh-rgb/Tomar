@@ -1,26 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdmin } from '@/lib/admin'
 import { logActivity } from '@/lib/activity'
+import { SupabaseClient } from '@supabase/supabase-js'
 
-async function deleteUserData(supabase: any, targetUserId: string) {
+async function deleteUserData(supabase: SupabaseClient, targetUserId: string) {
   // Delete user data in correct order (foreign key constraints)
   // 1. gig_dates (references gigs)
-  const { data: userGigs } = await supabase
-    .from('gigs')
-    .select('id')
-    .eq('user_id', targetUserId)
-  const gigIds = (userGigs || []).map((g: any) => g.id)
+  const { data: userGigs } = await supabase.from('gigs').select('id').eq('user_id', targetUserId)
+  const gigIds = (userGigs || []).map((g: { id: string }) => g.id)
   if (gigIds.length > 0) {
     await supabase.from('gig_dates').delete().in('gig_id', gigIds)
     await supabase.from('gig_attachments').delete().in('gig_id', gigIds)
   }
 
   // 2. invoice_lines (references invoices)
-  const { data: userInvoices } = await supabase
-    .from('invoices')
-    .select('id')
-    .eq('user_id', targetUserId)
-  const invoiceIds = (userInvoices || []).map((i: any) => i.id)
+  const { data: userInvoices } = await supabase.from('invoices').select('id').eq('user_id', targetUserId)
+  const invoiceIds = (userInvoices || []).map((i: { id: string }) => i.id)
   if (invoiceIds.length > 0) {
     await supabase.from('invoice_lines').delete().in('invoice_id', invoiceIds)
   }
@@ -59,10 +54,7 @@ async function deleteUserData(supabase: any, targetUserId: string) {
   await supabase.auth.admin.deleteUser(targetUserId)
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: targetUserId } = await params
   const auth = await verifyAdmin()
   if (auth instanceof NextResponse) return auth
@@ -100,10 +92,7 @@ export async function PATCH(
   return NextResponse.json({ success: true })
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: targetUserId } = await params
   const auth = await verifyAdmin()
   if (auth instanceof NextResponse) return auth
@@ -131,7 +120,7 @@ export async function DELETE(
         .eq('company_id', membership.company_id)
 
       // Delete all members' data
-      for (const m of (allMembers || [])) {
+      for (const m of allMembers || []) {
         if (m.user_id === userId) continue // Don't delete admin
         await logActivity({
           userId,
