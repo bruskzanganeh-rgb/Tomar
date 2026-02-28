@@ -109,7 +109,7 @@ export function RevenueChart({ year: yearProp, clientId, positionId }: RevenueCh
     if (shouldFilter && currentUserId) invQuery = invQuery.eq('user_id', currentUserId)
     const { data: invoices } = await invQuery
 
-    let gdQuery = supabase.from('gig_dates').select('date, gig:gigs(user_id)').order('date', { ascending: true })
+    const gdQuery = supabase.from('gig_dates').select('date, gig:gigs(user_id)').order('date', { ascending: true })
     const { data: rawGigDates } = await gdQuery
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gigDates =
