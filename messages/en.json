@@ -45,6 +45,7 @@
     "day": "day",
     "weeks": "weeks",
     "today": "Today",
+    "optional": "optional",
     "items": "pcs",
     "noNotes": "No notes",
     "writeNotesHere": "Write notes here...",

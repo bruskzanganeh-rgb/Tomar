@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Loader2,
   Upload,
@@ -111,6 +112,21 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
     notes: '',
     confidence: 0,
   })
+
+  // Object URL for PDF preview
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (file && file.type === 'application/pdf') {
+      const url = URL.createObjectURL(file)
+      setPdfUrl(url)
+      return () => {
+        URL.revokeObjectURL(url)
+        setPdfUrl(null)
+      }
+    } else {
+      setPdfUrl(null)
+    }
+  }, [file])
 
   // Ladda uppdrag om dialogen öppnas utan gigId
   useEffect(() => {
@@ -484,6 +500,12 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
                   <div className="relative w-full h-40 md:h-56 rounded-lg border shadow-sm overflow-hidden">
                     <NextImage src={preview} alt="" fill className="object-cover" unoptimized />
                   </div>
+                ) : pdfUrl ? (
+                  <iframe
+                    src={pdfUrl}
+                    className="w-full h-40 md:h-56 rounded-lg border shadow-sm"
+                    title="PDF preview"
+                  />
                 ) : (
                   <div className="w-full h-40 md:h-56 rounded-lg border flex flex-col items-center justify-center bg-gray-50">
                     <FileText className="h-12 w-12 text-red-500" />
@@ -537,7 +559,7 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
                     value={formData.currency}
                     onValueChange={(value) => setFormData({ ...formData, currency: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -557,7 +579,7 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
                   value={formData.category}
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -572,8 +594,9 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
 
               <div className="space-y-1">
                 <Label htmlFor="notes">{t('notes')}</Label>
-                <Input
+                <Textarea
                   id="notes"
+                  rows={2}
                   value={formData.notes || ''}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder={t('optionalDescription')}
@@ -584,14 +607,15 @@ export function UploadReceiptDialog({ open, onOpenChange, onSuccess, gigId, gigT
             {/* Höger kolumn: Uppdragsväljare */}
             {!gigId && (
               <div className="flex-1 min-w-0 space-y-2">
-                <Label>{t('linkToGig')}</Label>
+                <Label>
+                  {t('linkToGig')} <span className="text-muted-foreground font-normal">({tc('optional')})</span>
+                </Label>
                 <div className="md:hidden">
                   <GigCombobox gigs={gigs} value={selectedGigId} onValueChange={setSelectedGigId} />
                 </div>
                 <div className="hidden md:block">
                   <GigListBox gigs={gigs} value={selectedGigId} onValueChange={setSelectedGigId} />
                 </div>
-                <p className="text-xs text-muted-foreground">{t('optionalLinkReceiptToGig')}</p>
               </div>
             )}
           </div>
