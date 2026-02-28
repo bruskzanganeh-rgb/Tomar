@@ -1591,7 +1591,7 @@ export type Database = {
         Relationships: []
       }
     }
-    Views: {}
+    Views: Record<string, never>
     Functions: {
       get_user_company_id: {
         Args: Record<string, never>
@@ -1632,7 +1632,7 @@ export type Database = {
       subscription_plan: 'free' | 'pro' | 'team'
       subscription_status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete'
     }
-    CompositeTypes: {}
+    CompositeTypes: Record<string, never>
   }
 }
 
