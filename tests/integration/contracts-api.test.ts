@@ -49,10 +49,10 @@ describe('Contract review → sign flow', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'E2E Test Signer',
-        signer_email: 'e2e-signer@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         signer_title: 'CEO',
         reviewer_name: 'E2E Test Reviewer',
-        reviewer_email: 'e2e-reviewer@amida-test.com',
+        reviewer_email: 'dlshdzangana@gmail.com',
         status: 'sent_to_reviewer',
         reviewer_token: reviewerToken,
         reviewer_token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -90,7 +90,7 @@ describe('Contract review → sign flow', () => {
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.success).toBe(true)
-    expect(data.forwarded_to).toBe('e2e-signer@amida-test.com')
+    expect(data.forwarded_to).toBe('dlshdzangana@gmail.com')
 
     // Verify signing token was generated
     const supabase = getAdminClient()
@@ -174,7 +174,7 @@ describe('Contract sign — direct flow (no reviewer)', () => {
         contract_start_date: '2026-04-01',
         contract_duration_months: 24,
         signer_name: 'Direct Signer',
-        signer_email: 'e2e-direct@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         status: 'sent',
         signing_token: signingToken,
         token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -266,9 +266,9 @@ describe('Contract token security', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'Expired Reviewer Signer',
-        signer_email: 'e2e-expired-rev@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         reviewer_name: 'Expired Reviewer',
-        reviewer_email: 'e2e-expired-reviewer@amida-test.com',
+        reviewer_email: 'dlshdzangana@gmail.com',
         status: 'sent_to_reviewer',
         reviewer_token: expiredReviewerToken,
         // Expired 1 day ago
@@ -304,7 +304,7 @@ describe('Contract token security', () => {
         contract_start_date: '2026-04-01',
         contract_duration_months: 12,
         signer_name: 'Expired Token Signer',
-        signer_email: 'e2e-expired-sign@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         status: 'sent',
         signing_token: expiredSigningToken,
         // Expired 1 day ago
@@ -342,9 +342,9 @@ describe('Contract token security', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'Used Token Signer',
-        signer_email: 'e2e-used-token@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         reviewer_name: 'Used Token Reviewer',
-        reviewer_email: 'e2e-used-reviewer@amida-test.com',
+        reviewer_email: 'dlshdzangana@gmail.com',
         status: 'sent',
         reviewer_token: null, // Already nullified
         signing_token: randomBytes(32).toString('hex'),
@@ -383,7 +383,7 @@ describe('Contract token security', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'Already Signed Signer',
-        signer_email: 'e2e-already-signed@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         status: 'signed',
         signed_at: new Date().toISOString(),
         signing_token: null, // Nullified after signing
@@ -431,7 +431,7 @@ describe('Contract token security', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'Bad Payload Signer',
-        signer_email: 'e2e-bad-payload@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         status: 'sent',
         signing_token: validToken,
         token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -471,7 +471,7 @@ describe('Contract token security', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'Short Sig Signer',
-        signer_email: 'e2e-short-sig@amida-test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         status: 'sent',
         signing_token: validToken,
         token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),

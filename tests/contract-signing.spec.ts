@@ -47,7 +47,7 @@ test.describe('Contract signing page', () => {
         contract_start_date: '2026-03-01',
         contract_duration_months: 12,
         signer_name: 'E2E Signer',
-        signer_email: 'e2e-signer@test.com',
+        signer_email: 'dlshdzangana@gmail.com',
         signer_title: 'CTO',
         status: 'sent',
         signing_token: signingToken,
