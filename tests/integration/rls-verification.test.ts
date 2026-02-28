@@ -85,6 +85,7 @@ const STRICT_PROTECTED_TABLES = [
   'gigs',
   'gig_dates',
   'gig_types',
+  'gig_attachments',
   'clients',
   'invoices',
   'invoice_lines',
@@ -121,17 +122,12 @@ const STRICT_PROTECTED_TABLES = [
  * while INSERT/UPDATE/DELETE are still blocked.
  *
  * - exchange_rates: reference data, public SELECT by design
- * - gig_attachments: has anon policy for public response links
- *   (SECURITY NOTE: gig_attachments has a broad anon policy that
- *    grants full CRUD to anon role -- this should be reviewed and
- *    tightened to SELECT-only for shared links)
  * - platform_config: may have public read for client-side feature flags
  * - instruments: reference data for instrument selection
  * - instrument_categories: reference data for instrument categories
+ *
+ * NOTE: gig_attachments anon policy was removed in migration 052.
  */
-// Tables with intentional public read access (documented in tests below)
-// 'exchange_rates' — non-sensitive reference data
-// 'gig_attachments' — shared response links (overly permissive, see SECURITY NOTE)
 
 /**
  * Tables that an authenticated test user (e2e-owner) should be able
@@ -266,22 +262,14 @@ describe('RLS public-read tables -- verify intentional public access', () => {
     expect(error).not.toBeNull()
   })
 
-  test('gig_attachments: has anon access policy (for shared response links)', async () => {
-    // SECURITY NOTE: gig_attachments currently has a broad anon policy
-    // (gig_attachments_all) that grants full CRUD access to the anon role.
-    // This was likely created for public response link access but is
-    // overly permissive. It should be reviewed and tightened to:
-    // - SELECT-only for anon role
-    // - Scoped to specific gig_id via response token
-    //
-    // For now, we document this known state. The test verifies the current
-    // behavior so that any change to the policy is caught.
-    const { error } = await unauthClient.from('gig_attachments').select('*').limit(1)
+  test('gig_attachments: anon access is blocked (no anon policy)', async () => {
+    // The broad anon policy (gig_attachments_all) was removed in migration 052.
+    // Only authenticated company-scoped access is allowed.
+    const { data, error } = await unauthClient.from('gig_attachments').select('*').limit(1)
 
-    // Currently returns data due to the broad anon policy
-    // This test documents the current state -- if the policy is tightened,
-    // this test should be updated to expect blocked access
-    expect(error).toBeNull()
+    const noDataReturned = data === null || (Array.isArray(data) && data.length === 0)
+    const hasError = error !== null
+    expect(noDataReturned || hasError).toBe(true)
   })
 })
 

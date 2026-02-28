@@ -135,11 +135,26 @@ export async function POST(request: NextRequest) {
     ]
 
     if (attachmentUrls && attachmentUrls.length > 0) {
+      const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+        ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+        : null
+      const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024 // 10 MB
+
       for (let i = 0; i < attachmentUrls.length; i++) {
         try {
+          const url = new URL(attachmentUrls[i])
+          if (!supabaseHost || url.host !== supabaseHost) {
+            console.warn(`Skipping attachment ${i + 1}: URL host ${url.host} not in allowlist`)
+            continue
+          }
+
           const attachmentResponse = await fetch(attachmentUrls[i])
           if (attachmentResponse.ok) {
             const attachmentBuffer = Buffer.from(await attachmentResponse.arrayBuffer())
+            if (attachmentBuffer.byteLength > MAX_ATTACHMENT_BYTES) {
+              console.warn(`Skipping attachment ${i + 1}: exceeds ${MAX_ATTACHMENT_BYTES} bytes`)
+              continue
+            }
             const contentType = attachmentResponse.headers.get('content-type') || 'application/octet-stream'
             const extension = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg'
             fileAttachments.push({
