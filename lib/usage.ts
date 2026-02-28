@@ -1,6 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const DEFAULT_TIER_LIMITS = {
   free: { invoices: 5, receiptScans: 3, storageMb: 10 },
@@ -10,7 +8,7 @@ const DEFAULT_TIER_LIMITS = {
 
 type Plan = 'free' | 'pro' | 'team'
 
-async function getTierLimits(plan: Plan) {
+async function getTierLimits(supabaseAdmin: ReturnType<typeof createAdminClient>, plan: Plan) {
   const defaults = DEFAULT_TIER_LIMITS[plan]
   const { data } = await supabaseAdmin
     .from('platform_config')
@@ -29,6 +27,7 @@ async function getTierLimits(plan: Plan) {
 }
 
 export async function incrementUsage(userId: string, type: 'invoice' | 'receipt_scan') {
+  const supabaseAdmin = createAdminClient()
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
@@ -63,6 +62,7 @@ export async function checkUsageLimit(
   userId: string,
   type: 'invoice' | 'receipt_scan',
 ): Promise<{ allowed: boolean; current: number; limit: number }> {
+  const supabaseAdmin = createAdminClient()
   const { data: subscription } = await supabaseAdmin
     .from('subscriptions')
     .select('plan, status')
@@ -74,7 +74,7 @@ export async function checkUsageLimit(
       ? (subscription.plan as Plan)
       : 'free'
 
-  const tierLimits = await getTierLimits(plan)
+  const tierLimits = await getTierLimits(supabaseAdmin, plan)
   const rawLimit = type === 'invoice' ? tierLimits.invoices : tierLimits.receiptScans
   const limit = rawLimit === 0 ? Infinity : rawLimit
 
@@ -102,12 +102,13 @@ export async function checkStorageQuota(userId: string): Promise<{
   limitBytes: number
   plan: string
 }> {
+  const supabaseAdmin = createAdminClient()
   const { data: sub } = await supabaseAdmin.from('subscriptions').select('plan, status').eq('user_id', userId).single()
 
   const plan: Plan =
     sub?.status === 'active' && (sub?.plan === 'pro' || sub?.plan === 'team') ? (sub.plan as Plan) : 'free'
 
-  const tierLimits = await getTierLimits(plan)
+  const tierLimits = await getTierLimits(supabaseAdmin, plan)
   const limitBytes = tierLimits.storageMb === 0 ? Infinity : tierLimits.storageMb * 1024 * 1024
 
   const { data: attRows } = await supabaseAdmin.from('gig_attachments').select('file_size').eq('user_id', userId)
