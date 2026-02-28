@@ -85,7 +85,7 @@ export default function SettingsPage() {
   const [companyId, setCompanyId] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
-  const { isPro } = useSubscription()
+  const { isPro, isTeam } = useSubscription()
   const searchParams = useSearchParams()
   const countryConfig = getCountryConfig(settings?.country_code || 'SE')
 
@@ -100,19 +100,33 @@ export default function SettingsPage() {
     })
   }, [])
 
-  // Generate calendar URL with user parameter and auth token
+  // Generate calendar URLs with user parameter and auth token
   const calendarToken = settings?.calendar_token || ''
-  const calendarUrl =
+  const calendarBaseUrl =
     typeof window !== 'undefined' && userId && calendarToken
       ? `${window.location.origin}/api/calendar/feed?user=${userId}&token=${calendarToken}`
       : ''
-  const webcalUrl = calendarUrl.replace('http://', 'webcal://').replace('https://', 'webcal://')
+  const calendarUrl = calendarBaseUrl
+  const sharedCalendarUrl = calendarBaseUrl ? `${calendarBaseUrl}&scope=shared` : ''
+
+  const [sharedCalendarCopied, setSharedCalendarCopied] = useState(false)
 
   async function copyCalendarUrl() {
     try {
       await navigator.clipboard.writeText(calendarUrl)
       setCalendarCopied(true)
       setTimeout(() => setCalendarCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      toast.error(tToast('copyError'))
+    }
+  }
+
+  async function copySharedCalendarUrl() {
+    try {
+      await navigator.clipboard.writeText(sharedCalendarUrl)
+      setSharedCalendarCopied(true)
+      setTimeout(() => setSharedCalendarCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
       toast.error(tToast('copyError'))
@@ -902,14 +916,34 @@ export default function SettingsPage() {
                   <p className="text-xs mt-1">{t('localDevWarning')}</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Label>{t('subscriptionUrl')}</Label>
-                  <div className="flex gap-2">
-                    <Input value={calendarUrl} readOnly className="font-mono text-sm" />
-                    <Button variant="outline" onClick={copyCalendarUrl} className="shrink-0">
-                      {calendarCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                    </Button>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>{isTeam ? t('personalCalendar') : t('subscriptionUrl')}</Label>
+                    {isTeam && <p className="text-xs text-muted-foreground">{t('personalCalendarDesc')}</p>}
+                    <div className="flex gap-2">
+                      <Input value={calendarUrl} readOnly className="font-mono text-sm" />
+                      <Button variant="outline" onClick={copyCalendarUrl} className="shrink-0">
+                        {calendarCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </div>
+
+                  {isTeam && (
+                    <div className="space-y-2">
+                      <Label>{t('sharedCalendar')}</Label>
+                      <p className="text-xs text-muted-foreground">{t('sharedCalendarDesc')}</p>
+                      <div className="flex gap-2">
+                        <Input value={sharedCalendarUrl} readOnly className="font-mono text-sm" />
+                        <Button variant="outline" onClick={copySharedCalendarUrl} className="shrink-0">
+                          {sharedCalendarCopied ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
