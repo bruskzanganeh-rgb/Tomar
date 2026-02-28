@@ -574,15 +574,9 @@ export default function ExpensesTab() {
                 previewIsPdf ? (
                   <iframe src={previewUrl} className="w-full h-[80vh] rounded-lg" title={t('receiptPreview')} />
                 ) : (
-                  <NextImage
-                    src={previewUrl}
-                    alt=""
-                    width={0}
-                    height={0}
-                    sizes="100vw"
-                    className="w-full max-h-[80vh] object-contain h-auto"
-                    unoptimized
-                  />
+                  <div className="relative w-full h-[80vh]">
+                    <NextImage src={previewUrl} alt="" fill className="object-contain" unoptimized />
+                  </div>
                 )
               ) : (
                 <div className="flex items-center justify-center h-96 text-gray-500">{t('couldNotLoadImage')}</div>
