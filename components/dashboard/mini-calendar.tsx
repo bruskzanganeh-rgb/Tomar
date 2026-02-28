@@ -123,8 +123,8 @@ export function MiniCalendar() {
       <CardContent className="px-4 pb-4 pt-1 flex-1 min-h-0">
         <div className="grid grid-cols-7 gap-px">
           {/* Day headers */}
-          {dayNames.map((name) => (
-            <div key={name} className="text-center text-[10px] font-medium text-muted-foreground pb-1">
+          {dayNames.map((name, i) => (
+            <div key={i} className="text-center text-[10px] font-medium text-muted-foreground pb-1">
               {name}
             </div>
           ))}
