@@ -217,8 +217,8 @@ export function AnalyticsContent() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="flex gap-4">
-        <div className="w-48">
+      <div className="flex flex-wrap gap-2">
+        <div>
           <Select value={selectedYear} onValueChange={setSelectedYear}>
             <SelectTrigger>
               <SelectValue placeholder={t('selectYear')} />
@@ -233,7 +233,7 @@ export function AnalyticsContent() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-64">
+        <div>
           <Select value={selectedClient} onValueChange={setSelectedClient}>
             <SelectTrigger>
               <SelectValue placeholder={t('selectClient')} />
@@ -249,7 +249,7 @@ export function AnalyticsContent() {
           </Select>
         </div>
         {positions.length > 0 && (
-          <div className="w-56">
+          <div>
             <Select value={selectedPosition} onValueChange={setSelectedPosition}>
               <SelectTrigger>
                 <SelectValue placeholder={t('selectPosition')} />
