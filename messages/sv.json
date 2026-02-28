@@ -624,6 +624,8 @@
     "inviteError": "Kunde inte skapa inbjudan",
     "removeMemberError": "Kunde inte ta bort medlem",
     "memberRemoved": "Medlem borttagen",
+    "removeMemberConfirmTitle": "Ta bort medlem",
+    "removeMemberConfirmDesc": "Medlemmen förlorar åtkomst till företagets data. Uppdrag, fakturor och utgifter som skapats av medlemmen finns kvar.",
     "upgradeRequired": "Team-plan krävs",
     "upgradeDescription": "Uppgradera till Team-planen för att bjuda in fler användare till ditt företag.",
     "gigVisibility": "Synlighet för uppdrag",

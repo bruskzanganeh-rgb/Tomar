@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Users, Copy, Check, Loader2, UserPlus, Crown, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useTranslations } from 'next-intl'
 import { useCompany } from '@/lib/hooks/use-company'
 import { useSubscription } from '@/lib/hooks/use-subscription'
@@ -23,6 +24,7 @@ export function TeamSettings() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [creating, setCreating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [removeMemberId, setRemoveMemberId] = useState<string | null>(null)
   const [showOnlyMyData, setShowOnlyMyData] = useState(false)
   const supabase = createClient()
 
@@ -112,7 +114,11 @@ export function TeamSettings() {
   }
 
   async function handleRemoveMember(memberId: string) {
-    const { error } = await supabase.from('company_members').delete().eq('id', memberId)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await supabase
+      .from('company_members')
+      .update({ removed_at: new Date().toISOString() } as any)
+      .eq('id', memberId)
 
     if (error) {
       toast.error(t('removeMemberError'))
@@ -166,7 +172,7 @@ export function TeamSettings() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleRemoveMember(member.id)}
+                  onClick={() => setRemoveMemberId(member.id)}
                   className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -247,6 +253,21 @@ export function TeamSettings() {
           </CardContent>
         </Card>
       )}
+      <ConfirmDialog
+        open={!!removeMemberId}
+        onOpenChange={(open) => {
+          if (!open) setRemoveMemberId(null)
+        }}
+        title={t('removeMemberConfirmTitle')}
+        description={t('removeMemberConfirmDesc')}
+        confirmLabel={tc('delete')}
+        cancelLabel={tc('cancel')}
+        variant="destructive"
+        onConfirm={() => {
+          if (removeMemberId) handleRemoveMember(removeMemberId)
+          setRemoveMemberId(null)
+        }}
+      />
     </div>
   )
 }

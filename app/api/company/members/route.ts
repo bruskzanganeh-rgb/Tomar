@@ -24,19 +24,21 @@ export async function GET() {
     return NextResponse.json({ error: 'No company found' }, { status: 404 })
   }
 
-  // Get all members of this company
-  const { data: members } = await supabase
+  // Get all members of this company (including soft-deleted for identity display)
+  const { data: rawMembers } = await supabase
     .from('company_members')
-    .select('id, user_id, role, joined_at')
+    .select('id, user_id, role, joined_at, removed_at')
     .eq('company_id', membership.company_id)
     .order('joined_at')
 
-  if (!members || members.length === 0) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const members = (rawMembers || []) as any[]
+  if (members.length === 0) {
     return NextResponse.json({ members: [] })
   }
 
   // Fetch auth emails using admin client
-  const userIds = members.map((m) => m.user_id)
+  const userIds = members.map((m: { user_id: string }) => m.user_id)
   const emailMap = new Map<string, string>()
 
   try {

@@ -624,6 +624,8 @@
     "inviteError": "Could not create invite",
     "removeMemberError": "Could not remove member",
     "memberRemoved": "Member removed",
+    "removeMemberConfirmTitle": "Remove member",
+    "removeMemberConfirmDesc": "The member will lose access to company data. Gigs, invoices and expenses created by the member will remain.",
     "upgradeRequired": "Team plan required",
     "upgradeDescription": "Upgrade to the Team plan to invite more users to your company.",
     "gigVisibility": "Gig visibility",

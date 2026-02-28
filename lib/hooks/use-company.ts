@@ -41,65 +41,76 @@ export type CompanyMember = {
   role: 'owner' | 'member'
   joined_at: string
   email?: string | null
+  removed_at?: string | null
 }
 
 export function useCompany() {
-  const { data, error, isLoading, mutate } = useSWR('company', async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
+  const { data, error, isLoading, mutate } = useSWR(
+    'company',
+    async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
 
-    // Get membership
-    const { data: membership, error: memError } = await supabase
-      .from('company_members')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (memError || !membership) return null
-
-    // Get company
-    const { data: company, error: compError } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('id', membership.company_id)
-      .single()
-
-    if (compError || !company) return null
-
-    // Get all members with emails via server endpoint
-    let members: CompanyMember[] = []
-    try {
-      const res = await fetch('/api/company/members')
-      if (res.ok) {
-        const json = await res.json()
-        members = json.members || []
-      }
-    } catch {
-      // Fallback to basic query without emails
-      const { data: basicMembers } = await supabase
+      // Get membership
+      const { data: membership, error: memError } = await supabase
         .from('company_members')
         .select('*')
-        .eq('company_id', membership.company_id)
-        .order('joined_at')
-      members = (basicMembers || []) as CompanyMember[]
-    }
+        .eq('user_id', user.id)
+        .single()
 
-    return {
-      company: company as Company,
-      membership: membership as CompanyMember,
-      members,
-    }
-  }, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
-  })
+      if (memError || !membership) return null
+
+      // Get company
+      const { data: company, error: compError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', membership.company_id)
+        .single()
+
+      if (compError || !company) return null
+
+      // Get all members with emails via server endpoint
+      let members: CompanyMember[] = []
+      try {
+        const res = await fetch('/api/company/members')
+        if (res.ok) {
+          const json = await res.json()
+          members = json.members || []
+        }
+      } catch {
+        // Fallback to basic query without emails
+        const { data: basicMembers } = await supabase
+          .from('company_members')
+          .select('*')
+          .eq('company_id', membership.company_id)
+          .order('joined_at')
+        members = (basicMembers || []) as CompanyMember[]
+      }
+
+      return {
+        company: company as Company,
+        membership: membership as CompanyMember,
+        members,
+      }
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30_000,
+    },
+  )
+
+  const allMembers = data?.members ?? []
+  const activeMembers = allMembers.filter((m) => !m.removed_at)
 
   return {
     company: data?.company ?? null,
     companyId: data?.company?.id ?? null,
     role: data?.membership?.role ?? null,
     isOwner: data?.membership?.role === 'owner',
-    members: data?.members ?? [],
+    members: activeMembers,
+    allMembers,
     loading: isLoading,
     error,
     mutate,

@@ -63,7 +63,7 @@ export default function ExpensesTab() {
   const dateLocale = useDateLocale()
   const formatLocale = useFormatLocale()
   const tTeam = useTranslations('team')
-  const { company, members } = useCompany()
+  const { company, members, allMembers } = useCompany()
   const { shouldFilter, currentUserId: filterUserId, loaded: filterLoaded } = useGigFilter()
   const isSharedMode = company?.gig_visibility === 'shared' && members.length > 1
   const [currentUserId, setCurrentUserId] = useState<string>('')
@@ -92,7 +92,7 @@ export default function ExpensesTab() {
 
   function getMemberLabel(userId: string): string {
     if (userId === currentUserId) return tTeam('me')
-    const member = members.find((m) => m.user_id === userId)
+    const member = allMembers.find((m) => m.user_id === userId)
     if (member?.email) return member.email.split('@')[0]
     return userId.slice(0, 6)
   }
