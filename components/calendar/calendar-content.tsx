@@ -375,7 +375,7 @@ export default function CalendarPage() {
                     ))}
                   </div>
                 </div>
-                {isSharedMode && (
+                {isSharedMode && !gigFilter.shouldFilter && (
                   <div className="flex items-center gap-1">
                     <Button
                       variant={memberFilter === 'all' ? 'default' : 'outline'}

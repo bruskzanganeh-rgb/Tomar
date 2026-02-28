@@ -827,7 +827,7 @@ export default function GigsPage() {
                       {t('upcoming')} ({sortedUpcoming.length})
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                      {isSharedMode && (
+                      {isSharedMode && !gigFilter.shouldFilter && (
                         <>
                           <Button
                             variant={memberFilter === 'all' ? 'default' : 'outline'}
