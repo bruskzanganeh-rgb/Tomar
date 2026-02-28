@@ -4,7 +4,19 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Shield, Award, TrendingUp, Settings, Music, Building2, ScrollText, Activity, CreditCard, Ticket, PenLine } from 'lucide-react'
+import {
+  Shield,
+  Award,
+  TrendingUp,
+  Settings,
+  Music,
+  Building2,
+  ScrollText,
+  Activity,
+  CreditCard,
+  Ticket,
+  PenLine,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 
@@ -19,7 +31,17 @@ import { StripeTab } from '@/components/admin/stripe-tab'
 import { InvitationsTab } from '@/components/admin/invitations-tab'
 import { ContractsTab } from '@/components/admin/contracts-tab'
 
-type AdminTab = 'organizations' | 'sponsors' | 'categories' | 'stats' | 'stripe' | 'audit' | 'sessions' | 'invitations' | 'contracts' | 'config'
+type AdminTab =
+  | 'organizations'
+  | 'sponsors'
+  | 'categories'
+  | 'stats'
+  | 'stripe'
+  | 'audit'
+  | 'sessions'
+  | 'invitations'
+  | 'contracts'
+  | 'config'
 
 type User = {
   user_id: string
@@ -29,6 +51,7 @@ type User = {
   stripe_price_id: string | null
   current_period_end: string | null
   cancel_at_period_end: boolean
+  admin_override: boolean
   created_at: string
   company_name: string | null
   org_number: string | null
@@ -45,7 +68,14 @@ type User = {
   monthly_scans: number
   last_active?: string | null
   recent_activity_count?: number
-  members?: { user_id: string; role: string; email: string | null; gig_count: number; invoice_count: number; expense_count: number }[]
+  members?: {
+    user_id: string
+    role: string
+    email: string | null
+    gig_count: number
+    invoice_count: number
+    expense_count: number
+  }[]
 }
 
 type Sponsor = {
@@ -99,18 +129,16 @@ export default function AdminPage() {
   const [sponsors, setSponsors] = useState<Sponsor[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [categories, setCategories] = useState<InstrumentCategory[]>([])
-  const [stripeData, setStripeData] = useState<any>(null)
+  const [stripeData, setStripeData] = useState<Record<string, unknown> | null>(null)
 
   // Config
   const [configValues, setConfigValues] = useState<Record<string, string>>({})
   const [savingConfig, setSavingConfig] = useState(false)
 
-  useEffect(() => {
-    checkAdmin()
-  }, [])
-
   async function checkAdmin() {
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
     if (!user) {
       router.push('/dashboard')
       return
@@ -133,10 +161,13 @@ export default function AdminPage() {
       .from('instrument_categories')
       .select('id, name, slug, sort_order, instruments(count)')
       .order('sort_order')
-    if (cats) setCategories(cats.map((c: any) => ({
-      ...c,
-      instrument_count: c.instruments?.[0]?.count || 0,
-    })))
+    if (cats)
+      setCategories(
+        cats.map((c: Record<string, unknown>) => ({
+          ...c,
+          instrument_count: c.instruments?.[0]?.count || 0,
+        })),
+      )
 
     // Users
     const usersRes = await fetch('/api/admin/users')
@@ -151,10 +182,12 @@ export default function AdminPage() {
       .select('*, category:instrument_categories(name)')
       .order('priority', { ascending: false })
     if (sponsorData) {
-      setSponsors(sponsorData.map((s: any) => ({
-        ...s,
-        category_name: s.category?.name,
-      })))
+      setSponsors(
+        sponsorData.map((s: Record<string, unknown>) => ({
+          ...s,
+          category_name: s.category?.name,
+        })),
+      )
     }
 
     // Stats
@@ -170,7 +203,9 @@ export default function AdminPage() {
       const { config } = await configRes.json()
       if (config) {
         const map: Record<string, string> = {}
-        config.forEach((c: ConfigEntry) => { map[c.key] = c.value })
+        config.forEach((c: ConfigEntry) => {
+          map[c.key] = c.value
+        })
         setConfigValues(map)
       }
     }
@@ -182,6 +217,11 @@ export default function AdminPage() {
       setStripeData(stripeJson)
     }
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    checkAdmin()
+  }, [])
 
   async function handleSaveConfig() {
     setSavingConfig(true)
@@ -232,14 +272,12 @@ export default function AdminPage() {
 
       {/* Tab buttons */}
       <div className="flex gap-2 border-b pb-2 overflow-x-auto">
-        {tabs.map(tabItem => (
+        {tabs.map((tabItem) => (
           <button
             key={tabItem.key}
             onClick={() => setTab(tabItem.key)}
             className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
-              tab === tabItem.key
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-secondary'
+              tab === tabItem.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary'
             }`}
           >
             <tabItem.icon className="h-4 w-4" />
@@ -249,13 +287,7 @@ export default function AdminPage() {
       </div>
 
       {/* Tab content */}
-      {tab === 'organizations' && (
-        <OrganizationsTab
-          users={users}
-          setUsers={setUsers}
-          onReload={() => loadData()}
-        />
-      )}
+      {tab === 'organizations' && <OrganizationsTab users={users} setUsers={setUsers} onReload={() => loadData()} />}
       {tab === 'sponsors' && (
         <SponsorsTab
           sponsors={sponsors}
@@ -265,30 +297,14 @@ export default function AdminPage() {
         />
       )}
       {tab === 'categories' && (
-        <CategoriesTab
-          categories={categories}
-          setCategories={setCategories}
-          onReload={() => loadData()}
-        />
+        <CategoriesTab categories={categories} setCategories={setCategories} onReload={() => loadData()} />
       )}
-      {tab === 'stats' && (
-        <StatsTab stats={stats} />
-      )}
-      {tab === 'stripe' && (
-        <StripeTab data={stripeData} />
-      )}
-      {tab === 'audit' && (
-        <AuditTab users={users} />
-      )}
-      {tab === 'sessions' && (
-        <SessionsTab users={users} />
-      )}
-      {tab === 'invitations' && (
-        <InvitationsTab />
-      )}
-      {tab === 'contracts' && (
-        <ContractsTab />
-      )}
+      {tab === 'stats' && <StatsTab stats={stats} />}
+      {tab === 'stripe' && <StripeTab data={stripeData} />}
+      {tab === 'audit' && <AuditTab users={users} />}
+      {tab === 'sessions' && <SessionsTab users={users} />}
+      {tab === 'invitations' && <InvitationsTab />}
+      {tab === 'contracts' && <ContractsTab />}
       {tab === 'config' && (
         <ConfigTab
           configValues={configValues}
