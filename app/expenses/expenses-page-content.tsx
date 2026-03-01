@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { Suspense } from 'react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
@@ -46,8 +46,8 @@ export function ExpensesPageContent() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <Tabs value={currentTab} onValueChange={handleTabChange}>
+      <div className="lg:h-[calc(100vh-7rem)] lg:flex lg:flex-col space-y-6">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
           <div className="flex items-center justify-between gap-2">
             <TabsList>
               <TabsTrigger value="expenses" className="gap-2">
@@ -73,7 +73,7 @@ export function ExpensesPageContent() {
             )}
           </div>
 
-          <TabsContent value="expenses" className="mt-4">
+          <TabsContent value="expenses" className="mt-4 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
             <ErrorBoundary>
               <Suspense fallback={<TabSkeleton />}>
                 <ExpensesTab />

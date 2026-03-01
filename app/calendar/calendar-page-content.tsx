@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { Suspense } from 'react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
@@ -41,36 +41,36 @@ export function CalendarPageContent() {
 
   return (
     <PageTransition>
-    <div className="space-y-6">
-      <Tabs value={currentTab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="calendar" className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            Kalender
-          </TabsTrigger>
-          <TabsTrigger value="availability" className="gap-2">
-            <CalendarCheck className="h-4 w-4" />
-            Tillgänglighet
-          </TabsTrigger>
-        </TabsList>
+      <div className="lg:h-[calc(100vh-7rem)] lg:flex lg:flex-col space-y-6">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+          <TabsList>
+            <TabsTrigger value="calendar" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Kalender
+            </TabsTrigger>
+            <TabsTrigger value="availability" className="gap-2">
+              <CalendarCheck className="h-4 w-4" />
+              Tillgänglighet
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="calendar" className="mt-4">
-          <ErrorBoundary>
-            <Suspense fallback={<TabSkeleton />}>
-              <CalendarTab />
-            </Suspense>
-          </ErrorBoundary>
-        </TabsContent>
+          <TabsContent value="calendar" className="mt-4 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+            <ErrorBoundary>
+              <Suspense fallback={<TabSkeleton />}>
+                <CalendarTab />
+              </Suspense>
+            </ErrorBoundary>
+          </TabsContent>
 
-        <TabsContent value="availability" className="mt-4">
-          <ErrorBoundary>
-            <Suspense fallback={<TabSkeleton />}>
-              <AvailabilityTab />
-            </Suspense>
-          </ErrorBoundary>
-        </TabsContent>
-      </Tabs>
-    </div>
+          <TabsContent value="availability" className="mt-4 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+            <ErrorBoundary>
+              <Suspense fallback={<TabSkeleton />}>
+                <AvailabilityTab />
+              </Suspense>
+            </ErrorBoundary>
+          </TabsContent>
+        </Tabs>
+      </div>
     </PageTransition>
   )
 }

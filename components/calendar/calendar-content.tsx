@@ -350,14 +350,17 @@ export default function CalendarPage() {
   return (
     <PageTransition>
       <div
-        className={cn('lg:flex', selectedGig && 'lg:h-[calc(100vh-9.5rem)] overflow-hidden')}
+        className={cn('lg:flex lg:h-[calc(100vh-9.5rem)]', selectedGig && 'overflow-hidden')}
         style={{ gap: '16px' }}
       >
         {/* Main content */}
         <div
-          className={cn('flex-1 min-w-0 space-y-2 transition-all duration-300', selectedGig && 'lg:overflow-y-auto')}
+          className={cn(
+            'flex-1 min-w-0 space-y-2 transition-all duration-300 lg:flex lg:flex-col',
+            selectedGig && 'lg:overflow-y-auto',
+          )}
         >
-          <Card>
+          <Card className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
             <CardHeader className="py-3">
               <div className="flex flex-wrap items-center justify-between gap-y-2">
                 <div className="flex items-center gap-4 min-w-0">
@@ -429,7 +432,7 @@ export default function CalendarPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
               {loading ? (
                 <div className="space-y-3 py-2">
                   <div className="grid grid-cols-7 gap-1">
@@ -497,7 +500,10 @@ export default function CalendarPage() {
                 </div>
               ) : (
                 /* Month View */
-                <div className="grid grid-cols-7 gap-1">
+                <div
+                  className="grid grid-cols-7 gap-1 lg:flex-1 lg:min-h-0"
+                  style={{ gridTemplateRows: `auto repeat(${Math.ceil(calendarDays.length / 7)}, 1fr)` }}
+                >
                   {/* Day headers */}
                   {dayNames.map((day) => (
                     <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
@@ -508,7 +514,7 @@ export default function CalendarPage() {
                   {/* Calendar days */}
                   {calendarDays.map((day, index) => {
                     if (day === null) {
-                      return <div key={`empty-${index}`} className="min-h-20 bg-gray-50" />
+                      return <div key={`empty-${index}`} className="min-h-20 lg:min-h-0 bg-gray-50" />
                     }
 
                     const date = new Date(year, month, day)
@@ -519,7 +525,7 @@ export default function CalendarPage() {
                       <div
                         key={day}
                         className={cn(
-                          'min-h-20 border rounded-lg p-1 transition-colors cursor-pointer',
+                          'min-h-20 lg:min-h-0 border rounded-lg p-1 transition-colors cursor-pointer overflow-hidden',
                           today ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50',
                         )}
                         onClick={() => {

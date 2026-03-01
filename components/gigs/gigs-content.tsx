@@ -585,10 +585,13 @@ export default function GigsPage() {
 
   return (
     <PageTransition>
-      <div className={cn('lg:flex', selectedGig && 'lg:h-[calc(100vh-7rem)]')} style={{ gap: '16px' }}>
+      <div className="lg:flex lg:h-[calc(100vh-7rem)]" style={{ gap: '16px' }}>
         {/* Main content */}
         <div
-          className={cn('flex-1 min-w-0 space-y-6 transition-all duration-300', selectedGig && 'lg:overflow-y-auto')}
+          className={cn(
+            'flex-1 min-w-0 space-y-6 transition-all duration-300 lg:flex lg:flex-col',
+            selectedGig && 'lg:overflow-y-auto',
+          )}
         >
           {/* Section 1: Past gigs needing action */}
           {pastNeedingAction.length > 0 && (
@@ -801,6 +804,7 @@ export default function GigsPage() {
               setActiveTab(v)
               setShowScrollHint(true)
             }}
+            className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col"
           >
             <div className="flex items-center justify-between gap-2">
               <TabsList>
@@ -824,8 +828,8 @@ export default function GigsPage() {
             </div>
 
             {/* Upcoming */}
-            <TabsContent value="upcoming" className="mt-4">
-              <Card>
+            <TabsContent value="upcoming" className="mt-4 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+              <Card className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2">
@@ -868,7 +872,7 @@ export default function GigsPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                   {loading ? (
                     <TableSkeleton columns={7} rows={5} />
                   ) : sortedUpcoming.length === 0 ? (
@@ -882,7 +886,7 @@ export default function GigsPage() {
                       </Button>
                     </div>
                   ) : (
-                    <>
+                    <div className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                       {/* Mobile card view */}
                       <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
                         {sortedUpcoming.map((gig) => {
@@ -982,11 +986,11 @@ export default function GigsPage() {
                       </div>
 
                       {/* Desktop table view */}
-                      <div className="relative hidden lg:block">
+                      <div className="relative hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
                         <div
                           ref={upcomingScrollRef}
                           onScroll={handleScroll}
-                          className="h-[calc(100vh-13rem)] overflow-auto rounded-md border"
+                          className="lg:flex-1 lg:min-h-0 overflow-auto rounded-md border"
                         >
                           <table className="w-full caption-bottom text-sm table-fixed">
                             <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -1222,15 +1226,15 @@ export default function GigsPage() {
                           </div>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
 
             {/* History */}
-            <TabsContent value="history" className="mt-4">
-              <Card>
+            <TabsContent value="history" className="mt-4 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+              <Card className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2">
@@ -1278,7 +1282,7 @@ export default function GigsPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                   {sortedHistory.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1286,7 +1290,7 @@ export default function GigsPage() {
                       <p className="text-sm">{t('noHistoryHint')}</p>
                     </div>
                   ) : (
-                    <>
+                    <div className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                       {/* Mobile card view */}
                       <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
                         {sortedHistory.map((gig) => {
@@ -1363,11 +1367,11 @@ export default function GigsPage() {
                       </div>
 
                       {/* Desktop table view */}
-                      <div className="relative hidden lg:block">
+                      <div className="relative hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
                         <div
                           ref={historyScrollRef}
                           onScroll={handleScroll}
-                          className="h-[calc(100vh-13rem)] overflow-auto rounded-md border"
+                          className="lg:flex-1 lg:min-h-0 overflow-auto rounded-md border"
                         >
                           <table className="w-full caption-bottom text-sm table-fixed">
                             <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -1560,15 +1564,15 @@ export default function GigsPage() {
                           </div>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
 
             {/* Declined */}
-            <TabsContent value="declined" className="mt-4">
-              <Card>
+            <TabsContent value="declined" className="mt-4 lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+              <Card className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2">
@@ -1597,7 +1601,7 @@ export default function GigsPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                   {sortedDeclined.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Ban className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -1605,7 +1609,7 @@ export default function GigsPage() {
                       <p className="text-sm">{t('noDeclinedHint')}</p>
                     </div>
                   ) : (
-                    <>
+                    <div className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
                       {/* Mobile card view */}
                       <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
                         {sortedDeclined.map((gig) => {
@@ -1682,11 +1686,11 @@ export default function GigsPage() {
                       </div>
 
                       {/* Desktop table view */}
-                      <div className="relative hidden lg:block">
+                      <div className="relative hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0">
                         <div
                           ref={declinedScrollRef}
                           onScroll={handleScroll}
-                          className="h-[calc(100vh-13rem)] overflow-auto rounded-md border"
+                          className="lg:flex-1 lg:min-h-0 overflow-auto rounded-md border"
                         >
                           <table className="w-full caption-bottom text-sm table-fixed">
                             <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
@@ -1879,7 +1883,7 @@ export default function GigsPage() {
                           </div>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
                 </CardContent>
               </Card>

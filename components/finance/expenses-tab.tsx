@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCompany } from '@/lib/hooks/use-company'
 import { useGigFilter } from '@/lib/hooks/use-gig-filter'
@@ -26,6 +26,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { toast } from 'sonner'
 import { downloadFile } from '@/lib/download'
 import { PageTransition } from '@/components/ui/page-transition'
+import { ScrollIndicator } from '@/components/ui/scroll-indicator'
 
 type Expense = {
   id: string
@@ -81,6 +82,7 @@ export default function ExpensesTab() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewIsPdf, setPreviewIsPdf] = useState(false)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
 
@@ -201,10 +203,10 @@ export default function ExpensesTab() {
   }, [])
 
   return (
-    <PageTransition>
-      <div className="space-y-6">
+    <PageTransition className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+      <div className="lg:flex lg:flex-col lg:h-full lg:min-h-0 space-y-6">
         {/* Filter */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 lg:shrink-0">
           <div>
             <Select value={yearFilter} onValueChange={setYearFilter}>
               <SelectTrigger>
@@ -264,7 +266,7 @@ export default function ExpensesTab() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:shrink-0">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -325,8 +327,8 @@ export default function ExpensesTab() {
           )}
         </div>
 
-        <Card>
-          <CardHeader>
+        <Card className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col">
+          <CardHeader className="lg:shrink-0">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2">
                 <Receipt className="h-5 w-5" />
@@ -345,7 +347,7 @@ export default function ExpensesTab() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col lg:overflow-hidden">
             {loading ? (
               <TableSkeleton columns={7} rows={5} />
             ) : filteredExpenses.length === 0 ? (
@@ -367,7 +369,7 @@ export default function ExpensesTab() {
             ) : (
               <>
                 {/* Mobile card view */}
-                <div className="lg:hidden space-y-2 max-h-[calc(100vh-13rem)] overflow-auto">
+                <div className="lg:hidden space-y-2 overflow-auto max-h-[calc(100vh-24rem)]">
                   {filteredExpenses.map((expense) => (
                     <div
                       key={expense.id}
@@ -439,7 +441,7 @@ export default function ExpensesTab() {
                 </div>
 
                 {/* Desktop table view */}
-                <div className="hidden lg:block">
+                <div ref={tableScrollRef} className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0 lg:overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -527,6 +529,7 @@ export default function ExpensesTab() {
               </>
             )}
           </CardContent>
+          <ScrollIndicator targetRef={tableScrollRef} />
         </Card>
 
         <UploadReceiptDialog

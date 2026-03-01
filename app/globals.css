@@ -148,10 +148,10 @@
   }
 }
 
-/* Compact desktop density — zoom-out feel like Vercel/Linear/GitHub */
+/* Compact desktop density — smaller base font shrinks all rem-based sizing */
 @media (min-width: 1024px) {
   html {
-    zoom: 0.85;
+    font-size: 13px;
   }
 }
 
